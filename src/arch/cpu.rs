@@ -3,19 +3,22 @@ use arch::registers::*;
 use arch::instr::INSTR_TABLE;
 use arch::bit_utils::*;
 
-pub struct CPU<'mem>
+use std::rc::Rc;
+use std::cell::RefCell;
+
+pub struct CPU
 {
     pub clock: u8,
     pub registers: Registers,
-    pub memory: &'mem mut Memory,
+    pub memory: Rc<RefCell<Memory>>,
     pub irq: bool,
     pub nmi: bool,
     pub rst: bool
 }
 
-impl<'mem> CPU<'mem>
+impl CPU
 {
-    pub fn new(mem: &'mem mut Memory) -> CPU
+    pub fn new(mem: Rc<RefCell<Memory>>) -> CPU
     {
         CPU
         {
@@ -40,8 +43,8 @@ impl<'mem> CPU<'mem>
     {
         self.save_state_before_interrupt();
 
-        let low = self.memory.fetch(0xFFFE);
-        let high = self.memory.fetch(0xFFFF);
+        let low = self.memory.borrow().fetch(0xFFFE);
+        let high = self.memory.borrow().fetch(0xFFFF);
 
         self.registers.PC = to_u16(low, high);
     }
@@ -50,16 +53,16 @@ impl<'mem> CPU<'mem>
     {
         self.save_state_before_interrupt();
 
-        let low = self.memory.fetch(0xFFFA);
-        let high = self.memory.fetch(0xFFFB);
+        let low = self.memory.borrow().fetch(0xFFFA);
+        let high = self.memory.borrow().fetch(0xFFFB);
 
         self.registers.PC = to_u16(low, high);
     }
 
     fn perform_rst(&mut self)
     {
-        let low = self.memory.fetch(0xFFFC);
-        let high = self.memory.fetch(0xFFFD);
+        let low = self.memory.borrow().fetch(0xFFFC);
+        let high = self.memory.borrow().fetch(0xFFFD);
 
         self.registers.PC = to_u16(low, high);
     }
@@ -68,10 +71,15 @@ impl<'mem> CPU<'mem>
     {
         loop
         {
-            let opcode = self.memory.fetch(self.registers.PC);
+            // fetch
+            let opcode = self.memory.borrow().fetch(self.registers.PC);
+
             let instr = INSTR_TABLE[opcode as usize];
 
+            //execute
             let cycles = instr(self);
+
+            // update time?
 
             println!("{}", cycles);
         }
@@ -97,14 +105,14 @@ impl<'mem> CPU<'mem>
 
     pub fn push8(&mut self, v: u8)
     {
-        self.memory.store(self.registers.SP as u16 + 0x0100, v);
+        self.memory.borrow_mut().store(self.registers.SP as u16 + 0x0100, v);
         self.registers.SP -= 1;
     }
 
     pub fn pop8(&mut self) -> u8
     {
         self.registers.SP += 1;
-        self.memory.fetch(self.registers.SP as u16 + 0x0100)
+        self.memory.borrow().fetch(self.registers.SP as u16 + 0x0100)
     }
 
     pub fn pop16(&mut self) -> u16
