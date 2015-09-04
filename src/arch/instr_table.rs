@@ -1,5 +1,6 @@
-use arch::cpu::CPU;
 use arch::bit_utils::to_u16;
+use arch::instrs::*;
+use arch::cpu::CPU;
 
 pub static INSTR_TABLE: [Instr; 256] = [
     error_fn, //0
@@ -131,68 +132,68 @@ pub static INSTR_TABLE: [Instr; 256] = [
     error_fn, //7e
     error_fn, //7f
     error_fn, //80
-    error_fn, //81
+    sta::indirect_x, //81
     error_fn, //82
     error_fn, //83
-    error_fn, //84
-    error_fn, //85
-    error_fn, //86
+    sty::zeropage, //84
+    sta::zeropage, //85
+    stx::zeropage, //86
     error_fn, //87
     error_fn, //88
     error_fn, //89
     error_fn, //8a
     error_fn, //8b
-    error_fn, //8c
-    error_fn, //8d
-    error_fn, //8e
+    sty::absolute, //8c
+    sta::absolute, //8d
+    stx::absolute, //8e
     error_fn, //8f
     error_fn, //90
-    error_fn, //91
+    sta::indirect_y, //91
     error_fn, //92
     error_fn, //93
-    error_fn, //94
-    error_fn, //95
-    error_fn, //96
+    sty::zeropage_x, //94
+    sta::zeropage_x, //95
+    stx::zeropage_y, //96
     error_fn, //97
     error_fn, //98
-    error_fn, //99
+    sta::absolute_y, //99
     error_fn, //9a
     error_fn, //9b
     error_fn, //9c
-    error_fn, //9d
+    sta::absolute_x, //9d
     error_fn, //9e
     error_fn, //9f
-    error_fn, //a0
-    error_fn, //a1
-    error_fn, //a2
+    ldy::immediate, //a0
+    lda::indirect_x, //a1
+    ldx::immediate, //a2
     error_fn, //a3
-    error_fn, //a4
-    lda_zeropage, //a5
-    error_fn, //a6
+    ldy::zeropage, //a4
+    lda::zeropage, //a5
+    ldx::zeropage, //a6
     error_fn, //a7
     error_fn, //a8
-    lda_immediate, //a9
+    lda::immediate, //a9
     error_fn, //aa
     error_fn, //ab
-    error_fn, //ac
-    error_fn, //ad
-    error_fn, //ae
+    ldy::absolute, //ac
+    lda::absolute, //ad
+    ldx::absolute, //ae
     error_fn, //af
     error_fn, //b0
-    error_fn, //b1
+    lda::indirect_y, //b1
     error_fn, //b2
     error_fn, //b3
-    error_fn, //b4
-    lda_zeropage_x, //b5
-    error_fn, //b6
+    ldy::zeropage_x, //b4
+    lda::zeropage_x, //b5
+    ldx::zeropage_y, //b6
     error_fn, //b7
     error_fn, //b8
-    error_fn, //b9
+    lda::absolute_y, //b9
     error_fn, //ba
     error_fn, //bb
-    error_fn, //bc
-    error_fn, //bd
-    error_fn, //be
+    ldy::absolute_x, //bc
+    lda::absolute_x, //bd
+    ldx::absolute_y, //be
     error_fn, //bf
     error_fn, //c0
     error_fn, //c1
@@ -260,89 +261,58 @@ pub static INSTR_TABLE: [Instr; 256] = [
     error_fn  //ff
 ];
 
-pub type Instr = fn(&mut CPU) -> u8;
+pub type Instr = fn(&mut CPU) -> (u8, u8);
 
-fn error_fn(_cpu: &mut CPU) -> u8
+pub fn error_fn(_cpu: &mut CPU) -> (u8, u8)
 {
     panic!("Invalid opcode!");
 }
 
 // decode functions
-fn decode_absolute(cpu: &CPU) -> u16
+pub fn decode_absolute(cpu: &CPU) -> (u16, u8)
 {
     let low = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
     let high = cpu.memory.borrow().fetch(cpu.registers.PC + 2);
-    to_u16(low, high)
+    (to_u16(low, high), 3)
 }
 
-fn decode_immediate(cpu: &CPU) -> u8
+pub fn decode_immediate(cpu: &CPU) -> (u8, u8)
 {
-    cpu.memory.borrow().fetch(cpu.registers.PC + 1)
+    (cpu.memory.borrow().fetch(cpu.registers.PC + 1), 2)
 }
 
-fn decode_zeropage(cpu: &CPU) -> u8
+pub fn decode_zeropage(cpu: &CPU) -> (u8, u8)
 {
-    cpu.memory.borrow().fetch(cpu.registers.PC + 1)
+    (cpu.memory.borrow().fetch(cpu.registers.PC + 1), 2)
 }
 
-fn decode_absolute_indexed(cpu: &CPU, offset: u8) -> u16
+pub fn decode_absolute_indexed(cpu: &CPU, offset: u8) -> (u16, u8)
 {
     let low = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
     let high = cpu.memory.borrow().fetch(cpu.registers.PC + 2);
-    (to_u16(low, high) + offset as u16) & 0xFFFF
+    ((to_u16(low, high) + offset as u16) & 0xFFFF, 3)
 }
 
-fn decode_zeropage_indexed(cpu: &CPU, offset: u8) -> u8
+pub fn decode_zeropage_indexed(cpu: &CPU, offset: u8) -> (u8, u8)
 {
     let addr = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
-    (addr + offset) & 0xFF
+    ((addr + offset) & 0xFF, 2)
 }
 
-fn decode_indirect(cpu: &CPU) -> u16
-{
-    let op = cpu.memory.borrow().fetch(cpu.registers.PC + 1) as u16;
-    let low = cpu.memory.borrow().fetch(op);
-    let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
-
-    to_u16(low, high)
-}
-
-fn decode_indexed_indirect(cpu: &CPU) -> u16
+pub fn decode_indexed_indirect(cpu: &CPU) -> (u16, u8)
 {
     let op = (cpu.memory.borrow().fetch(cpu.registers.PC + 1) + cpu.registers.X) as u16 & 0xFF;
     let low = cpu.memory.borrow().fetch(op);
     let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
-    to_u16(low, high)
+    (to_u16(low, high), 2)
 }
 
-fn decode_indirect_indexed(cpu: &CPU) -> u16
+pub fn decode_indirect_indexed(cpu: &CPU) -> (u16, u8)
 {
     let op = cpu.memory.borrow().fetch(cpu.registers.PC + 1) as u16;
     let low = cpu.memory.borrow().fetch(op);
     let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
-    (to_u16(low, high) + cpu.registers.Y as u16) & 0xFFFF
-}
-
-// execute functions
-fn lda_immediate(cpu: &mut CPU) -> u8
-{
-    let op = decode_immediate(cpu);
-    cpu.registers.A = op;
-    2
-}
-
-fn lda_zeropage(cpu: &mut CPU) -> u8
-{
-    let data = decode_zeropage(cpu);
-    cpu.registers.A = cpu.memory.borrow().fetch(data as u16);
-    3
-}
-
-fn lda_zeropage_x(cpu: &mut CPU) -> u8
-{
-    let addr = decode_zeropage_indexed(cpu, cpu.registers.X);
-    cpu.registers.A = cpu.memory.borrow().fetch(addr as u16);
-    4
+    ((to_u16(low, high) + cpu.registers.Y as u16) & 0xFFFF, 2)
 }

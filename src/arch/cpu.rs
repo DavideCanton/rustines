@@ -1,6 +1,6 @@
 use arch::memory::Memory;
 use arch::registers::*;
-use arch::instr::INSTR_TABLE;
+use arch::instr_table::INSTR_TABLE;
 use arch::bit_utils::*;
 
 use std::rc::Rc;
@@ -20,6 +20,8 @@ impl CPU
 {
     pub fn new(mem: Rc<RefCell<Memory>>) -> CPU
     {
+        init_flags();
+        
         CPU
         {
             clock: 0,
@@ -35,7 +37,7 @@ impl CPU
     {
         let pc = self.registers.PC;
         self.push16(pc);
-        let p = self.registers.P;
+        let p = self.registers.getP();
         self.push8(p);
     }
 
@@ -77,7 +79,8 @@ impl CPU
             let instr = INSTR_TABLE[opcode as usize];
 
             //execute
-            let cycles = instr(self);
+            let (cycles, ilen) = instr(self);
+            self.registers.PC += ilen as u16;
 
             // update time?
 
@@ -120,7 +123,7 @@ impl CPU
         let high = self.pop8();
         let low = self.pop8();
 
-        return to_u16(low, high);
+        to_u16(low, high)
     }
 
     pub fn pop32(&mut self) -> u32
@@ -128,6 +131,6 @@ impl CPU
         let high = self.pop16();
         let low = self.pop16();
 
-        return to_u32(low, high);
+         to_u32(low, high)
     }
 }
