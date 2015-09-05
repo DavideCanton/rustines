@@ -265,7 +265,8 @@ pub type Instr = fn(&mut CPU) -> (u8, u8);
 
 pub fn error_fn(_cpu: &mut CPU) -> (u8, u8)
 {
-    panic!("Invalid opcode!");
+    //panic!("Invalid opcode!");
+    (0xFF, 0xFF)
 }
 
 // decode functions

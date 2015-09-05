@@ -11,4 +11,6 @@ pub fn main()
 
     let mut cpu = CPU::new(mem.clone());
     cpu.execute();
+
+    println!("End!");
 }

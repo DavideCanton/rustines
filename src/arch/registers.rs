@@ -33,7 +33,7 @@ pub fn init_flags()
         for i in 0u16..256
         {
             NZ_TABLE[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
-            println!("{} => NZ:{:?}", i, NZ_TABLE[i as usize]);
+            //println!("{} => NZ:{:?}", i, NZ_TABLE[i as usize]);
 
             for j in 0u16..256
             {
@@ -43,7 +43,7 @@ pub fn init_flags()
 
                 VC_TABLE[to_u16(j as u8, i as u8) as usize] = (V | C) as u8;
 
-                println!("{} {} => VC:{:?}", i, j, VC_TABLE[to_u16(j as u8, i as u8) as usize]);
+                //println!("{} {} => VC:{:?}", i, j, VC_TABLE[to_u16(j as u8, i as u8) as usize]);
             }
         }
     }

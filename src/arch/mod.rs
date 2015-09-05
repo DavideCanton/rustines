@@ -16,3 +16,4 @@ mod bit_utils;
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 mod instrs;
+mod arch_tests;

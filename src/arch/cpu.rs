@@ -21,7 +21,7 @@ impl CPU
     pub fn new(mem: Rc<RefCell<Memory>>) -> CPU
     {
         init_flags();
-        
+
         CPU
         {
             clock: 0,
@@ -80,6 +80,12 @@ impl CPU
 
             //execute
             let (cycles, ilen) = instr(self);
+
+            if cycles == 0xFF
+            {
+                break;
+            }
+
             self.registers.PC += ilen as u16;
 
             // update time?
@@ -131,6 +137,6 @@ impl CPU
         let high = self.pop16();
         let low = self.pop16();
 
-         to_u32(low, high)
+        to_u32(low, high)
     }
 }
