@@ -15,5 +15,5 @@ mod instr_table;
 mod bit_utils;
 #[allow(non_snake_case)]
 #[allow(dead_code)]
-mod instrs;
+pub mod instrs;
 mod arch_tests;

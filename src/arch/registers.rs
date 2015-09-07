@@ -81,4 +81,109 @@ impl Registers
 
         (N << 7) | (V << 6) | (1 << 5) | (self.BDI << 2) | (Z << 1) | C
     }
+
+    pub fn getN(&self) -> bool
+    {
+        (self.NZ & 0x2) != 0
+    }
+
+    pub fn setN(&mut self)
+    {
+        self.NZ |= 0x2;
+    }
+
+    pub fn clearN(&mut self)
+    {
+        self.NZ &= 0xFD;
+    }
+
+    pub fn getZ(&self) -> bool
+    {
+        (self.NZ & 0x1) != 0
+    }
+
+    pub fn setZ(&mut self)
+    {
+        self.NZ |= 0x1;
+    }
+
+    pub fn clearZ(&mut self)
+    {
+        self.NZ &= 0xFE;
+    }
+
+    pub fn getV(&self) -> bool
+    {
+        (self.VC & 0x2) != 0
+    }
+
+    pub fn setV(&mut self)
+    {
+        self.VC |= 0x2;
+    }
+
+    pub fn clearV(&mut self)
+    {
+        self.VC &= 0xFD;
+    }
+
+    pub fn getC(&self) -> bool
+    {
+        (self.VC & 0x1) != 0
+    }
+
+    pub fn setC(&mut self)
+    {
+        self.VC |= 0x1;
+    }
+
+    pub fn clearC(&mut self)
+    {
+        self.VC &= 0xFE;
+    }
+
+    pub fn getB(&self) -> bool
+    {
+        (self.BDI & 0x4) != 0
+    }
+
+    pub fn setB(&mut self)
+    {
+        self.BDI |= 0x4;
+    }
+
+    pub fn clearB(&mut self)
+    {
+        self.NZ &= 0xFB;
+    }
+
+    pub fn getD(&self) -> bool
+    {
+        (self.BDI & 0x2) != 0
+    }
+
+    pub fn setD(&mut self)
+    {
+        self.BDI |= 0x2;
+    }
+
+    pub fn clearD(&mut self)
+    {
+        self.BDI &= 0xFB;
+    }
+
+    pub fn getI(&self) -> bool
+    {
+        (self.BDI & 0x1) != 0
+    }
+
+    pub fn setI(&mut self)
+    {
+        self.BDI |= 0x1;
+    }
+
+    pub fn clearI(&mut self)
+    {
+        self.BDI &= 0xFE;
+    }
 }

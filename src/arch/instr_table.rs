@@ -297,7 +297,7 @@ pub fn decode_absolute_indexed(cpu: &CPU, offset: u8) -> (u16, u8)
 pub fn decode_zeropage_indexed(cpu: &CPU, offset: u8) -> (u8, u8)
 {
     let addr = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
-    ((addr + offset) & 0xFF, 2)
+    (addr.wrapping_add(offset), 2)
 }
 
 pub fn decode_indexed_indirect(cpu: &CPU) -> (u16, u8)
