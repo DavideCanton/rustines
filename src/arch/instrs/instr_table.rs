@@ -139,7 +139,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     sta::zeropage, //85
     stx::zeropage, //86
     error_fn, //87
-    dey::implied, //88
+    error_fn, //88
     error_fn, //89
     error_fn, //8a
     error_fn, //8b
@@ -205,7 +205,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     error_fn, //c7
     iny::implied, //c8
     error_fn, //c9
-    dex::implied, //ca
+    error_fn, //ca
     error_fn, //cb
     error_fn, //cc
     error_fn, //cd
