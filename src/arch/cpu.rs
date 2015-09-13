@@ -1,7 +1,7 @@
 use arch::memory::Memory;
 use arch::registers::*;
-use arch::instr_table::INSTR_TABLE;
-use arch::bit_utils::*;
+use arch::instrs::instr_table::INSTR_TABLE;
+use utils::bit_utils::*;
 
 use std::rc::Rc;
 use std::cell::RefCell;

@@ -1,5 +1,5 @@
 use arch::cpu::CPU;
-use arch::instr_table::{decode_zeropage, decode_zeropage_indexed, decode_absolute,
+use arch::instrs::instr_table::{decode_zeropage, decode_zeropage_indexed, decode_absolute,
     decode_absolute_indexed};
 
 

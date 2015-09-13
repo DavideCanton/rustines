@@ -1,5 +1,5 @@
 use arch::cpu::CPU;
-use arch::instr_table::{decode_immediate, decode_zeropage, decode_zeropage_indexed,
+use arch::instrs::instr_table::{decode_immediate, decode_zeropage, decode_zeropage_indexed,
     decode_absolute, decode_absolute_indexed};
 
 pub fn immediate(cpu: &mut CPU) -> (u8, u8)

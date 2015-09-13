@@ -1,4 +1,5 @@
 mod arch;
+mod utils;
 use arch::memory::Memory;
 use arch::cpu::CPU;
 

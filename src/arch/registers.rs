@@ -1,4 +1,4 @@
-use arch::bit_utils::*;
+use utils::utils::range_inclusive;
 
 pub struct Registers
 {
@@ -24,27 +24,15 @@ pub const FLAG_V: u8 = 1 << 6;
 pub const FLAG_N: u8 = 1 << 7;
 
 static mut NZ_TABLE : [u8; 1 << 8] = [0; 1 << 8];
-static mut VC_TABLE : [u8; 1 << 16] = [0; 1 << 16];
 
 pub fn init_flags()
 {
     unsafe
     {
-        for i in 0u16..256
+        for i in range_inclusive(0u8, 255)
         {
             NZ_TABLE[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
             //println!("{} => NZ:{:?}", i, NZ_TABLE[i as usize]);
-
-            for j in 0u16..256
-            {
-                let R = i + j;
-                let C = (R & 0x100 != 0) as u8;
-                let V = ((i >> 7) == (j >> 7) && (i >> 7) != ((R >> 7) & 1)) as u8;
-
-                VC_TABLE[to_u16(j as u8, i as u8) as usize] = (V | C) as u8;
-
-                //println!("{} {} => VC:{:?}", i, j, VC_TABLE[to_u16(j as u8, i as u8) as usize]);
-            }
         }
     }
 }
@@ -65,13 +53,12 @@ impl Registers
         }
     }
 
-    pub fn compute_VC_flags(&mut self, a: u8, b: u8)
+    pub fn compute_VC_flags(&mut self, a: u8, r: u16)
     {
-        let ind = to_u16(b, a);
-        unsafe
-        {
-            self.VC = VC_TABLE[ind as usize];
-        }
+        let c = (((r & 0x100) >> 8) & 0x1) as u8;
+        let v = (a >> 7 != (r >> 8) as u8) as u8;
+
+        self.VC = (v << 1) | c;
     }
 
     pub fn getP(&self) -> u8

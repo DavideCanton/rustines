@@ -1,5 +1,5 @@
 use arch::cpu::CPU;
-use arch::instr_table::{decode_zeropage, decode_zeropage_indexed, decode_absolute};
+use arch::instrs::instr_table::{decode_zeropage, decode_zeropage_indexed, decode_absolute};
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 {
