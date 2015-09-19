@@ -1,0 +1,7 @@
+{
+  "cmd": "cargo",
+  "args": [ "run", "--verbose" ],
+  "sh": true,
+  "cwd": "{PROJECT_PATH}",
+  "errorMatch": "^(?<file>[^\\.]+.rs):(?<line>\\d+):(?<col>\\d+)"
+}

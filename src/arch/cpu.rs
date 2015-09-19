@@ -76,7 +76,9 @@ impl CPU
             // fetch
             let opcode = self.memory.borrow().fetch(self.registers.PC);
 
-            let instr = INSTR_TABLE[opcode as usize];
+            let (instr, fname) = INSTR_TABLE[opcode as usize];
+
+            println!("Fetched instr {}, PC = {}", fname, self.registers.PC);
 
             //execute
             let (cycles, ilen) = instr(self);
@@ -87,6 +89,8 @@ impl CPU
             }
 
             self.registers.PC += ilen as u16;
+
+            println!("Registers: {:?}", self.registers);
 
             // update time?
 

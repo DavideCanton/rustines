@@ -1,5 +1,6 @@
 use utils::utils::range_inclusive;
 
+#[derive(Debug)]
 pub struct Registers
 {
     pub PC: u16,
@@ -53,12 +54,14 @@ impl Registers
         }
     }
 
-    pub fn compute_VC_flags(&mut self, a: u8, r: u16)
+    pub fn compute_VC_flags(&mut self, v: bool, c: bool)
     {
-        let c = (((r & 0x100) >> 8) & 0x1) as u8;
-        let v = (a >> 7 != (r >> 8) as u8) as u8;
+        self.VC = ((v as u8) << 1) | (c as u8);
+    }
 
-        self.VC = (v << 1) | c;
+    pub fn compute_C_flag(&mut self, c: bool)
+    {
+        self.VC = (self.VC & 0x10) | (c as u8);
     }
 
     pub fn getP(&self) -> u8
@@ -172,5 +175,5 @@ impl Registers
     pub fn clearI(&mut self)
     {
         self.BDI &= 0xFE;
-    }
+    }    
 }

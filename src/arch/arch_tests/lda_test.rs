@@ -1,27 +1,11 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
-use arch::cpu::CPU;
-use arch::memory::Memory;
-
-fn setup_tests() -> (CPU, Rc<RefCell<Memory>>)
-{
-    let mem = Rc::new(RefCell::new(Memory::new()));
-    let mut cpu = CPU::new(mem.clone());
-
-    cpu.registers.PC = 0x100;
-
-    (cpu, mem.clone())
-}
-
 #[cfg(test)]
 mod tests
 {
+    use arch::arch_tests::common::tests::setup_tests;
     use arch::instrs::lda;
-    use super::setup_tests;
 
     #[test]
-    pub fn test_lda_immediate()
+    fn test_lda_immediate()
     {
         let (mut cpu, mem) = setup_tests();
 
@@ -38,11 +22,11 @@ mod tests
 
         let val = cpu.registers.A;
         assert_eq!(val, 0xDE);
-        
+
     }
 
     #[test]
-    pub fn test_lda_zeropage()
+    fn test_lda_zeropage()
     {
         let (mut cpu, mem) = setup_tests();
 
@@ -64,7 +48,7 @@ mod tests
     }
 
     #[test]
-    pub fn test_lda_zeropage_x()
+    fn test_lda_zeropage_x()
     {
         let (mut cpu, mem) = setup_tests();
 
@@ -88,7 +72,7 @@ mod tests
     }
 
     #[test]
-    pub fn test_lda_zeropage_x_flipping()
+    fn test_lda_zeropage_x_flipping()
     {
         let (mut cpu, mem) = setup_tests();
 
@@ -106,6 +90,29 @@ mod tests
 
         assert_eq!(4, cycles);
         assert_eq!(2, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_absolute()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xad);
+            mem.store(cpu.registers.PC + 1, 0x34);
+            mem.store(cpu.registers.PC + 2, 0x12);
+
+            mem.store(0x1234, 0xAB);
+        }
+
+        let (cycles, ilen) = lda::absolute(&mut cpu);
+
+        assert_eq!(4, cycles);
+        assert_eq!(3, ilen);
 
         let val = cpu.registers.A;
         assert_eq!(val, 0xAB);

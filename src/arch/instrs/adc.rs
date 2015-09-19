@@ -9,7 +9,7 @@ pub fn immediate(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (2, ilen)
 }
@@ -22,7 +22,7 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (3, ilen)
 }
@@ -35,7 +35,7 @@ pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (4, ilen)
 }
@@ -48,7 +48,7 @@ pub fn absolute(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (4, ilen)
 }
@@ -61,7 +61,7 @@ pub fn absolute_x(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (4, ilen)
     //TODO +1 if page boundary
@@ -75,7 +75,7 @@ pub fn absolute_y(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (4, ilen)
     //TODO +1 if page boundary
@@ -89,7 +89,7 @@ pub fn indirect_x(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (6, ilen)
 }
@@ -102,7 +102,7 @@ pub fn indirect_y(cpu: &mut CPU) -> (u8, u8)
     let resA = (res & 0xFF) as u8;
     let oldA = cpu.registers.A;
     cpu.registers.compute_NZ_flags(resA);
-    cpu.registers.compute_VC_flags(oldA, res);
+    cpu.registers.compute_VC_flags(oldA >> 7 != resA >> 7, res & 0x100 != 0);
     cpu.registers.A = resA;
     (5, ilen)
     //TODO +1 if page boundary

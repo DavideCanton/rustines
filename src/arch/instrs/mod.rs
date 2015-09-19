@@ -23,3 +23,6 @@ pub mod branches;
 pub mod cmp;
 pub mod cpx;
 pub mod cpy;
+pub mod bit;
+pub mod asl;
+pub mod lsr;
