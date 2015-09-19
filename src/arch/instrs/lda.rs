@@ -50,7 +50,7 @@ pub fn absolute_x(cpu: &mut CPU) -> (u8, u8)
 pub fn absolute_y(cpu: &mut CPU) -> (u8, u8)
 {
     let (addr, ilen) = decode_absolute_indexed(cpu, cpu.registers.Y);
-    cpu.registers.A = cpu.memory.borrow().fetch(addr );
+    cpu.registers.A = cpu.memory.borrow().fetch(addr);
     let aval = cpu.registers.A;
     cpu.registers.compute_NZ_flags(aval);
     (4, ilen)

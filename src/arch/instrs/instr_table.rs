@@ -302,7 +302,7 @@ pub fn decode_zeropage_indexed(cpu: &CPU, offset: u8) -> (u8, u8)
 
 pub fn decode_indexed_indirect(cpu: &CPU) -> (u16, u8)
 {
-    let op = (cpu.memory.borrow().fetch(cpu.registers.PC + 1) + cpu.registers.X) as u16 & 0xFF;
+    let op = (cpu.memory.borrow().fetch(cpu.registers.PC + 1).wrapping_add(cpu.registers.X)) as u16 & 0xFF;
     let low = cpu.memory.borrow().fetch(op);
     let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
@@ -315,5 +315,5 @@ pub fn decode_indirect_indexed(cpu: &CPU) -> (u16, u8)
     let low = cpu.memory.borrow().fetch(op);
     let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
-    ((to_u16(low, high).wrapping_add(cpu.registers.Y as u16)) & 0xFFFF, 2)
+    (to_u16(low, high).wrapping_add(cpu.registers.Y as u16), 2)
 }

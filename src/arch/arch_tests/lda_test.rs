@@ -117,4 +117,204 @@ mod tests
         let val = cpu.registers.A;
         assert_eq!(val, 0xAB);
     }
+
+    #[test]
+    fn test_lda_absolute_x()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xbd);
+            mem.store(cpu.registers.PC + 1, 0x34);
+            mem.store(cpu.registers.PC + 2, 0x12);
+
+            mem.store(0x1244, 0xAB);
+        }
+        cpu.registers.X = 0x10;
+
+        let (cycles, ilen) = lda::absolute_x(&mut cpu);
+
+        assert_eq!(4, cycles);
+        assert_eq!(3, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_absolute_x_flipping()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xbd);
+            mem.store(cpu.registers.PC + 1, 0xFE);
+            mem.store(cpu.registers.PC + 2, 0xFF);
+
+            mem.store(0x0001, 0xAB);
+        }
+        cpu.registers.X = 0x3;
+
+        let (cycles, ilen) = lda::absolute_x(&mut cpu);
+
+        assert_eq!(4, cycles);
+        assert_eq!(3, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_absolute_y()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xb9);
+            mem.store(cpu.registers.PC + 1, 0x34);
+            mem.store(cpu.registers.PC + 2, 0x12);
+
+            mem.store(0x1244, 0xAB);
+        }
+        cpu.registers.Y = 0x10;
+
+        let (cycles, ilen) = lda::absolute_y(&mut cpu);
+
+        assert_eq!(4, cycles);
+        assert_eq!(3, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_absolute_y_flipping()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xb9);
+            mem.store(cpu.registers.PC + 1, 0xFE);
+            mem.store(cpu.registers.PC + 2, 0xFF);
+
+            mem.store(0x0001, 0xAB);
+        }
+        cpu.registers.Y = 0x3;
+
+        let (cycles, ilen) = lda::absolute_y(&mut cpu);
+
+        assert_eq!(4, cycles);
+        assert_eq!(3, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_indirect_x()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xa1);
+            mem.store(cpu.registers.PC + 1, 0x34);
+
+            mem.store(0x44, 0x10);
+            mem.store(0x45, 0x11);
+
+            mem.store(0x1110, 0xAB);
+        }
+        cpu.registers.X = 0x10;
+
+        let (cycles, ilen) = lda::indirect_x(&mut cpu);
+
+        assert_eq!(6, cycles);
+        assert_eq!(2, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_indirect_x_flipping()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xa1);
+            mem.store(cpu.registers.PC + 1, 0xFE);
+
+            mem.store(0x0E, 0x10);
+            mem.store(0x0F, 0x11);
+
+            mem.store(0x1110, 0xAB);
+        }
+        cpu.registers.X = 0x10;
+
+        let (cycles, ilen) = lda::indirect_x(&mut cpu);
+
+        assert_eq!(6, cycles);
+        assert_eq!(2, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_indirect_y()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xb1);
+            mem.store(cpu.registers.PC + 1, 0x34);
+
+            mem.store(0x34, 0x10);
+            mem.store(0x35, 0x11);
+
+            mem.store(0x1120, 0xAB);
+        }
+        cpu.registers.Y = 0x10;
+
+        let (cycles, ilen) = lda::indirect_y(&mut cpu);
+
+        assert_eq!(5, cycles);
+        assert_eq!(2, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
+
+    #[test]
+    fn test_lda_indirect_y_flipping()
+    {
+        let (mut cpu, mem) = setup_tests();
+
+        {
+            let mut mem = mem.borrow_mut();
+            mem.store(cpu.registers.PC, 0xb1);
+            mem.store(cpu.registers.PC + 1, 0x0E);
+
+            mem.store(0x0E, 0xFE);
+            mem.store(0x0F, 0xFF);
+
+            mem.store(0x001E, 0xAB);
+        }
+        cpu.registers.Y = 0x20;
+
+        let (cycles, ilen) = lda::indirect_y(&mut cpu);
+
+        assert_eq!(5, cycles);
+        assert_eq!(2, ilen);
+
+        let val = cpu.registers.A;
+        assert_eq!(val, 0xAB);
+    }
 }
