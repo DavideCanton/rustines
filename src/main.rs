@@ -9,16 +9,17 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::io::Read;
 
-fn load_ram(cpu: &mut CPU, path: PathBuf)
+fn load_ram(cpu: &mut CPU, path: PathBuf) -> std::io::Result<()>
 {
     let mut mem = cpu.memory.borrow_mut();
-    let mut f = File::open(path).unwrap();
+    let mut f = try!(File::open(path));
     let mut buf = vec![0u8; 1 << 16];
-    f.read_to_end(&mut buf).unwrap();
+    try!(f.read_to_end(&mut buf));
     for (i, el) in buf.into_iter().enumerate()
     {
         mem.store(i as u16, el);
     }
+    Ok(())
 }
 
 pub fn main()
@@ -27,7 +28,11 @@ pub fn main()
 
     let mut cpu = CPU::new(mem.clone());
 
-    load_ram(&mut cpu, PathBuf::from("D:\\prova.nes"));
+    if let Err(e) = load_ram(&mut cpu, PathBuf::from("D:\\prova.nes"))
+    {
+        println!("{:?}", e);
+        return;
+    }
 
     cpu.execute();
 
