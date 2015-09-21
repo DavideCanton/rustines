@@ -1,9 +1,9 @@
 use arch::cpu::CPU;
-use arch::instrs::instr_table::{decode_immediate, decode_zeropage, decode_absolute};
+use utils::bit_utils::*;
 
 pub fn immediate(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_immediate(cpu);
+    let (addr, ilen) = decode_immediate!(cpu);
     let res = cpu.registers.X.wrapping_sub(addr);
     cpu.registers.compute_NZ_flags(res);
     if res & 0x80 == 0
@@ -19,7 +19,7 @@ pub fn immediate(cpu: &mut CPU) -> (u8, u8)
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 {
-    let (mut addr, ilen) = decode_zeropage(cpu);
+    let (mut addr, ilen) = decode_zeropage!(cpu);
     addr = cpu.memory.borrow().fetch(addr as u16);
     let res = cpu.registers.X.wrapping_sub(addr);
     cpu.registers.compute_NZ_flags(res);
@@ -36,7 +36,7 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_absolute(cpu);
+    let (addr, ilen) = decode_absolute!(cpu);
     let addr = cpu.memory.borrow().fetch(addr);
     let res = cpu.registers.X.wrapping_sub(addr);
     cpu.registers.compute_NZ_flags(res);

@@ -1,6 +1,5 @@
 use arch::cpu::CPU;
-use arch::instrs::instr_table::{decode_zeropage, decode_zeropage_indexed, decode_absolute,
-    decode_absolute_indexed};
+use utils::bit_utils::*;
 
 pub fn accumulator(cpu: &mut CPU) -> (u8, u8)
 {
@@ -14,7 +13,7 @@ pub fn accumulator(cpu: &mut CPU) -> (u8, u8)
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_zeropage(cpu);
+    let (addr, ilen) = decode_zeropage!(cpu);
     let mut mem = cpu.memory.borrow_mut();
     let mut val = mem.fetch(addr as u16);
     if val & 0x80 != 0 { cpu.registers.setC() } else { cpu.registers.clearC() };
@@ -26,7 +25,7 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 
 pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_zeropage_indexed(cpu, cpu.registers.X);
+    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.X);
     let mut mem = cpu.memory.borrow_mut();
     let mut val = mem.fetch(addr as u16);
     if val & 0x80 != 0 { cpu.registers.setC() } else { cpu.registers.clearC() };
@@ -38,7 +37,7 @@ pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8)
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_absolute(cpu);
+    let (addr, ilen) = decode_absolute!(cpu);
     let mut mem = cpu.memory.borrow_mut();
     let mut val = mem.fetch(addr as u16);
     if val & 0x80 != 0 { cpu.registers.setC() } else { cpu.registers.clearC() };
@@ -50,7 +49,7 @@ pub fn absolute(cpu: &mut CPU) -> (u8, u8)
 
 pub fn absolute_x(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_absolute_indexed(cpu, cpu.registers.X);
+    let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.X);
     let mut mem = cpu.memory.borrow_mut();
     let mut val = mem.fetch(addr as u16);
     if val & 0x80 != 0 { cpu.registers.setC() } else { cpu.registers.clearC() };

@@ -1,4 +1,3 @@
-use utils::bit_utils::to_u16;
 use arch::instrs::*;
 use arch::cpu::CPU;
 
@@ -270,50 +269,66 @@ pub fn error_fn(_cpu: &mut CPU) -> (u8, u8)
 }
 
 // decode functions
-pub fn decode_absolute(cpu: &CPU) -> (u16, u8)
-{
-    let low = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
-    let high = cpu.memory.borrow().fetch(cpu.registers.PC + 2);
-    (to_u16(low, high), 3)
+
+#[macro_export]
+macro_rules! decode_absolute {
+    ( $cpu:expr ) => {{
+        let mem = $cpu.memory.borrow();
+        let low = mem.fetch($cpu.registers.PC + 1);
+        let high = mem.fetch($cpu.registers.PC + 2);
+        (to_u16(low, high), 3)
+    }};
 }
 
-pub fn decode_immediate(cpu: &CPU) -> (u8, u8)
-{
-    (cpu.memory.borrow().fetch(cpu.registers.PC + 1), 2)
+#[macro_export]
+macro_rules! decode_immediate {
+    ( $cpu:expr ) => {{
+        ($cpu.memory.borrow().fetch($cpu.registers.PC + 1), 2)
+    }};
 }
 
-pub fn decode_zeropage(cpu: &CPU) -> (u8, u8)
-{
-    (cpu.memory.borrow().fetch(cpu.registers.PC + 1), 2)
+#[macro_export]
+macro_rules! decode_zeropage {
+    ( $cpu:expr ) => {{
+        ($cpu.memory.borrow().fetch($cpu.registers.PC + 1), 2)
+    }};
 }
 
-pub fn decode_absolute_indexed(cpu: &CPU, offset: u8) -> (u16, u8)
-{
-    let low = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
-    let high = cpu.memory.borrow().fetch(cpu.registers.PC + 2);
-    (to_u16(low, high).wrapping_add(offset as u16), 3)
+#[macro_export]
+macro_rules! decode_absolute_indexed {
+    ( $cpu:expr, $offset:expr ) => {{
+        let low = $cpu.memory.borrow().fetch($cpu.registers.PC + 1);
+        let high = $cpu.memory.borrow().fetch($cpu.registers.PC + 2);
+        (to_u16(low, high).wrapping_add($offset as u16), 3)
+    }};
 }
 
-pub fn decode_zeropage_indexed(cpu: &CPU, offset: u8) -> (u8, u8)
-{
-    let addr = cpu.memory.borrow().fetch(cpu.registers.PC + 1);
-    (addr.wrapping_add(offset), 2)
+#[macro_export]
+macro_rules! decode_zeropage_indexed {
+    ( $cpu:expr, $offset:expr ) => {{
+        let addr = $cpu.memory.borrow().fetch($cpu.registers.PC + 1);
+        (addr.wrapping_add($offset), 2)
+    }};
 }
 
-pub fn decode_indexed_indirect(cpu: &CPU) -> (u16, u8)
-{
-    let op = (cpu.memory.borrow().fetch(cpu.registers.PC + 1).wrapping_add(cpu.registers.X)) as u16 & 0xFF;
-    let low = cpu.memory.borrow().fetch(op);
-    let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
+#[macro_export]
+macro_rules! decode_indexed_indirect {
+    ( $cpu:expr ) => {{
+        let op = ($cpu.memory.borrow().fetch($cpu.registers.PC + 1).wrapping_add($cpu.registers.X)) as u16 & 0xFF;
+        let low = $cpu.memory.borrow().fetch(op);
+        let high = $cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
-    (to_u16(low, high), 2)
+        (to_u16(low, high), 2)
+    }};
 }
 
-pub fn decode_indirect_indexed(cpu: &CPU) -> (u16, u8)
-{
-    let op = cpu.memory.borrow().fetch(cpu.registers.PC + 1) as u16;
-    let low = cpu.memory.borrow().fetch(op);
-    let high = cpu.memory.borrow().fetch((op + 1) & 0xFF);
+#[macro_export]
+macro_rules! decode_indirect_indexed {
+    ( $cpu:expr ) => {{
+        let op = $cpu.memory.borrow().fetch($cpu.registers.PC + 1) as u16;
+        let low = $cpu.memory.borrow().fetch(op);
+        let high = $cpu.memory.borrow().fetch((op + 1) & 0xFF);
 
-    (to_u16(low, high).wrapping_add(cpu.registers.Y as u16), 2)
+        (to_u16(low, high).wrapping_add($cpu.registers.Y as u16), 2)
+    }};
 }

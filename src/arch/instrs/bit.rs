@@ -1,10 +1,9 @@
 use arch::cpu::CPU;
-use arch::instrs::instr_table::{decode_zeropage, decode_absolute};
-
+use utils::bit_utils::*;
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_zeropage(cpu);
+    let (addr, ilen) = decode_zeropage!(cpu);
     let addr = cpu.memory.borrow().fetch(addr as u16);
     let res = addr & cpu.registers.A;
 
@@ -17,7 +16,7 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8)
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8)
 {
-    let (addr, ilen) = decode_absolute(cpu);
+    let (addr, ilen) = decode_absolute!(cpu);
     let addr = cpu.memory.borrow().fetch(addr);
     let res = addr & cpu.registers.A;
 
