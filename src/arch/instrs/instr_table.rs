@@ -1,6 +1,7 @@
 use arch::instrs::*;
 use arch::cpu::CPU;
 
+
 pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //00
     (ora::indirect_x, "ora::indirect_x"), //01
@@ -8,7 +9,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //03
     (error_fn, "error_fn"), //04
     (ora::zeropage, "ora::zeropage"), //05
-    (asl::zeropage, "asl::accumulator"), //06
+    (asl::zeropage, "asl::zeropage"), //06
     (error_fn, "error_fn"), //07
     (error_fn, "error_fn"), //08
     (ora::immediate, "ora::immediate"), //09
@@ -40,15 +41,15 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //23
     (bit::zeropage, "bit::zeropage"), //24
     (error_fn, "error_fn"), //25
-    (error_fn, "error_fn"), //26
+    (rol::zeropage, "rol::zeropage"), //26
     (error_fn, "error_fn"), //27
     (error_fn, "error_fn"), //28
     (error_fn, "error_fn"), //29
-    (error_fn, "error_fn"), //2a
+    (rol::accumulator, "rol::accumulator"), //2a
     (error_fn, "error_fn"), //2b
     (bit::absolute, "bit::absolute"), //2c
     (error_fn, "error_fn"), //2d
-    (error_fn, "error_fn"), //2e
+    (rol::absolute, "rol::absolue"), //2e
     (error_fn, "error_fn"), //2f
     (branches::bmi, "branches::bmi"), //30
     (error_fn, "error_fn"), //31
@@ -56,11 +57,11 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //33
     (error_fn, "error_fn"), //34
     (error_fn, "error_fn"), //35
-    (error_fn, "error_fn"), //36
+    (rol::zeropage_x, "rol::zeropage_x"), //36
     (error_fn, "error_fn"), //37
     (error_fn, "error_fn"), //38
     (error_fn, "error_fn"), //39
-    (error_fn, "error_fn"), //3a
+    (rol::absolute_x, "rol::absolute_x"), //3a
     (error_fn, "error_fn"), //3b
     (error_fn, "error_fn"), //3c
     (error_fn, "error_fn"), //3d
@@ -104,15 +105,15 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //63
     (error_fn, "error_fn"), //64
     (adc::zeropage, "adc::zeropage"), //65
-    (error_fn, "error_fn"), //66
+    (ror::zeropage, "ror::zeropage"), //66
     (error_fn, "error_fn"), //67
     (error_fn, "error_fn"), //68
     (adc::immediate, "adc::immediate"), //69
-    (error_fn, "error_fn"), //6a
+    (ror::accumulator, "ror::accumulator"), //6a
     (error_fn, "error_fn"), //6b
     (jmp::indirect_absolute, "jmp::indirect_absolute"), //6c
     (adc::absolute, "adc::absolute"), //6d
-    (error_fn, "error_fn"), //6e
+    (ror::absolute, "ror::absolute"), //6e
     (error_fn, "error_fn"), //6f
     (branches::bvs, "branches::bvs"), //70
     (adc::indirect_y, "adc::indirect_y"), //71
@@ -120,7 +121,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //73
     (error_fn, "error_fn"), //74
     (adc::zeropage_x, "adc::zeropage_x"), //75
-    (error_fn, "error_fn"), //76
+    (ror::zeropage_x, "ror::zeropage_x"), //76
     (error_fn, "error_fn"), //77
     (error_fn, "error_fn"), //78
     (adc::absolute_y, "adc::absolute_y"), //79
@@ -128,7 +129,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //7b
     (error_fn, "error_fn"), //7c
     (adc::absolute_x, "adc::absolute_x"), //7d
-    (error_fn, "error_fn"), //7e
+    (ror::absolute_x, "ror::absolute_x"), //7e
     (error_fn, "error_fn"), //7f
     (error_fn, "error_fn"), //80
     (sta::indirect_x, "sta::indirect_x"), //81
