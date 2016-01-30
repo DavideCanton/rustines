@@ -1,6 +1,6 @@
 pub struct Memory
 {
-    memory: [u8; 1 << 16]
+    memory: Vec<u8>
 }
 
 impl Memory
@@ -8,7 +8,19 @@ impl Memory
     pub fn new() -> Memory
     {
         //TODO initialize memory properly
-        Memory { memory: [0; 1 << 16] }
+        Memory { memory: vec![0; 1 << 16] }
+    }
+
+    pub fn from_array(mem: Vec<u8>) -> Option<Memory>
+    {
+        if mem.len() == 1 << 16
+        {
+            Some(Memory { memory: mem })
+        }
+        else
+        {
+            None
+        }
     }
 
     pub fn fetch(&self, addr: u16) -> u8
