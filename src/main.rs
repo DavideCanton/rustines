@@ -20,7 +20,8 @@ fn load_ram(path: PathBuf) -> std::io::Result<Vec<u8>>
 
 pub fn main()
 {
-    let mem = load_ram(PathBuf::from("D:\\prova.nes")).unwrap();
+    let file_path = "D:\\prova.nes";
+    let mem = load_ram(PathBuf::from(file_path)).unwrap();
     let mem = Memory::from_array(mem).expect("Invalid data!");
     let mut cpu = CPU::new(Rc::new(RefCell::new(mem)));
 

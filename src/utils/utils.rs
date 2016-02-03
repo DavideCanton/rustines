@@ -23,17 +23,16 @@ impl Iterator for MyRange
         }
         else
         {
+            let val = self.cur;
             if self.cur == self.end
             {
                 self.done = true;
-                Some(self.cur)
             }
             else
             {
                 self.cur += 1;
-                Some(self.cur - 1)
             }
-
+            Some(val)
         }
     }
 }
