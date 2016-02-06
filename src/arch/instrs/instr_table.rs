@@ -11,7 +11,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (ora::zeropage, "ora::zeropage"), //05
     (asl::zeropage, "asl::zeropage"), //06
     (error_fn, "error_fn"), //07
-    (error_fn, "error_fn"), //08
+    (pushpop::php, "php::implied"), //08
     (ora::immediate, "ora::immediate"), //09
     (asl::accumulator, "asl::accumulator"), //0a
     (error_fn, "error_fn"), //0b
@@ -43,7 +43,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //25
     (rol::zeropage, "rol::zeropage"), //26
     (error_fn, "error_fn"), //27
-    (error_fn, "error_fn"), //28
+    (pushpop::plp, "plp::implied"), //28
     (error_fn, "error_fn"), //29
     (rol::accumulator, "rol::accumulator"), //2a
     (error_fn, "error_fn"), //2b
@@ -75,7 +75,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (eor::zeropage, "eor::zeropage"), //45
     (lsr::zeropage, "lsr::zeropage"), //46
     (error_fn, "error_fn"), //47
-    (error_fn, "error_fn"), //48
+    (pushpop::pha, "pha::implied"), //48
     (eor::immediate, "eor::immediate"), //49
     (lsr::accumulator, "lsr::accumulator"), //4a
     (error_fn, "error_fn"), //4b
@@ -107,7 +107,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (adc::zeropage, "adc::zeropage"), //65
     (ror::zeropage, "ror::zeropage"), //66
     (error_fn, "error_fn"), //67
-    (error_fn, "error_fn"), //68
+    (pushpop::pla, "pla::implied"), //68
     (adc::immediate, "adc::immediate"), //69
     (ror::accumulator, "ror::accumulator"), //6a
     (error_fn, "error_fn"), //6b
@@ -141,7 +141,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //87
     (dey::implied, "dey::implied"), //88
     (error_fn, "error_fn"), //89
-    (error_fn, "error_fn"), //8a
+    (transfers::txa, "txa::implied"), //8a
     (error_fn, "error_fn"), //8b
     (sty::absolute, "sty::absolute"), //8c
     (sta::absolute, "sta::absolute"), //8d
@@ -155,9 +155,9 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (sta::zeropage_x, "sta::zeropage_x"), //95
     (stx::zeropage_y, "stx::zeropage_y"), //96
     (error_fn, "error_fn"), //97
-    (error_fn, "error_fn"), //98
+    (transfers::tya, "tya::implied"), //98
     (sta::absolute_y, "sta::absolute_y"), //99
-    (error_fn, "error_fn"), //9a
+    (transfers::txs, "txs::implied"), //9a
     (error_fn, "error_fn"), //9b
     (error_fn, "error_fn"), //9c
     (sta::absolute_x, "sta::absolute_x"), //9d
@@ -171,9 +171,9 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (lda::zeropage, "lda::zeropage"), //a5
     (ldx::zeropage, "ldx::zeropage"), //a6
     (error_fn, "error_fn"), //a7
-    (error_fn, "error_fn"), //a8
+    (transfers::tay, "tay::implied"), //a8
     (lda::immediate, "lda::immediate"), //a9
-    (error_fn, "error_fn"), //aa
+    (transfers::tax, "tax::implied"), //aa
     (error_fn, "error_fn"), //ab
     (ldy::absolute, "ldy::absolute"), //ac
     (lda::absolute, "lda::absolute"), //ad
@@ -189,7 +189,7 @@ pub static INSTR_TABLE: [Instr; 256] = [
     (error_fn, "error_fn"), //b7
     (error_fn, "error_fn"), //b8
     (lda::absolute_y, "lda::absolute_y"), //b9
-    (error_fn, "error_fn"), //ba
+    (transfers::tsx, "tsx::implied"), //ba
     (error_fn, "error_fn"), //bb
     (ldy::absolute_x, "ldy::absolute_x"), //bc
     (lda::absolute_x, "lda::absolute_x"), //bd

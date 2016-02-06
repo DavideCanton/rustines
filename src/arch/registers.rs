@@ -72,6 +72,13 @@ impl Registers
         (N << 7) | (V << 6) | (1 << 5) | (self.BDI << 2) | (Z << 1) | C
     }
 
+    pub fn setP(&mut self, p: u8)
+    {
+        self.VC = ((p & 0x40) >> 5) | (p & 0x1);
+        self.NZ = ((p & 0x80) >> 6) | ((p & 0x2) >> 1);
+        self.BDI = (p >> 2) & 0x7;
+    }
+
     pub fn getN(&self) -> bool
     {
         (self.NZ & 0x2) != 0
@@ -175,5 +182,5 @@ impl Registers
     pub fn clearI(&mut self)
     {
         self.BDI &= 0xFE;
-    }    
+    }
 }

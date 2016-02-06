@@ -118,14 +118,14 @@ impl CPU
 
     pub fn push8(&mut self, v: u8)
     {
-        self.memory.borrow_mut().store(self.registers.SP as u16 + 0x0100, v);
+        self.memory.borrow_mut().push8(self.registers.SP, v);
         self.registers.SP -= 1;
     }
 
     pub fn pop8(&mut self) -> u8
     {
         self.registers.SP += 1;
-        self.memory.borrow().fetch(self.registers.SP as u16 + 0x0100)
+        self.memory.borrow().peek8(self.registers.SP)
     }
 
     pub fn pop16(&mut self) -> u16
@@ -140,6 +140,29 @@ impl CPU
     {
         let high = self.pop16();
         let low = self.pop16();
+
+        to_u32(low, high)
+    }
+
+    pub fn peek8(&self) -> u8
+    {
+        self.memory.borrow().peek8(self.registers.SP + 1)
+    }
+
+    pub fn peek16(&self) -> u16
+    {
+        let high = self.peek8();
+        let low = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0102);
+
+        to_u16(low, high)
+    }
+
+    pub fn peek32(&self) -> u32
+    {
+        let high = self.peek16();
+        let lowh = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0103);
+        let lowl = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0104);
+        let low = to_u16(lowl, lowh);
 
         to_u32(low, high)
     }

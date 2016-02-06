@@ -36,4 +36,16 @@ impl Memory
         self.memory[addr] = val;
         old
     }
+
+    pub fn push8(&mut self, sp: u8, val: u8)
+    {
+        let sp = sp as u16 + 0x0100;
+        self.store(sp, val);
+    }
+
+    pub fn peek8(&self, sp: u8) -> u8
+    {
+        let sp = sp as u16 + 0x0100;
+        self.fetch(sp)
+    }
 }
