@@ -1,7 +1,6 @@
 use arch::cpu::CPU;
 
-pub fn implied(cpu: &mut CPU) -> (u8, u8)
-{
+pub fn implied(cpu: &mut CPU) -> (u8, u8) {
     let mut val = cpu.registers.X;
     val = val.wrapping_add(1);
     cpu.registers.X = val;

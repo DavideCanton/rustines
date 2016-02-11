@@ -1,13 +1,11 @@
 #[cfg(test)]
-pub mod tests
-{
+pub mod tests {
     use arch::cpu::CPU;
     use arch::memory::Memory;
     use std::rc::Rc;
     use std::cell::RefCell;
 
-    pub fn setup_tests() -> (CPU, Rc<RefCell<Memory>>)
-    {
+    pub fn setup_tests() -> (CPU, Rc<RefCell<Memory>>) {
         let mem = Rc::new(RefCell::new(Memory::new()));
         let mut cpu = CPU::new(mem.clone());
 

@@ -1,11 +1,9 @@
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use arch::arch_tests::common::tests::setup_tests;
 
     #[test]
-    fn test_push_pop_peek()
-    {
+    fn test_push_pop_peek() {
         let (mut cpu, _) = setup_tests();
 
         cpu.push8(0xAB);

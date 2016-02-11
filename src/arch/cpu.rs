@@ -6,43 +6,37 @@ use utils::bit_utils::*;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub struct CPU
-{
+pub struct CPU {
     pub clock: u8,
     pub registers: Registers,
     pub memory: Rc<RefCell<Memory>>,
     pub irq: bool,
     pub nmi: bool,
-    pub rst: bool
+    pub rst: bool,
 }
 
-impl CPU
-{
-    pub fn new(mem: Rc<RefCell<Memory>>) -> CPU
-    {
+impl CPU {
+    pub fn new(mem: Rc<RefCell<Memory>>) -> CPU {
         init_flags();
 
-        CPU
-        {
+        CPU {
             clock: 0,
             registers: Registers::new(),
             memory: mem,
             irq: false,
             nmi: false,
-            rst: false
+            rst: false,
         }
     }
 
-    fn save_state_before_interrupt(&mut self)
-    {
+    fn save_state_before_interrupt(&mut self) {
         let pc = self.registers.PC;
         self.push16(pc);
         let p = self.registers.getP();
         self.push8(p);
     }
 
-    fn perform_irq(&mut self)
-    {
+    fn perform_irq(&mut self) {
         self.save_state_before_interrupt();
 
         let low = self.memory.borrow().fetch(0xFFFE);
@@ -51,8 +45,7 @@ impl CPU
         self.registers.PC = to_u16(low, high);
     }
 
-    fn perform_nmi(&mut self)
-    {
+    fn perform_nmi(&mut self) {
         self.save_state_before_interrupt();
 
         let low = self.memory.borrow().fetch(0xFFFA);
@@ -61,18 +54,15 @@ impl CPU
         self.registers.PC = to_u16(low, high);
     }
 
-    fn perform_rst(&mut self)
-    {
+    fn perform_rst(&mut self) {
         let low = self.memory.borrow().fetch(0xFFFC);
         let high = self.memory.borrow().fetch(0xFFFD);
 
         self.registers.PC = to_u16(low, high);
     }
 
-    pub fn execute(&mut self)
-    {
-        loop
-        {
+    pub fn execute(&mut self) {
+        loop {
             // fetch
             let opcode = self.memory.borrow().fetch(self.registers.PC);
 
@@ -80,11 +70,10 @@ impl CPU
 
             println!("Fetched instr {}, PC = {}", fname, self.registers.PC);
 
-            //execute
+            // execute
             let (cycles, ilen) = instr(self);
 
-            if cycles == 0xFF
-            {
+            if cycles == 0xFF {
                 break;
             }
 
@@ -98,8 +87,7 @@ impl CPU
         }
     }
 
-    pub fn push32(&mut self, v: u32)
-    {
+    pub fn push32(&mut self, v: u32) {
         let (low, high) = to_u16_lh(v);
 
         // TODO is the order right?
@@ -107,8 +95,7 @@ impl CPU
         self.push16(high);
     }
 
-    pub fn push16(&mut self, v: u16)
-    {
+    pub fn push16(&mut self, v: u16) {
         let (low, high) = to_u8_lh(v);
 
         // TODO is the order right?
@@ -116,49 +103,42 @@ impl CPU
         self.push8(high);
     }
 
-    pub fn push8(&mut self, v: u8)
-    {
+    pub fn push8(&mut self, v: u8) {
         self.memory.borrow_mut().push8(self.registers.SP, v);
         self.registers.SP -= 1;
     }
 
-    pub fn pop8(&mut self) -> u8
-    {
+    pub fn pop8(&mut self) -> u8 {
         self.registers.SP += 1;
         self.memory.borrow().peek8(self.registers.SP)
     }
 
-    pub fn pop16(&mut self) -> u16
-    {
+    pub fn pop16(&mut self) -> u16 {
         let high = self.pop8();
         let low = self.pop8();
 
         to_u16(low, high)
     }
 
-    pub fn pop32(&mut self) -> u32
-    {
+    pub fn pop32(&mut self) -> u32 {
         let high = self.pop16();
         let low = self.pop16();
 
         to_u32(low, high)
     }
 
-    pub fn peek8(&self) -> u8
-    {
+    pub fn peek8(&self) -> u8 {
         self.memory.borrow().peek8(self.registers.SP + 1)
     }
 
-    pub fn peek16(&self) -> u16
-    {
+    pub fn peek16(&self) -> u16 {
         let high = self.peek8();
         let low = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0102);
 
         to_u16(low, high)
     }
 
-    pub fn peek32(&self) -> u32
-    {
+    pub fn peek32(&self) -> u32 {
         let high = self.peek16();
         let lowh = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0103);
         let lowl = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0104);

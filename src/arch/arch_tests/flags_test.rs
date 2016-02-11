@@ -1,11 +1,9 @@
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use arch::registers::{Registers, init_flags};
 
     #[test]
-    fn test_num_n()
-    {
+    fn test_num_n() {
         init_flags();
         let mut reg = Registers::new();
         assert!(!reg.getN());
@@ -18,8 +16,7 @@ mod tests
     }
 
     #[test]
-    fn test_n()
-    {
+    fn test_n() {
         init_flags();
         let mut reg = Registers::new();
         assert!(!reg.getN());
@@ -32,8 +29,7 @@ mod tests
     }
 
     #[test]
-    fn test_num_z()
-    {
+    fn test_num_z() {
         init_flags();
         let mut reg = Registers::new();
         assert!(!reg.getZ());
@@ -46,8 +42,7 @@ mod tests
     }
 
     #[test]
-    fn test_z()
-    {
+    fn test_z() {
         init_flags();
         let mut reg = Registers::new();
         assert!(!reg.getZ());
@@ -60,8 +55,7 @@ mod tests
     }
 
     #[test]
-    fn test_c()
-    {
+    fn test_c() {
         init_flags();
         let mut reg = Registers::new();
         assert!(!reg.getC());

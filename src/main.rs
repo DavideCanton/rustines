@@ -9,8 +9,7 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::io::Read;
 
-fn load_ram(path: PathBuf) -> std::io::Result<Vec<u8>>
-{
+fn load_ram(path: PathBuf) -> std::io::Result<Vec<u8>> {
     let mut f = try!(File::open(path));
     let mut buf = vec![];
     try!(f.read_to_end(&mut buf));
@@ -18,8 +17,7 @@ fn load_ram(path: PathBuf) -> std::io::Result<Vec<u8>>
     Ok(buf)
 }
 
-pub fn main()
-{
+pub fn main() {
     let file_path = "D:\\prova.nes";
     let mem = load_ram(PathBuf::from(file_path)).unwrap();
     let mem = Memory::from_array(mem).expect("Invalid data!");

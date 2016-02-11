@@ -1,12 +1,10 @@
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use arch::arch_tests::common::tests::setup_tests;
     use arch::instrs::pushpop;
 
     #[test]
-    fn test_pha()
-    {
+    fn test_pha() {
         let (mut cpu, _) = setup_tests();
 
         cpu.registers.A = 0xAB;
@@ -25,8 +23,7 @@ mod tests
     }
 
     #[test]
-    fn test_php_1()
-    {
+    fn test_php_1() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -51,8 +48,7 @@ mod tests
     }
 
     #[test]
-    fn test_php_0()
-    {
+    fn test_php_0() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -77,8 +73,7 @@ mod tests
     }
 
     #[test]
-    fn test_php_alt()
-    {
+    fn test_php_alt() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -103,8 +98,7 @@ mod tests
     }
 
     #[test]
-    fn test_pla()
-    {
+    fn test_pla() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -123,8 +117,7 @@ mod tests
     }
 
     #[test]
-    fn test_plp1()
-    {
+    fn test_plp1() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -148,8 +141,7 @@ mod tests
     }
 
     #[test]
-    fn test_plp0()
-    {
+    fn test_plp0() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 
@@ -173,8 +165,7 @@ mod tests
     }
 
     #[test]
-    fn test_plp_alt()
-    {
+    fn test_plp_alt() {
         let (mut cpu, _) = setup_tests();
         let old_sp = cpu.registers.SP;
 

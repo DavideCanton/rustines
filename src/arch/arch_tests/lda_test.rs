@@ -1,12 +1,10 @@
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use arch::arch_tests::common::tests::setup_tests;
     use arch::instrs::lda;
 
     #[test]
-    fn test_lda_immediate()
-    {
+    fn test_lda_immediate() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -26,8 +24,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_zeropage()
-    {
+    fn test_lda_zeropage() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -48,8 +45,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_zeropage_x()
-    {
+    fn test_lda_zeropage_x() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -72,8 +68,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_zeropage_x_flipping()
-    {
+    fn test_lda_zeropage_x_flipping() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -96,8 +91,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_absolute()
-    {
+    fn test_lda_absolute() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -119,8 +113,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_absolute_x()
-    {
+    fn test_lda_absolute_x() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -143,8 +136,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_absolute_x_flipping()
-    {
+    fn test_lda_absolute_x_flipping() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -167,8 +159,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_absolute_y()
-    {
+    fn test_lda_absolute_y() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -191,8 +182,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_absolute_y_flipping()
-    {
+    fn test_lda_absolute_y_flipping() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -215,8 +205,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_indirect_x()
-    {
+    fn test_lda_indirect_x() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -241,8 +230,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_indirect_x_flipping()
-    {
+    fn test_lda_indirect_x_flipping() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -267,8 +255,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_indirect_y()
-    {
+    fn test_lda_indirect_y() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -293,8 +280,7 @@ mod tests
     }
 
     #[test]
-    fn test_lda_indirect_y_flipping()
-    {
+    fn test_lda_indirect_y_flipping() {
         let (mut cpu, mem) = setup_tests();
 
         {

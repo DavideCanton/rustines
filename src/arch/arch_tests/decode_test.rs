@@ -1,12 +1,10 @@
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use arch::arch_tests::common::tests::setup_tests;
     use utils::bit_utils::*;
 
     #[test]
-    fn test_decode_absolute()
-    {
+    fn test_decode_absolute() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -22,8 +20,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_immediate()
-    {
+    fn test_decode_immediate() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -38,8 +35,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_zeropage()
-    {
+    fn test_decode_zeropage() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -54,8 +50,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_absolute_indexed()
-    {
+    fn test_decode_absolute_indexed() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -71,8 +66,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_absolute_indexed_wrapping()
-    {
+    fn test_decode_absolute_indexed_wrapping() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -88,8 +82,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_zeropage_indexed()
-    {
+    fn test_decode_zeropage_indexed() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -104,8 +97,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_zeropage_indexed_wrapping()
-    {
+    fn test_decode_zeropage_indexed_wrapping() {
         let (cpu, mem) = setup_tests();
 
         {
@@ -120,8 +112,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_indexed_indirect()
-    {
+    fn test_decode_indexed_indirect() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -141,8 +132,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_indexed_indirect_wrapping()
-    {
+    fn test_decode_indexed_indirect_wrapping() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -162,8 +152,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_indirect_indexed()
-    {
+    fn test_decode_indirect_indexed() {
         let (mut cpu, mem) = setup_tests();
 
         {
@@ -183,8 +172,7 @@ mod tests
     }
 
     #[test]
-    fn test_decode_indirect_indexed_wrapping()
-    {
+    fn test_decode_indirect_indexed_wrapping() {
         let (mut cpu, mem) = setup_tests();
 
         {
