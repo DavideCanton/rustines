@@ -4,7 +4,7 @@ mod tests {
 
     #[test]
     fn test_push_pop_peek() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
 
         cpu.push8(0xAB);
 

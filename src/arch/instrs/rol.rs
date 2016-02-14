@@ -17,8 +17,8 @@ pub fn accumulator(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage!(cpu);
-    let mut mem = cpu.memory.borrow_mut();
-    let mut val = mem.fetch(addr as u16);
+    
+    let mut val = cpu.memory.fetch(addr as u16);
     let oldC = cpu.registers.getC() as u8;
     if val & 0x80 != 0 {
         cpu.registers.setC()
@@ -27,14 +27,14 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     };
     val = (val << 1) & 0xFE | oldC;
     cpu.registers.compute_NZ_flags(val);
-    mem.store(addr as u16, val);
+    cpu.memory.store(addr as u16, val);
     (5, ilen)
 }
 
 pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.X);
-    let mut mem = cpu.memory.borrow_mut();
-    let mut val = mem.fetch(addr as u16);
+    
+    let mut val = cpu.memory.fetch(addr as u16);
     let oldC = cpu.registers.getC() as u8;
     if val & 0x80 != 0 {
         cpu.registers.setC()
@@ -43,14 +43,14 @@ pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8) {
     };
     val = (val << 1) & 0xFE | oldC;
     cpu.registers.compute_NZ_flags(val);
-    mem.store(addr as u16, val);
+    cpu.memory.store(addr as u16, val);
     (6, ilen)
 }
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute!(cpu);
-    let mut mem = cpu.memory.borrow_mut();
-    let mut val = mem.fetch(addr as u16);
+    
+    let mut val = cpu.memory.fetch(addr as u16);
     let oldC = cpu.registers.getC() as u8;
     if val & 0x80 != 0 {
         cpu.registers.setC()
@@ -59,14 +59,14 @@ pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     };
     val = (val << 1) & 0xFE | oldC;
     cpu.registers.compute_NZ_flags(val);
-    mem.store(addr as u16, val);
+    cpu.memory.store(addr as u16, val);
     (6, ilen)
 }
 
 pub fn absolute_x(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.X);
-    let mut mem = cpu.memory.borrow_mut();
-    let mut val = mem.fetch(addr as u16);
+    
+    let mut val = cpu.memory.fetch(addr as u16);
     let oldC = cpu.registers.getC() as u8;
     if val & 0x80 != 0 {
         cpu.registers.setC()
@@ -75,6 +75,6 @@ pub fn absolute_x(cpu: &mut CPU) -> (u8, u8) {
     };
     val = (val << 1) & 0xFE | oldC;
     cpu.registers.compute_NZ_flags(val);
-    mem.store(addr as u16, val);
+    cpu.memory.store(addr as u16, val);
     (7, ilen)
 }

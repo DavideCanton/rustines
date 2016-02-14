@@ -3,20 +3,17 @@ use arch::registers::*;
 use arch::instrs::instr_table::INSTR_TABLE;
 use utils::bit_utils::*;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-
 pub struct CPU {
     pub clock: u8,
     pub registers: Registers,
-    pub memory: Rc<RefCell<Memory>>,
+    pub memory: Memory,
     pub irq: bool,
     pub nmi: bool,
     pub rst: bool,
 }
 
 impl CPU {
-    pub fn new(mem: Rc<RefCell<Memory>>) -> CPU {
+    pub fn new(mem: Memory) -> CPU {
         init_flags();
 
         CPU {
@@ -39,8 +36,8 @@ impl CPU {
     fn perform_irq(&mut self) {
         self.save_state_before_interrupt();
 
-        let low = self.memory.borrow().fetch(0xFFFE);
-        let high = self.memory.borrow().fetch(0xFFFF);
+        let low = self.memory.fetch(0xFFFE);
+        let high = self.memory.fetch(0xFFFF);
 
         self.registers.PC = to_u16(low, high);
     }
@@ -48,15 +45,15 @@ impl CPU {
     fn perform_nmi(&mut self) {
         self.save_state_before_interrupt();
 
-        let low = self.memory.borrow().fetch(0xFFFA);
-        let high = self.memory.borrow().fetch(0xFFFB);
+        let low = self.memory.fetch(0xFFFA);
+        let high = self.memory.fetch(0xFFFB);
 
         self.registers.PC = to_u16(low, high);
     }
 
     fn perform_rst(&mut self) {
-        let low = self.memory.borrow().fetch(0xFFFC);
-        let high = self.memory.borrow().fetch(0xFFFD);
+        let low = self.memory.fetch(0xFFFC);
+        let high = self.memory.fetch(0xFFFD);
 
         self.registers.PC = to_u16(low, high);
     }
@@ -64,7 +61,7 @@ impl CPU {
     pub fn execute(&mut self) {
         loop {
             // fetch
-            let opcode = self.memory.borrow().fetch(self.registers.PC);
+            let opcode = self.memory.fetch(self.registers.PC);
 
             let (instr, fname) = INSTR_TABLE[opcode as usize];
 
@@ -104,13 +101,13 @@ impl CPU {
     }
 
     pub fn push8(&mut self, v: u8) {
-        self.memory.borrow_mut().push8(self.registers.SP, v);
+        self.memory.push8(self.registers.SP, v);
         self.registers.SP -= 1;
     }
 
     pub fn pop8(&mut self) -> u8 {
         self.registers.SP += 1;
-        self.memory.borrow().peek8(self.registers.SP)
+        self.memory.peek8(self.registers.SP)
     }
 
     pub fn pop16(&mut self) -> u16 {
@@ -128,20 +125,20 @@ impl CPU {
     }
 
     pub fn peek8(&self) -> u8 {
-        self.memory.borrow().peek8(self.registers.SP + 1)
+        self.memory.peek8(self.registers.SP + 1)
     }
 
     pub fn peek16(&self) -> u16 {
         let high = self.peek8();
-        let low = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0102);
+        let low = self.memory.fetch(self.registers.SP as u16 + 0x0102);
 
         to_u16(low, high)
     }
 
     pub fn peek32(&self) -> u32 {
         let high = self.peek16();
-        let lowh = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0103);
-        let lowl = self.memory.borrow().fetch(self.registers.SP as u16 + 0x0104);
+        let lowh = self.memory.fetch(self.registers.SP as u16 + 0x0103);
+        let lowl = self.memory.fetch(self.registers.SP as u16 + 0x0104);
         let low = to_u16(lowl, lowh);
 
         to_u32(low, high)

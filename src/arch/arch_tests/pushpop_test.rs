@@ -5,7 +5,7 @@ mod tests {
 
     #[test]
     fn test_pha() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
 
         cpu.registers.A = 0xAB;
         let old_sp = cpu.registers.SP;
@@ -24,7 +24,7 @@ mod tests {
 
     #[test]
     fn test_php_1() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.registers.setC();
@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn test_php_0() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.registers.clearC();
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_php_alt() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.registers.setN();
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_pla() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.push8(0xAB);
@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_plp1() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.push8(0xFF);
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_plp0() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.push8(0x00);
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_plp_alt() {
-        let (mut cpu, _) = setup_tests();
+        let mut cpu = setup_tests();
         let old_sp = cpu.registers.SP;
 
         cpu.push8(0xAA);

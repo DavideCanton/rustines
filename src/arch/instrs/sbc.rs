@@ -16,7 +16,7 @@ pub fn immediate(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage!(cpu);
-    let addr = cpu.memory.borrow().fetch(addr as u16);
+    let addr = cpu.memory.fetch(addr as u16);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -30,7 +30,7 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.X);
-    let addr = cpu.memory.borrow().fetch(addr as u16);
+    let addr = cpu.memory.fetch(addr as u16);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -44,7 +44,7 @@ pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute!(cpu);
-    let addr = cpu.memory.borrow().fetch(addr);
+    let addr = cpu.memory.fetch(addr);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -58,7 +58,7 @@ pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn absolute_x(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.X);
-    let addr = cpu.memory.borrow().fetch(addr);
+    let addr = cpu.memory.fetch(addr);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -73,7 +73,7 @@ pub fn absolute_x(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn absolute_y(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.Y);
-    let addr = cpu.memory.borrow().fetch(addr);
+    let addr = cpu.memory.fetch(addr);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -88,7 +88,7 @@ pub fn absolute_y(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn indirect_x(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_indexed_indirect!(cpu);
-    let addr = cpu.memory.borrow().fetch(addr);
+    let addr = cpu.memory.fetch(addr);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);
@@ -102,7 +102,7 @@ pub fn indirect_x(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn indirect_y(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_indirect_indexed!(cpu);
-    let addr = cpu.memory.borrow().fetch(addr);
+    let addr = cpu.memory.fetch(addr);
     let res = (cpu.registers.A as u16)
                   .wrapping_sub(addr as u16)
                   .wrapping_sub(!cpu.registers.getC() as u16);

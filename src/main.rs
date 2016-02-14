@@ -3,8 +3,6 @@ mod utils;
 use arch::memory::Memory;
 use arch::cpu::CPU;
 
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::path::PathBuf;
 use std::fs::File;
 use std::io::Read;
@@ -21,17 +19,14 @@ pub fn main() {
     let file_path = "D:\\prova.nes";
     let mem = load_ram(PathBuf::from(file_path)).unwrap();
     let mem = Memory::from_array(mem).expect("Invalid data!");
-    let mut cpu = CPU::new(Rc::new(RefCell::new(mem)));
+    let mut cpu = CPU::new(mem);
 
     cpu.execute();
 
-    {
-        let mem = cpu.memory.borrow();
-        println!("{}", mem.fetch(0x100));
-        println!("{}", mem.fetch(0x101));
-        println!("{}", mem.fetch(0x102));
-        println!("{}", mem.fetch(0x103));
-    }
+    println!("{}", cpu.memory.fetch(0x100));
+    println!("{}", cpu.memory.fetch(0x101));
+    println!("{}", cpu.memory.fetch(0x102));
+    println!("{}", cpu.memory.fetch(0x103));
 
     println!("End!");
 }
