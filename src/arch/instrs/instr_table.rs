@@ -2,7 +2,7 @@ use arch::instrs::*;
 use arch::cpu::CPU;
 
 
-pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
+pub static INSTR_TABLE: [Instr; 256] = [(others::brk, "brk::implied"), // 00
                                         (ora::indirect_x, "ora::indirect_x"), // 01
                                         (error_fn, "error_fn"), // 02
                                         (error_fn, "error_fn"), // 03
@@ -26,7 +26,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (ora::zeropage_x, "ora::zeropage_x"), // 15
                                         (asl::zeropage_x, "asl::zeropage_x"), // 16
                                         (error_fn, "error_fn"), // 17
-                                        (error_fn, "error_fn"), // 18
+                                        (flags::clc, "clc::implied"), // 18
                                         (ora::absolute_y, "ora::absolute_y"), // 19
                                         (error_fn, "error_fn"), // 1a
                                         (error_fn, "error_fn"), // 1b
@@ -34,39 +34,39 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (ora::absolute_x, "ora::absolute_x"), // 1d
                                         (asl::absolute_x, "asl::absolute_x"), // 1e
                                         (error_fn, "error_fn"), // 1f
-                                        (error_fn, "error_fn"), // 20
-                                        (error_fn, "error_fn"), // 21
+                                        (subroutines::jsr, "jsr::absolute"), // 20
+                                        (and::indirect_x, "and::indirect_x"), // 21
                                         (error_fn, "error_fn"), // 22
                                         (error_fn, "error_fn"), // 23
                                         (bit::zeropage, "bit::zeropage"), // 24
-                                        (error_fn, "error_fn"), // 25
+                                        (and::zeropage, "and::zeropage"), // 25
                                         (rol::zeropage, "rol::zeropage"), // 26
                                         (error_fn, "error_fn"), // 27
                                         (pushpop::plp, "plp::implied"), // 28
-                                        (error_fn, "error_fn"), // 29
+                                        (and::immediate, "and::immediate"), // 29
                                         (rol::accumulator, "rol::accumulator"), // 2a
                                         (error_fn, "error_fn"), // 2b
                                         (bit::absolute, "bit::absolute"), // 2c
-                                        (error_fn, "error_fn"), // 2d
+                                        (and::absolute, "and::absolute"), // 2d
                                         (rol::absolute, "rol::absolue"), // 2e
                                         (error_fn, "error_fn"), // 2f
                                         (branches::bmi, "branches::bmi"), // 30
-                                        (error_fn, "error_fn"), // 31
+                                        (and::indirect_y, "and::indirect_y"), // 31
                                         (error_fn, "error_fn"), // 32
                                         (error_fn, "error_fn"), // 33
                                         (error_fn, "error_fn"), // 34
-                                        (error_fn, "error_fn"), // 35
+                                        (and::zeropage_x, "and::zeropage_x"), // 35
                                         (rol::zeropage_x, "rol::zeropage_x"), // 36
                                         (error_fn, "error_fn"), // 37
-                                        (error_fn, "error_fn"), // 38
-                                        (error_fn, "error_fn"), // 39
-                                        (rol::absolute_x, "rol::absolute_x"), // 3a
+                                        (flags::sec, "sec::implied"), // 38
+                                        (and::absolute_y, "and::absolute_y"), // 39
+                                        (error_fn, "error_fn"), // 3a
                                         (error_fn, "error_fn"), // 3b
                                         (error_fn, "error_fn"), // 3c
-                                        (error_fn, "error_fn"), // 3d
-                                        (error_fn, "error_fn"), // 3e
+                                        (and::absolute_x, "and::absolute_x"), // 3d
+                                        (rol::absolute_x, "rol::absolute_x"), // 3e
                                         (error_fn, "error_fn"), // 3f
-                                        (error_fn, "error_fn"), // 40
+                                        (subroutines::rti, "rti::absolute"), // 40
                                         (eor::indirect_x, "eor::indirect_x"), // 41
                                         (error_fn, "error_fn"), // 42
                                         (error_fn, "error_fn"), // 43
@@ -90,7 +90,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (eor::zeropage_x, "eor::zeropage_x"), // 55
                                         (lsr::zeropage_x, "lsr::zeropage_x"), // 56
                                         (error_fn, "error_fn"), // 57
-                                        (error_fn, "error_fn"), // 58
+                                        (flags::cli, "cli::implied"), // 58
                                         (eor::absolute_y, "eor::absolute_y"), // 59
                                         (error_fn, "error_fn"), // 5a
                                         (error_fn, "error_fn"), // 5b
@@ -98,7 +98,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (eor::absolute_x, "eor::absolute_x"), // 5d
                                         (lsr::absolute_x, "lsr::absolute_x"), // 5e
                                         (error_fn, "error_fn"), // 5f
-                                        (error_fn, "error_fn"), // 60
+                                        (subroutines::rts, "rts::absolute"), // 60
                                         (adc::indirect_x, "adc::indirect_x"), // 61
                                         (error_fn, "error_fn"), // 62
                                         (error_fn, "error_fn"), // 63
@@ -122,7 +122,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (adc::zeropage_x, "adc::zeropage_x"), // 75
                                         (ror::zeropage_x, "ror::zeropage_x"), // 76
                                         (error_fn, "error_fn"), // 77
-                                        (error_fn, "error_fn"), // 78
+                                        (flags::sei, "sei::implied"), // 78
                                         (adc::absolute_y, "adc::absolute_y"), // 79
                                         (error_fn, "error_fn"), // 7a
                                         (error_fn, "error_fn"), // 7b
@@ -186,7 +186,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (lda::zeropage_x, "lda::zeropage_x"), // b5
                                         (ldx::zeropage_y, "ldx::zeropage_y"), // b6
                                         (error_fn, "error_fn"), // b7
-                                        (error_fn, "error_fn"), // b8
+                                        (flags::clv, "clv::implied"), // b8
                                         (lda::absolute_y, "lda::absolute_y"), // b9
                                         (transfers::tsx, "tsx::implied"), // ba
                                         (error_fn, "error_fn"), // bb
@@ -218,7 +218,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (cmp::zeropage_x, "cmp::zeropage_x"), // d5
                                         (dec::zeropage_x, "dec::zeropage_x"), // d6
                                         (error_fn, "error_fn"), // d7
-                                        (error_fn, "error_fn"), // d8
+                                        (flags::cld, "cld::implied"), // d8
                                         (cmp::absolute_y, "cmp::absolute_y"), // d9
                                         (error_fn, "error_fn"), // da
                                         (error_fn, "error_fn"), // db
@@ -236,7 +236,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (error_fn, "error_fn"), // e7
                                         (inx::implied, "inx::implied"), // e8
                                         (sbc::immediate, "sbc::immediate"), // e9
-                                        (error_fn, "error_fn"), // ea
+                                        (others::nop, "nop::implied"), // ea
                                         (error_fn, "error_fn"), // eb
                                         (cpx::absolute, "cpx::absolute"), // ec
                                         (sbc::absolute, "sbc::absolute"), // ed
@@ -250,7 +250,7 @@ pub static INSTR_TABLE: [Instr; 256] = [(error_fn, "error_fn"), // 00
                                         (sbc::zeropage_x, "sbc::zeropage_x"), // f5
                                         (inc::zeropage_x, "inc::zeropage_x"), // f6
                                         (error_fn, "error_fn"), // f7
-                                        (error_fn, "error_fn"), // f8
+                                        (flags::sed, "sed::implied"), // f8
                                         (sbc::absolute_y, "sbc::absolute_y"), // f9
                                         (error_fn, "error_fn"), // fa
                                         (error_fn, "error_fn"), // fb

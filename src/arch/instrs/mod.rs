@@ -31,3 +31,6 @@ pub mod rol;
 pub mod ror;
 pub mod transfers;
 pub mod pushpop;
+pub mod subroutines;
+pub mod flags;
+pub mod others;

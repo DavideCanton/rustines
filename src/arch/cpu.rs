@@ -13,7 +13,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(mem: Memory) -> CPU {
+    pub fn new(mem: Memory) -> Self {
         init_flags();
 
         CPU {
@@ -24,38 +24,6 @@ impl CPU {
             nmi: false,
             rst: false,
         }
-    }
-
-    fn save_state_before_interrupt(&mut self) {
-        let pc = self.registers.PC;
-        self.push16(pc);
-        let p = self.registers.getP();
-        self.push8(p);
-    }
-
-    fn perform_irq(&mut self) {
-        self.save_state_before_interrupt();
-
-        let low = self.memory.fetch(0xFFFE);
-        let high = self.memory.fetch(0xFFFF);
-
-        self.registers.PC = to_u16(low, high);
-    }
-
-    fn perform_nmi(&mut self) {
-        self.save_state_before_interrupt();
-
-        let low = self.memory.fetch(0xFFFA);
-        let high = self.memory.fetch(0xFFFB);
-
-        self.registers.PC = to_u16(low, high);
-    }
-
-    fn perform_rst(&mut self) {
-        let low = self.memory.fetch(0xFFFC);
-        let high = self.memory.fetch(0xFFFD);
-
-        self.registers.PC = to_u16(low, high);
     }
 
     pub fn execute(&mut self) {
@@ -88,16 +56,16 @@ impl CPU {
         let (low, high) = to_u16_lh(v);
 
         // TODO is the order right?
-        self.push16(low);
         self.push16(high);
+        self.push16(low);
     }
 
     pub fn push16(&mut self, v: u16) {
         let (low, high) = to_u8_lh(v);
 
         // TODO is the order right?
-        self.push8(low);
         self.push8(high);
+        self.push8(low);
     }
 
     pub fn push8(&mut self, v: u8) {
@@ -111,15 +79,15 @@ impl CPU {
     }
 
     pub fn pop16(&mut self) -> u16 {
-        let high = self.pop8();
         let low = self.pop8();
+        let high = self.pop8();
 
         to_u16(low, high)
     }
 
     pub fn pop32(&mut self) -> u32 {
-        let high = self.pop16();
         let low = self.pop16();
+        let high = self.pop16();
 
         to_u32(low, high)
     }
@@ -129,17 +97,17 @@ impl CPU {
     }
 
     pub fn peek16(&self) -> u16 {
-        let high = self.peek8();
-        let low = self.memory.fetch(self.registers.SP as u16 + 0x0102);
+        let low = self.peek8();
+        let high = self.memory.fetch(self.registers.SP as u16 + 0x0102);
 
         to_u16(low, high)
     }
 
     pub fn peek32(&self) -> u32 {
-        let high = self.peek16();
-        let lowh = self.memory.fetch(self.registers.SP as u16 + 0x0103);
-        let lowl = self.memory.fetch(self.registers.SP as u16 + 0x0104);
-        let low = to_u16(lowl, lowh);
+        let low = self.peek16();
+        let high_h = self.memory.fetch(self.registers.SP as u16 + 0x0103);
+        let high_l = self.memory.fetch(self.registers.SP as u16 + 0x0104);
+        let high = to_u16(high_l, high_h);
 
         to_u32(low, high)
     }

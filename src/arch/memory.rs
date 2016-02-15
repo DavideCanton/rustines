@@ -3,12 +3,12 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new() -> Memory {
+    pub fn new() -> Self {
         // TODO initialize memory properly
         Memory { memory: vec![0; 1 << 16] }
     }
 
-    pub fn from_array(mem: Vec<u8>) -> Option<Memory> {
+    pub fn from_array(mem: Vec<u8>) -> Option<Self> {
         if mem.len() == 1 << 16 {
             Some(Memory { memory: mem })
         } else {

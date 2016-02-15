@@ -10,8 +10,8 @@ pub fn immediate(cpu: &mut CPU) -> (u8, u8) {
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage!(cpu);
-    cpu.registers.A = cpu.memory.fetch(addr as u16);
-    let aval = cpu.registers.A;
+    let aval = cpu.memory.fetch(addr as u16);
+    cpu.registers.A = aval;    
     cpu.registers.compute_NZ_flags(aval);
     (3, ilen)
 }
