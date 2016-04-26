@@ -8,7 +8,6 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
             cpu.memory.store(cpu.registers.PC, 0xa9);
             cpu.memory.store(cpu.registers.PC + 1, 0xDE);
         }
@@ -28,7 +27,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xa5);
             cpu.memory.store(cpu.registers.PC + 1, 0xDE);
 
@@ -49,7 +48,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb5);
             cpu.memory.store(cpu.registers.PC + 1, 0xDE);
 
@@ -72,7 +71,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb5);
             cpu.memory.store(cpu.registers.PC + 1, 0xFF);
 
@@ -95,7 +94,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xad);
             cpu.memory.store(cpu.registers.PC + 1, 0x34);
             cpu.memory.store(cpu.registers.PC + 2, 0x12);
@@ -117,7 +116,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xbd);
             cpu.memory.store(cpu.registers.PC + 1, 0x34);
             cpu.memory.store(cpu.registers.PC + 2, 0x12);
@@ -140,7 +139,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xbd);
             cpu.memory.store(cpu.registers.PC + 1, 0xFE);
             cpu.memory.store(cpu.registers.PC + 2, 0xFF);
@@ -163,7 +162,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb9);
             cpu.memory.store(cpu.registers.PC + 1, 0x34);
             cpu.memory.store(cpu.registers.PC + 2, 0x12);
@@ -186,7 +185,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb9);
             cpu.memory.store(cpu.registers.PC + 1, 0xFE);
             cpu.memory.store(cpu.registers.PC + 2, 0xFF);
@@ -209,7 +208,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xa1);
             cpu.memory.store(cpu.registers.PC + 1, 0x34);
 
@@ -234,7 +233,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xa1);
             cpu.memory.store(cpu.registers.PC + 1, 0xFE);
 
@@ -259,7 +258,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb1);
             cpu.memory.store(cpu.registers.PC + 1, 0x34);
 
@@ -284,7 +283,7 @@ mod tests {
         let mut cpu = setup_tests();
 
         {
-            
+
             cpu.memory.store(cpu.registers.PC, 0xb1);
             cpu.memory.store(cpu.registers.PC + 1, 0x0E);
 
