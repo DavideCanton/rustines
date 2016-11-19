@@ -17,7 +17,7 @@ fn load_rom(path: PathBuf) -> std::io::Result<Vec<u8>> {
     let mut f : File = try!(File::open(path));
     let mut buf : Vec<u8> = vec![];
 
-    try!(f.read_to_end(&mut buf));
+    f.read_to_end(&mut buf)?;
 
     let header = &buf[0..16];
     let prg_size = header[4] as usize;

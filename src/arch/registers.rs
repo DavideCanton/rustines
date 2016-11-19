@@ -1,4 +1,4 @@
-use utils::utils::range_inclusive;
+use utils::other_utils::range_inclusive;
 
 #[derive(Debug)]
 pub struct Registers {
@@ -15,7 +15,7 @@ pub struct Registers {
     pub BDI: u8,
 }
 
-pub const FLAG_C: u8 = 1 << 0;
+pub const FLAG_C: u8 = 1;
 pub const FLAG_Z: u8 = 1 << 1;
 pub const FLAG_I: u8 = 1 << 2;
 pub const FLAG_D: u8 = 1 << 3;

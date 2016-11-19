@@ -1,4 +1,4 @@
 #[allow(dead_code)]
-pub mod utils;
+pub mod other_utils;
 #[allow(dead_code)]
 pub mod bit_utils;
