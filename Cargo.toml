@@ -6,3 +6,4 @@ authors = ["DavideCanton <davide.canton5@gmail.com>"]
 [dependencies]
 log = "*"
 env_logger = "*"
+zip = "0.2"
