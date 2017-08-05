@@ -44,7 +44,7 @@ pub fn main() {
         eprintln!("Failed to initialize logger.");
     }
 
-    let file_path = PathBuf::from("C:\\Users\\thepa\\Downloads\\NES Test (USA).zip"); // example path
+    let file_path = PathBuf::from("C:\\Users\\Davide\\Downloads\\nes\\NES Test (USA).zip"); // example path
     let ext = file_path.extension().unwrap().to_str().unwrap();
 
     let mut file = File::open(&file_path).expect("Failed to open file");
