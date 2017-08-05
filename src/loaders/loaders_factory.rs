@@ -1,4 +1,4 @@
-use loaders::loaders::Loader;
+use loaders::loader::Loader;
 use loaders::flat_loader::FlatLoader;
 use loaders::zip_loader::ZipLoader;
 

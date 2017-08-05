@@ -1,4 +1,4 @@
-use loaders::loaders::Loader;
+use loaders::loader::Loader;
 use std::io;
 use std::fs::File;
 use std::io::Read;

@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-pub mod loaders;
+pub mod loader;
 #[allow(dead_code)]
 pub mod flat_loader;
 #[allow(dead_code)]
