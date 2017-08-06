@@ -15,9 +15,9 @@ impl ZipLoader {
 
 impl Loader for ZipLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
-        let mut archive = zip::ZipArchive::new(f).unwrap();
+        let mut archive = zip::ZipArchive::new(f)?;
 
-        let mut rom_file = archive.by_index(0).unwrap();
+        let mut rom_file = archive.by_index(0)?;
 
         info!("ZipLoader: read file \"{}\"", rom_file.name());
 

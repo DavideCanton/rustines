@@ -1,0 +1,1 @@
+cargo run -- "C:\\Users\\Davide\\Downloads\\nes\\NES Test (USA).zip"

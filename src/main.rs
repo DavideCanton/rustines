@@ -9,6 +9,7 @@ mod loaders;
 // use arch::cpu::CPU;
 
 use log::{LogLevelFilter, SetLoggerError};
+use std::env;
 use env_logger::LogBuilder;
 use std::fs::File;
 use std::path::PathBuf;
@@ -44,8 +45,13 @@ pub fn main() {
         eprintln!("Failed to initialize logger.");
     }
 
-    let file_path = PathBuf::from("C:\\Users\\Davide\\Downloads\\nes\\NES Test (USA).zip"); // example path
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    let args : Vec<_> = env::args().collect();
+    let file_path = PathBuf::from(&args[1]);
+
+    let ext = match file_path.extension() {
+        Some(ext) => ext.to_str().unwrap_or(""),
+        None => ""
+    };
 
     let mut file = File::open(&file_path).expect("Failed to open file");
 
