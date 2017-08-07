@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate arrayref;
 extern crate env_logger;
 
 mod arch;
@@ -14,7 +16,7 @@ use env_logger::LogBuilder;
 use std::fs::File;
 use std::path::PathBuf;
 use loaders::loaders_factory::LoadersFactory;
-
+use arch::rom_structs::Header;
 
 fn init_logger() -> Result<(), SetLoggerError> {
     let mut builder = LogBuilder::new();
@@ -22,22 +24,25 @@ fn init_logger() -> Result<(), SetLoggerError> {
     builder.init()
 }
 
-fn load_rom(buf: &[u8]) -> &[u8] {
-    let header = &buf[0..16];
-    let prg_size = header[4] as usize;
-    let prg_bank_size = 1 << 14; // 16384
-    let has_trainer = (buf[6] & (1 << 2)) != 0;
+fn load_rom(buf: &[u8]) -> Result<&[u8], String> {
+    let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);
 
-    info!("Rom has trainer? {}", has_trainer);
+    if &header.header != "NES\x1A".as_bytes() {
+        return Err("Invalid header!".to_owned());
+    }
 
-    let prg_start = 16 + (if has_trainer { 512 } else { 0 }) as usize;
-    let prg_end = prg_start + (prg_size * prg_bank_size) as usize;
+    info!("Rom has trainer? {}", header.has_trainer());
+    
+    let prg_start = 16 + (if header.has_trainer() { 512 } else { 0 }) as usize;
+    let prg_end = prg_start + header.prg_rom_size();
 
     info!("PRG ROM from {:#X} to {:#X}", prg_start, prg_end);
 
+    info!("Mapper: {}", header.mapping_number());
+
     let rom: &[u8] = &buf[prg_start..prg_end];
 
-    rom
+    Ok(rom)
 }
 
 pub fn main() {
@@ -45,12 +50,12 @@ pub fn main() {
         eprintln!("Failed to initialize logger.");
     }
 
-    let args : Vec<_> = env::args().collect();
+    let args: Vec<_> = env::args().collect();
     let file_path = PathBuf::from(&args[1]);
 
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
-        None => ""
+        None => "",
     };
 
     let mut file = File::open(&file_path).expect("Failed to open file");
@@ -60,7 +65,12 @@ pub fn main() {
     info!("Selected loader {}", loader.name());
 
     let buf = loader.load_rom(&mut file).expect("Failed to load ROM");
-    let rom = load_rom(&buf);
-
-    info!("ROM size: {}", rom.len());
+    match load_rom(&buf) {
+        Ok(rom) => {
+            info!("ROM size: {}", rom.len());
+        }
+        Err(e) => {
+            eprintln!("Errore {}", e);
+        }
+    }
 }
