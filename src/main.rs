@@ -48,9 +48,16 @@ fn load_rom(buf: &[u8]) -> Result<&[u8], String> {
 pub fn main() {
     if init_logger().is_err() {
         eprintln!("Failed to initialize logger.");
+        return;
     }
 
     let args: Vec<_> = env::args().collect();
+
+    if args.len() < 2 {
+        eprintln!("Not enough arguments!");
+        return;
+    }
+
     let file_path = PathBuf::from(&args[1]);
 
     let ext = match file_path.extension() {
