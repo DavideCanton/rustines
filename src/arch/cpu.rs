@@ -1,6 +1,6 @@
 use arch::memory::Memory;
 use arch::registers::*;
-use arch::instrs::instr_table::INSTR_TABLE;
+use arch::instrs::instr_table::{Instr, INSTR_TABLE};
 use utils::bit_utils::*;
 
 pub struct CPU {
@@ -31,12 +31,12 @@ impl CPU {
             // fetch
             let opcode = self.memory.fetch(self.registers.PC);
 
-            let (instr, fname) = INSTR_TABLE[opcode as usize];
+            let Instr{ ref fun, fname, ilen } = INSTR_TABLE[opcode as usize];
 
             println!("Fetched instr {}, PC = {}", fname, self.registers.PC);
 
             // execute
-            let (cycles, ilen) = instr(self);
+            let (cycles, _) = fun(self);
 
             if cycles == 0xFF {
                 break;
@@ -70,11 +70,11 @@ impl CPU {
 
     pub fn push8(&mut self, v: u8) {
         self.memory.push8(self.registers.SP, v);
-        self.registers.SP -= 1;
+        self.registers.SP = self.registers.SP.wrapping_sub(1);
     }
 
     pub fn pop8(&mut self) -> u8 {
-        self.registers.SP += 1;
+        self.registers.SP = self.registers.SP.wrapping_add(1);
         self.memory.peek8(self.registers.SP)
     }
 

@@ -35,6 +35,10 @@ impl Header {
         (self.prg_rom_size as usize) << 14
     }
 
+    pub fn prg_rom_banks(&self) -> usize {
+        self.prg_rom_size as usize
+    }
+
     pub fn chr_rom_size(&self) -> usize {
         (self.chr_rom_size as usize) << 13
     }
