@@ -1,1 +1,2 @@
-cargo run -- "C:\\Users\\Davide\\Downloads\\nes\\NES Test (USA).zip"
+@echo off
+cargo run -- -d "%USERPROFILE%\Downloads\nes\NES Test (USA).zip"
