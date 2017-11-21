@@ -60,9 +60,9 @@ fn disassemble_rom(_: &Header, rom: &[u8]) {
             last = rem;
             println!("Bank {}", last + 1);
         }
-        let (string, cnt_2) = disassemble_instr(&rom, cnt);
+        let (_, cnt_2) = disassemble_instr(&rom, cnt);
         cnt = cnt_2;
-        println!("{}", string);
+        //println!("{}", string);
     }
 }
 
@@ -95,7 +95,7 @@ pub fn main() {
     let file_path = PathBuf::from(rom_name);
 
     info!("Disassemble: {}", disassemble);
-    info!("Using input file: {}", rom_name);
+    info!("Using input file: {}", rom_name);    
 
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),

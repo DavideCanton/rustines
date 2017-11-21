@@ -311,7 +311,7 @@ fn get_fname_for_print(fname: &str, arg: &str) -> String {
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode = prg[current];
 
-    let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];
+    let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];    
     let is_error = ilen == 0xFF;
 
     if ilen == 0 || ilen == 0xFF {
@@ -322,7 +322,9 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let a = if is_error {
         format!("{} ({:02X})", fname, opcode)
     } else {
-        get_fname_for_print(&fname, &format_hex(&prg[current + 1..current + ilen]))
+        let codes = &format_hex(&prg[current + 1..current + ilen]);
+        debug!("{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}", current+16, fname, opcode, ilen, codes);
+        get_fname_for_print(&fname, codes)
     };
 
     (a.to_owned(), current + ilen)
