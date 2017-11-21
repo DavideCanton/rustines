@@ -6,9 +6,13 @@ pub struct LoadersFactory{}
 
 impl LoadersFactory {
     pub fn decode(extension: &str) -> Box<Loader> {
-        match extension {
+        let loader: Box<Loader> = match extension {
             "zip" => Box::new(ZipLoader::new()),
             _     => Box::new(FlatLoader::new())
-        }
+        };
+
+        info!("Selected loader {}", loader.name());
+
+        loader
     }
 }

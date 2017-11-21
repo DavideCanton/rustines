@@ -8,8 +8,8 @@ pub struct MyRange {
 pub fn range_inclusive(start: u8, end: u8) -> MyRange {
     MyRange {
         done: false,
-        start: start,
-        end: end,
+        start,
+        end,
         cur: start,
     }
 }

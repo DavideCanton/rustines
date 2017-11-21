@@ -10,6 +10,7 @@ extern crate clap;
 mod arch;
 mod utils;
 mod loaders;
+mod context;
 // use arch::memory::Memory;
 // use arch::cpu::CPU;
 
@@ -19,8 +20,9 @@ use std::fs::File;
 use std::path::PathBuf;
 use loaders::loaders_factory::LoadersFactory;
 use arch::rom_structs::Header;
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches};
 use arch::instrs::instr_table::disassemble_instr;
+use context::Context;
 
 fn init_logger() -> Result<(), SetLoggerError> {
     let mut builder = LogBuilder::new();
@@ -32,6 +34,7 @@ fn load_rom(buf: &[u8]) -> Result<(Header, &[u8]), String> {
     let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);
 
     if &header.header != "NES\x1A".as_bytes() {
+        error!("Found unexpected {:?} header", header.header);
         return Err("Invalid header!".to_owned());
     }
 
@@ -51,7 +54,7 @@ fn load_rom(buf: &[u8]) -> Result<(Header, &[u8]), String> {
 }
 
 fn disassemble_rom(_: &Header, rom: &[u8]) {
-    let mut cnt : usize = 0;
+    let mut cnt: usize = 0;
     let mut last = 0;
 
     while cnt < rom.len() {
@@ -66,8 +69,8 @@ fn disassemble_rom(_: &Header, rom: &[u8]) {
     }
 }
 
-pub fn main() {
-    let matches = App::new("rustines")
+fn get_args() -> ArgMatches<'static> {
+    App::new("rustines")
         .version("1.0")
         .author("Davide C. <davide.canton5@gmail.com>")
         .about("NES emulator written in Rust")
@@ -82,45 +85,58 @@ pub fn main() {
                 .required(true)
                 .index(1),
         )
-        .get_matches();
+        .get_matches()
+}
+
+fn read_file(file_path: PathBuf) -> Result<Vec<u8>, String> {
+    let ext = match file_path.extension() {
+        Some(ext) => ext.to_str().unwrap_or(""),
+        None => "",
+    };
+
+    let mut file = File::open(&file_path).map_err(|_| "Failed to open file".to_owned())?;
+
+    let loader = LoadersFactory::decode(ext);
+
+    let buf = loader.load_rom(&mut file).map_err(|_| "Failed to load ROM".to_owned())?;
+
+    Ok(buf)
+}
+
+fn process_file(buf: &[u8], context: &Context) -> Result<(), String> {
+    let (header, rom) = load_rom(buf)?;
+
+    info!("ROM size: {:#X}", rom.len());
+
+    if context.disassemble {
+        Ok(disassemble_rom(&header, &rom))
+    } else {
+        // TODO execute ROM
+        Ok(())
+    }
+}
+
+fn build_context(matches: ArgMatches) -> Context {
+    Context {
+        disassemble: matches.occurrences_of("disassemble") > 0,
+        rom_name: matches.value_of("INPUT").unwrap().to_owned()
+    }
+}
+
+pub fn main() {
+    let matches = get_args();
+    let context = build_context(matches);
 
     if init_logger().is_err() {
         eprintln!("Failed to initialize logger.");
         return;
     }
 
-    let disassemble = matches.occurrences_of("disassemble") > 0;
-    let rom_name = matches.value_of("INPUT").unwrap();
+    let file_path = PathBuf::from(&context.rom_name);
 
-    let file_path = PathBuf::from(rom_name);
+    info!("Disassemble: {}", &context.disassemble);
+    info!("Using input file: {}", &context.rom_name);
 
-    info!("Disassemble: {}", disassemble);
-    info!("Using input file: {}", rom_name);    
-
-    let ext = match file_path.extension() {
-        Some(ext) => ext.to_str().unwrap_or(""),
-        None => "",
-    };
-
-    let mut file = File::open(&file_path).expect("Failed to open file");
-
-    let loader = LoadersFactory::decode(ext);
-
-    info!("Selected loader {}", loader.name());
-
-    let buf = loader.load_rom(&mut file).expect("Failed to load ROM");
-    match load_rom(&buf) {
-        Ok((header, rom)) => {
-            info!("ROM size: {:#X}", rom.len());
-
-            if disassemble {
-                disassemble_rom(&header, &rom);
-            } else {
-                // TODO execute ROM
-            }
-        }
-        Err(e) => {
-            eprintln!("Errore {}", e);
-        }
-    }
+    let buf = read_file(file_path).unwrap();
+    process_file(&buf, &context).unwrap();
 }

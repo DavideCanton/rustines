@@ -21,7 +21,7 @@ impl Loader for ZipLoader {
 
         info!("ZipLoader: read file \"{}\"", rom_file.name());
 
-        let mut buf = vec![];
+        let mut buf: Vec<u8> = vec![];
 
         rom_file.read_to_end(&mut buf)?;
 

@@ -309,7 +309,7 @@ fn get_fname_for_print(fname: &str, arg: &str) -> String {
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
-    let opcode = prg[current];
+    let opcode: u8 = prg[current];
 
     let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];    
     let is_error = ilen == 0xFF;
