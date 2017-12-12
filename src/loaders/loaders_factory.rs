@@ -2,17 +2,46 @@ use loaders::loader::Loader;
 use loaders::flat_loader::FlatLoader;
 use loaders::zip_loader::ZipLoader;
 
-pub struct LoadersFactory{}
+pub struct LoadersFactory;
 
 impl LoadersFactory {
     pub fn decode(extension: &str) -> Box<Loader> {
         let loader: Box<Loader> = match extension {
             "zip" => Box::new(ZipLoader::new()),
-            _     => Box::new(FlatLoader::new())
+            _ => Box::new(FlatLoader::new())
         };
 
         info!("Selected loader {}", loader.name());
 
         loader
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn it_detects_zip_correctly() {
+        let ext = "zip";
+        let loader = LoadersFactory::decode(ext);
+
+        assert!(loader.as_any().is::<ZipLoader>());
+    }
+
+    #[test]
+    fn it_detects_empty_correctly() {
+        let ext = "";
+        let loader = LoadersFactory::decode(ext);
+
+        assert!(loader.as_any().is::<FlatLoader>());
+    }
+
+    #[test]
+    fn it_detects_nes_correctly() {
+        let ext = "nes";
+        let loader = LoadersFactory::decode(ext);
+
+        assert!(loader.as_any().is::<FlatLoader>());
     }
 }

@@ -4,12 +4,13 @@ use loaders::loader::Loader;
 use std::io;
 use std::fs::File;
 use std::io::Read;
+use std::any::Any;
 
 pub struct ZipLoader {}
 
 impl ZipLoader {
     pub fn new() -> Self {
-        ZipLoader { }
+        ZipLoader {}
     }
 }
 
@@ -30,5 +31,9 @@ impl Loader for ZipLoader {
 
     fn name(&self) -> String {
         String::from("ZipLoader")
+    }
+
+    fn as_any(&self) -> &Any {
+        self
     }
 }

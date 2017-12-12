@@ -2,6 +2,7 @@ use loaders::loader::Loader;
 use std::io;
 use std::fs::File;
 use std::io::Read;
+use std::any::Any;
 
 pub struct FlatLoader {}
 
@@ -22,5 +23,9 @@ impl Loader for FlatLoader {
 
     fn name(&self) -> String {
         String::from("FlatLoader")
+    }
+
+    fn as_any(&self) -> &Any {
+        self
     }
 }

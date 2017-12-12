@@ -16,3 +16,4 @@ pub mod instrs;
 #[allow(dead_code)]
 pub mod rom_structs;
 mod arch_tests;
+pub mod mappers;

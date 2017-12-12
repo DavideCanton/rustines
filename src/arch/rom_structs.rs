@@ -73,3 +73,28 @@ impl Header {
         high | low
     }
 }
+
+pub struct Bank {
+    pub ram: bool,
+    pub enabled: bool,
+    pub writable: bool,
+    pub battery: bool,
+    pub id: String,
+    pub data: Vec<u8>
+}
+
+pub struct NesRom {
+    pub prg_rom_banks: Vec<Bank>,
+    pub header: Header,
+    pub size: usize,
+}
+
+impl NesRom {
+    pub fn new(header: Header, prg_rom_banks: Vec<Bank>, size: usize) -> Self {
+        NesRom {
+            header,
+            prg_rom_banks,
+            size
+        }
+    }
+}
