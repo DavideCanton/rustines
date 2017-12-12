@@ -7,7 +7,7 @@ pub mod tests {
         let mem = Memory::new();
         let mut cpu = CPU::new(mem);
 
-        cpu.registers.PC = 0x100;
+        cpu.registers.pc = 0x100;
 
         cpu
     }

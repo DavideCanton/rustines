@@ -40,10 +40,11 @@ fn load_rom(buf: &[u8]) -> Result<(Header, &[u8]), String> {
 
     info!("Rom has trainer? {}", header.has_trainer());
 
-    let prg_start = 16 + (if header.has_trainer() { 512 } else { 0 }) as usize;
+    let trainer_size = if header.has_trainer() { 512 } else { 0 };
+    let prg_start = 16 + trainer_size as usize;
     let prg_end = prg_start + header.prg_rom_size();
 
-    info!("PRG ROM from {:#X} to {:#X}", prg_start, prg_end);
+    info!("PRG ROM from {:#x} to {:#x}", prg_start, prg_end);
     info!("Number of PRG banks: {}", header.prg_rom_banks());
 
     info!("Mapper: {}", header.mapping_number());
@@ -63,9 +64,9 @@ fn disassemble_rom(_: &Header, rom: &[u8]) {
             last = rem;
             println!("Bank {}", last + 1);
         }
-        let (_, cnt_2) = disassemble_instr(&rom, cnt);
+        let (string, cnt_2) = disassemble_instr(&rom, cnt);
         cnt = cnt_2;
-        //println!("{}", string);
+        println!("{}", string);
     }
 }
 
@@ -94,11 +95,13 @@ fn read_file(file_path: PathBuf) -> Result<Vec<u8>, String> {
         None => "",
     };
 
-    let mut file = File::open(&file_path).map_err(|_| "Failed to open file".to_owned())?;
+    let mut file = File::open(&file_path)
+        .map_err(|e| format!("Failed to open file: {}", e))?;
 
     let loader = LoadersFactory::decode(ext);
 
-    let buf = loader.load_rom(&mut file).map_err(|_| "Failed to load ROM".to_owned())?;
+    let buf = loader.load_rom(&mut file)
+        .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
     Ok(buf)
 }
@@ -106,7 +109,7 @@ fn read_file(file_path: PathBuf) -> Result<Vec<u8>, String> {
 fn process_file(buf: &[u8], context: &Context) -> Result<(), String> {
     let (header, rom) = load_rom(buf)?;
 
-    info!("ROM size: {:#X}", rom.len());
+    info!("ROM size: {:#x}", rom.len());
 
     if context.disassemble {
         Ok(disassemble_rom(&header, &rom))

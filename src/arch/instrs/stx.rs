@@ -3,18 +3,18 @@ use utils::bit_utils::*;
 
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage!(cpu);
-    cpu.memory.store(addr as u16, cpu.registers.X);
+    cpu.memory.store(addr as u16, cpu.registers.x_reg);
     (3, ilen)
 }
 
 pub fn zeropage_y(cpu: &mut CPU) -> (u8, u8) {
-    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.Y);
-    cpu.memory.store(addr as u16, cpu.registers.X);
+    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.y_reg);
+    cpu.memory.store(addr as u16, cpu.registers.x_reg);
     (4, ilen)
 }
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute!(cpu);
-    cpu.memory.store(addr, cpu.registers.X);
+    cpu.memory.store(addr, cpu.registers.x_reg);
     (4, ilen)
 }

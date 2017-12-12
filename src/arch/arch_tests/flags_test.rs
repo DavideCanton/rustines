@@ -6,64 +6,64 @@ mod tests {
     fn test_num_n() {
         init_flags();
         let mut reg = Registers::new();
-        assert!(!reg.getN());
+        assert!(!reg.get_n());
 
-        reg.compute_NZ_flags(0xFF);
-        assert!(reg.getN());
+        reg.compute_nz_flags(0xFF);
+        assert!(reg.get_n());
 
-        reg.compute_NZ_flags(0x01);
-        assert!(!reg.getN());
+        reg.compute_nz_flags(0x01);
+        assert!(!reg.get_n());
     }
 
     #[test]
     fn test_n() {
         init_flags();
         let mut reg = Registers::new();
-        assert!(!reg.getN());
+        assert!(!reg.get_n());
 
-        reg.setN();
-        assert!(reg.getN());
+        reg.set_n();
+        assert!(reg.get_n());
 
-        reg.clearN();
-        assert!(!reg.getN());
+        reg.clear_n();
+        assert!(!reg.get_n());
     }
 
     #[test]
     fn test_num_z() {
         init_flags();
         let mut reg = Registers::new();
-        assert!(!reg.getZ());
+        assert!(!reg.get_z());
 
-        reg.compute_NZ_flags(0x0);
-        assert!(reg.getZ());
+        reg.compute_nz_flags(0x0);
+        assert!(reg.get_z());
 
-        reg.compute_NZ_flags(0x01);
-        assert!(!reg.getZ());
+        reg.compute_nz_flags(0x01);
+        assert!(!reg.get_z());
     }
 
     #[test]
     fn test_z() {
         init_flags();
         let mut reg = Registers::new();
-        assert!(!reg.getZ());
+        assert!(!reg.get_z());
 
-        reg.setZ();
-        assert!(reg.getZ());
+        reg.set_z();
+        assert!(reg.get_z());
 
-        reg.clearZ();
-        assert!(!reg.getZ());
+        reg.clear_z();
+        assert!(!reg.get_z());
     }
 
     #[test]
     fn test_c() {
         init_flags();
         let mut reg = Registers::new();
-        assert!(!reg.getC());
+        assert!(!reg.get_c());
 
-        reg.setC();
-        assert!(reg.getC());
+        reg.set_c();
+        assert!(reg.get_c());
 
-        reg.clearC();
-        assert!(!reg.getC());
+        reg.clear_c();
+        assert!(!reg.get_c());
     }
 }

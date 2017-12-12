@@ -29,11 +29,11 @@ impl CPU {
     pub fn execute(&mut self) {
         loop {
             // fetch
-            let opcode = self.memory.fetch(self.registers.PC);
+            let opcode = self.memory.fetch(self.registers.pc);
 
             let Instr{ ref fun, fname, ilen } = INSTR_TABLE[opcode as usize];
 
-            println!("Fetched instr {}, PC = {}", fname, self.registers.PC);
+            println!("Fetched instr {}, pc = {}", fname, self.registers.pc);
 
             // execute
             let (cycles, _) = fun(self);
@@ -42,7 +42,7 @@ impl CPU {
                 break;
             }
 
-            self.registers.PC += ilen as u16;
+            self.registers.pc += ilen as u16;
 
             println!("Registers: {:?}", self.registers);
 
@@ -69,13 +69,13 @@ impl CPU {
     }
 
     pub fn push8(&mut self, v: u8) {
-        self.memory.push8(self.registers.SP, v);
-        self.registers.SP = self.registers.SP.wrapping_sub(1);
+        self.memory.push8(self.registers.sp, v);
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 
     pub fn pop8(&mut self) -> u8 {
-        self.registers.SP = self.registers.SP.wrapping_add(1);
-        self.memory.peek8(self.registers.SP)
+        self.registers.sp = self.registers.sp.wrapping_add(1);
+        self.memory.peek8(self.registers.sp)
     }
 
     pub fn pop16(&mut self) -> u16 {
@@ -93,20 +93,20 @@ impl CPU {
     }
 
     pub fn peek8(&self) -> u8 {
-        self.memory.peek8(self.registers.SP + 1)
+        self.memory.peek8(self.registers.sp + 1)
     }
 
     pub fn peek16(&self) -> u16 {
         let low = self.peek8();
-        let high = self.memory.fetch(self.registers.SP as u16 + 0x0102);
+        let high = self.memory.fetch(self.registers.sp as u16 + 0x0102);
 
         to_u16(low, high)
     }
 
     pub fn peek32(&self) -> u32 {
         let low = self.peek16();
-        let high_h = self.memory.fetch(self.registers.SP as u16 + 0x0103);
-        let high_l = self.memory.fetch(self.registers.SP as u16 + 0x0104);
+        let high_h = self.memory.fetch(self.registers.sp as u16 + 0x0103);
+        let high_l = self.memory.fetch(self.registers.sp as u16 + 0x0104);
         let high = to_u16(high_l, high_h);
 
         to_u32(low, high)

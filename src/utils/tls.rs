@@ -37,7 +37,7 @@ unsafe impl<T> marker::Sync for Syncify<T> {}
 ///
 /// TLS works by copying the initial data on every new thread creation. This allows access to a
 /// variable, which is only available for the current thread, meaning that there is no need for
-/// syncronization.
+/// synchronization.
 ///
 /// For this reason, in contrast to other `static`s in Rust, this need not thread-safety, which is
 /// what this macro "fixes".

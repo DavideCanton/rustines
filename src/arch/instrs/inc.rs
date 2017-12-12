@@ -8,19 +8,19 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let mut val =cpu.memory.fetch(addr as u16);
     val = val.wrapping_add(1);
    cpu.memory.store(addr as u16, val);
-    cpu.registers.compute_NZ_flags(val);
+    cpu.registers.compute_nz_flags(val);
 
     (5, ilen)
 }
 
 pub fn zeropage_x(cpu: &mut CPU) -> (u8, u8) {
-    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.X);
+    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.x_reg);
 
     
     let mut val =cpu.memory.fetch(addr as u16);
     val = val.wrapping_add(1);
    cpu.memory.store(addr as u16, val);
-    cpu.registers.compute_NZ_flags(val);
+    cpu.registers.compute_nz_flags(val);
 
     (6, ilen)
 }
@@ -33,18 +33,18 @@ pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     val = val.wrapping_add(1);
    cpu.memory.store(addr, val);
 
-    cpu.registers.compute_NZ_flags(val);
+    cpu.registers.compute_nz_flags(val);
     (6, ilen)
 }
 
 pub fn absolute_x(cpu: &mut CPU) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.X);
+    let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.x_reg);
 
     
     let mut val =cpu.memory.fetch(addr as u16);
     val = val.wrapping_add(1);
    cpu.memory.store(addr, val);
 
-    cpu.registers.compute_NZ_flags(val);
+    cpu.registers.compute_nz_flags(val);
     (7, ilen)
 }

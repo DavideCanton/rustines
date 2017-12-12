@@ -2,17 +2,17 @@ use utils::other_utils::range_inclusive;
 
 #[derive(Debug)]
 pub struct Registers {
-    pub PC: u16,
-    pub SP: u8,
+    pub pc: u16,
+    pub sp: u8,
     // pub P: u8,
-    pub A: u8, // o i8?
-    pub X: u8,
-    pub Y: u8,
+    pub a_reg: u8, // o i8?
+    pub x_reg: u8,
+    pub y_reg: u8,
 
     // flags
-    pub NZ: u8,
-    pub VC: u8,
-    pub BDI: u8,
+    nz: u8,
+    vc: u8,
+    bdi: u8,
 }
 
 pub const FLAG_C: u8 = 1;
@@ -29,7 +29,7 @@ pub fn init_flags() {
     unsafe {
         for i in range_inclusive(0u8, 255) {
             NZ_TABLE[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
-            // println!("{} => NZ:{:?}", i, NZ_TABLE[i as usize]);
+            // println!("{} => nz:{:?}", i, NZ_TABLE[i as usize]);
         }
     }
 }
@@ -37,126 +37,126 @@ pub fn init_flags() {
 impl Registers {
     pub fn new() -> Registers {
         Registers {
-            PC: 0,
-            SP: 0xFF,
-            A: 0,
-            X: 0,
-            Y: 0,
-            NZ: 0,
-            VC: 0,
-            BDI: 0,
+            pc: 0,
+            sp: 0xFF,
+            a_reg: 0,
+            x_reg: 0,
+            y_reg: 0,
+            nz: 0,
+            vc: 0,
+            bdi: 0,
         }
         // reg.P |= 1 << 5; // the unused flag is always 1?
     }
 
-    pub fn compute_NZ_flags(&mut self, a: u8) {
+    pub fn compute_nz_flags(&mut self, a: u8) {
         unsafe {
-            self.NZ = NZ_TABLE[a as usize];
+            self.nz = NZ_TABLE[a as usize];
         }
     }
 
-    pub fn compute_VC_flags(&mut self, v: bool, c: bool) {
-        self.VC = ((v as u8) << 1) | (c as u8);
+    pub fn compute_vc_flags(&mut self, v: bool, c: bool) {
+        self.vc = ((v as u8) << 1) | (c as u8);
     }
 
-    pub fn compute_C_flag(&mut self, c: bool) {
-        self.VC = (self.VC & 0x10) | (c as u8);
+    pub fn compute_c_flag(&mut self, c: bool) {
+        self.vc = (self.vc & 0x10) | (c as u8);
     }
 
-    pub fn getP(&self) -> u8 {
-        let (N, Z) = (((self.NZ & 2) >> 1), self.NZ & 1);
-        let (V, C) = (((self.VC & 2) >> 1), self.VC & 1);
+    pub fn get_p(&self) -> u8 {
+        let (n, z) = (((self.nz & 2) >> 1), self.nz & 1);
+        let (v, c) = (((self.vc & 2) >> 1), self.vc & 1);
 
-        (N << 7) | (V << 6) | (1 << 5) | (self.BDI << 2) | (Z << 1) | C
+        (n << 7) | (v << 6) | (1 << 5) | (self.bdi << 2) | (z << 1) | c
     }
 
-    pub fn setP(&mut self, p: u8) {
-        self.VC = ((p & 0x40) >> 5) | (p & 0x1);
-        self.NZ = ((p & 0x80) >> 6) | ((p & 0x2) >> 1);
-        self.BDI = (p >> 2) & 0x7;
+    pub fn set_p(&mut self, p: u8) {
+        self.vc = ((p & 0x40) >> 5) | (p & 0x1);
+        self.nz = ((p & 0x80) >> 6) | ((p & 0x2) >> 1);
+        self.bdi = (p >> 2) & 0x7;
     }
 
-    pub fn getN(&self) -> bool {
-        (self.NZ & 0x2) != 0
+    pub fn get_n(&self) -> bool {
+        (self.nz & 0x2) != 0
     }
 
-    pub fn setN(&mut self) {
-        self.NZ |= 0x2;
+    pub fn set_n(&mut self) {
+        self.nz |= 0x2;
     }
 
-    pub fn clearN(&mut self) {
-        self.NZ &= 0xFD;
+    pub fn clear_n(&mut self) {
+        self.nz &= 0xFD;
     }
 
-    pub fn getZ(&self) -> bool {
-        (self.NZ & 0x1) != 0
+    pub fn get_z(&self) -> bool {
+        (self.nz & 0x1) != 0
     }
 
-    pub fn setZ(&mut self) {
-        self.NZ |= 0x1;
+    pub fn set_z(&mut self) {
+        self.nz |= 0x1;
     }
 
-    pub fn clearZ(&mut self) {
-        self.NZ &= 0xFE;
+    pub fn clear_z(&mut self) {
+        self.nz &= 0xFE;
     }
 
-    pub fn getV(&self) -> bool {
-        (self.VC & 0x2) != 0
+    pub fn get_v(&self) -> bool {
+        (self.vc & 0x2) != 0
     }
 
-    pub fn setV(&mut self) {
-        self.VC |= 0x2;
+    pub fn set_v(&mut self) {
+        self.vc |= 0x2;
     }
 
-    pub fn clearV(&mut self) {
-        self.VC &= 0xFD;
+    pub fn clear_v(&mut self) {
+        self.vc &= 0xFD;
     }
 
-    pub fn getC(&self) -> bool {
-        (self.VC & 0x1) != 0
+    pub fn get_c(&self) -> bool {
+        (self.vc & 0x1) != 0
     }
 
-    pub fn setC(&mut self) {
-        self.VC |= 0x1;
+    pub fn set_c(&mut self) {
+        self.vc |= 0x1;
     }
 
-    pub fn clearC(&mut self) {
-        self.VC &= 0xFE;
+    pub fn clear_c(&mut self) {
+        self.vc &= 0xFE;
     }
 
-    pub fn getB(&self) -> bool {
-        (self.BDI & 0x4) != 0
+    pub fn get_b(&self) -> bool {
+        (self.bdi & 0x4) != 0
     }
 
-    pub fn setB(&mut self) {
-        self.BDI |= 0x4;
+    pub fn set_b(&mut self) {
+        self.bdi |= 0x4;
     }
 
-    pub fn clearB(&mut self) {
-        self.NZ &= 0xFB;
+    pub fn clear_b(&mut self) {
+        self.nz &= 0xFB;
     }
 
-    pub fn getD(&self) -> bool {
-        (self.BDI & 0x2) != 0
+    pub fn get_d(&self) -> bool {
+        (self.bdi & 0x2) != 0
     }
 
-    pub fn setD(&mut self) {
-        self.BDI |= 0x2;
+    pub fn set_d(&mut self) {
+        self.bdi |= 0x2;
     }
 
-    pub fn clearD(&mut self) {
-        self.BDI &= 0xFB;
+    pub fn clear_d(&mut self) {
+        self.bdi &= 0xFB;
     }
 
-    pub fn getI(&self) -> bool {
-        (self.BDI & 0x1) != 0
+    pub fn get_i(&self) -> bool {
+        (self.bdi & 0x1) != 0
     }
 
-    pub fn setI(&mut self) {
-        self.BDI |= 0x1;
+    pub fn set_i(&mut self) {
+        self.bdi |= 0x1;
     }
 
-    pub fn clearI(&mut self) {
-        self.BDI &= 0xFE;
+    pub fn clear_i(&mut self) {
+        self.bdi &= 0xFE;
     }
 }

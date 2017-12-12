@@ -4,22 +4,22 @@ use utils::bit_utils::*;
 pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_zeropage!(cpu);
     let addr = cpu.memory.fetch(addr as u16);
-    let res = addr & cpu.registers.A;
+    let res = addr & cpu.registers.a_reg;
 
     if res & 0x80 != 0 {
-        cpu.registers.setN()
+        cpu.registers.set_n()
     } else {
-        cpu.registers.clearN()
+        cpu.registers.clear_n()
     }
     if res & 0x40 != 0 {
-        cpu.registers.setV()
+        cpu.registers.set_v()
     } else {
-        cpu.registers.clearV()
+        cpu.registers.clear_v()
     }
     if res == 0 {
-        cpu.registers.setZ()
+        cpu.registers.set_z()
     } else {
-        cpu.registers.clearZ()
+        cpu.registers.clear_z()
     }
 
     (3, ilen)
@@ -28,22 +28,22 @@ pub fn zeropage(cpu: &mut CPU) -> (u8, u8) {
 pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     let (addr, ilen) = decode_absolute!(cpu);
     let addr = cpu.memory.fetch(addr);
-    let res = addr & cpu.registers.A;
+    let res = addr & cpu.registers.a_reg;
 
     if res & 0x80 != 0 {
-        cpu.registers.setN()
+        cpu.registers.set_n()
     } else {
-        cpu.registers.clearN()
+        cpu.registers.clear_n()
     }
     if res & 0x40 != 0 {
-        cpu.registers.setV()
+        cpu.registers.set_v()
     } else {
-        cpu.registers.clearV()
+        cpu.registers.clear_v()
     }
     if res == 0 {
-        cpu.registers.setZ()
+        cpu.registers.set_z()
     } else {
-        cpu.registers.clearZ()
+        cpu.registers.clear_z()
     }
 
     (4, ilen)

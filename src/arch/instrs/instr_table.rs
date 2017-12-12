@@ -286,21 +286,21 @@ fn get_fname_for_print(fname: &str, arg: &str) -> String {
     let fname_for_print = if fname.contains("implied") {
         instr_name.to_string()
     } else if fname.contains("zeropage_x") {
-        format!("{} {}+X", instr_name, arg)
+        format!("{} {}+x", instr_name, arg)
     } else if fname.contains("zeropage") {
         format!("{} {}", instr_name, arg)
     } else if fname.contains("immediate") {
         format!("{} #{}", instr_name, arg)
     } else if fname.contains("absolute_x") {
-        format!("{} [{}+X]", instr_name, arg)
+        format!("{} [{}+x]", instr_name, arg)
     } else if fname.contains("absolute_y") {
-        format!("{} [{}+Y]", instr_name, arg)
+        format!("{} [{}+y]", instr_name, arg)
     } else if fname.contains("absolute") {
         format!("{} [{}]", instr_name, arg)
     } else if fname.contains("indirect_x") {
-        format!("{} X({})", instr_name, arg)
+        format!("{} x({})", instr_name, arg)
     } else if fname.contains("indirect_y") {
-        format!("{} Y({})", instr_name, arg)
+        format!("{} y({})", instr_name, arg)
     } else {
         instr_name.to_string()
     };
@@ -335,8 +335,8 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
 #[macro_export]
 macro_rules! decode_absolute {
     ( $cpu:expr ) => {{      
-        let low = $cpu.memory.fetch($cpu.registers.PC + 1);
-        let high = $cpu.memory.fetch($cpu.registers.PC + 2);
+        let low = $cpu.memory.fetch($cpu.registers.pc + 1);
+        let high = $cpu.memory.fetch($cpu.registers.pc + 2);
         (to_u16(low, high), 3)
     }};
 }
@@ -344,22 +344,22 @@ macro_rules! decode_absolute {
 #[macro_export]
 macro_rules! decode_immediate {
     ( $cpu:expr ) => {{
-        ($cpu.memory.fetch($cpu.registers.PC + 1), 2)
+        ($cpu.memory.fetch($cpu.registers.pc + 1), 2)
     }};
 }
 
 #[macro_export]
 macro_rules! decode_zeropage {
     ( $cpu:expr ) => {{
-        ($cpu.memory.fetch($cpu.registers.PC + 1), 2)
+        ($cpu.memory.fetch($cpu.registers.pc + 1), 2)
     }};
 }
 
 #[macro_export]
 macro_rules! decode_absolute_indexed {
     ( $cpu:expr, $offset:expr ) => {{
-        let low = $cpu.memory.fetch($cpu.registers.PC + 1);
-        let high = $cpu.memory.fetch($cpu.registers.PC + 2);
+        let low = $cpu.memory.fetch($cpu.registers.pc + 1);
+        let high = $cpu.memory.fetch($cpu.registers.pc + 2);
         (to_u16(low, high).wrapping_add($offset as u16), 3)
     }};
 }
@@ -367,7 +367,7 @@ macro_rules! decode_absolute_indexed {
 #[macro_export]
 macro_rules! decode_zeropage_indexed {
     ( $cpu:expr, $offset:expr ) => {{
-        let addr = $cpu.memory.fetch($cpu.registers.PC + 1);
+        let addr = $cpu.memory.fetch($cpu.registers.pc + 1);
         (addr.wrapping_add($offset), 2)
     }};
 }
@@ -375,7 +375,7 @@ macro_rules! decode_zeropage_indexed {
 #[macro_export]
 macro_rules! decode_indexed_indirect {
     ( $cpu:expr ) => {{
-        let op = ($cpu.memory.fetch($cpu.registers.PC + 1).wrapping_add($cpu.registers.X)) as u16 & 0xFF;
+        let op = ($cpu.memory.fetch($cpu.registers.pc + 1).wrapping_add($cpu.registers.x_reg)) as u16 & 0xFF;
         let low = $cpu.memory.fetch(op);
         let high = $cpu.memory.fetch((op + 1) & 0xFF);
 
@@ -386,10 +386,10 @@ macro_rules! decode_indexed_indirect {
 #[macro_export]
 macro_rules! decode_indirect_indexed {
     ( $cpu:expr ) => {{
-        let op = $cpu.memory.fetch($cpu.registers.PC + 1) as u16;
+        let op = $cpu.memory.fetch($cpu.registers.pc + 1) as u16;
         let low = $cpu.memory.fetch(op);
         let high = $cpu.memory.fetch((op + 1) & 0xFF);
 
-        (to_u16(low, high).wrapping_add($cpu.registers.Y as u16), 2)
+        (to_u16(low, high).wrapping_add($cpu.registers.y_reg as u16), 2)
     }};
 }

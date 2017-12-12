@@ -7,8 +7,8 @@ mod tests {
     fn test_decode_absolute() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
-        cpu.memory.store(cpu.registers.PC + 2, 0xab);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 2, 0xab);
 
         let (addr, ilen) = decode_absolute!(&cpu);
 
@@ -20,7 +20,7 @@ mod tests {
     fn test_decode_immediate() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         let (addr, ilen) = decode_immediate!(&cpu);
 
@@ -32,7 +32,7 @@ mod tests {
     fn test_decode_zeropage() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         let (addr, ilen) = decode_zeropage!(&cpu);
 
@@ -44,8 +44,8 @@ mod tests {
     fn test_decode_absolute_indexed() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
-        cpu.memory.store(cpu.registers.PC + 2, 0xab);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 2, 0xab);
 
         let (addr, ilen) = decode_absolute_indexed!(&cpu, 0x10);
 
@@ -57,8 +57,8 @@ mod tests {
     fn test_decode_absolute_indexed_wrapping() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xfe);
-        cpu.memory.store(cpu.registers.PC + 2, 0xff);
+        cpu.memory.store(cpu.registers.pc + 1, 0xfe);
+        cpu.memory.store(cpu.registers.pc + 2, 0xff);
 
         let (addr, ilen) = decode_absolute_indexed!(&cpu, 0x10);
 
@@ -72,7 +72,7 @@ mod tests {
 
 
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
 
         let (addr, ilen) = decode_zeropage_indexed!(&cpu, 0x10);
@@ -87,7 +87,7 @@ mod tests {
 
 
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xfe);
+        cpu.memory.store(cpu.registers.pc + 1, 0xfe);
 
 
         let (addr, ilen) = decode_zeropage_indexed!(&cpu, 0x10);
@@ -102,13 +102,13 @@ mod tests {
 
 
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         cpu.memory.store(0xdd, 0xcd);
         cpu.memory.store(0xde, 0xab);
 
 
-        cpu.registers.X = 0x10;
+        cpu.registers.x_reg = 0x10;
 
         let (addr, ilen) = decode_indexed_indirect!(&cpu);
 
@@ -120,12 +120,12 @@ mod tests {
     fn test_decode_indexed_indirect_wrapping() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xff);
+        cpu.memory.store(cpu.registers.pc + 1, 0xff);
 
         cpu.memory.store(0x0f, 0xcd);
         cpu.memory.store(0x10, 0xab);
 
-        cpu.registers.X = 0x10;
+        cpu.registers.x_reg = 0x10;
 
         let (addr, ilen) = decode_indexed_indirect!(&cpu);
 
@@ -139,12 +139,12 @@ mod tests {
 
 
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         cpu.memory.store(0xcd, 0xcd);
         cpu.memory.store(0xce, 0xab);
 
-        cpu.registers.Y = 0x10;
+        cpu.registers.y_reg = 0x10;
 
         let (addr, ilen) = decode_indirect_indexed!(&cpu);
 
@@ -156,12 +156,12 @@ mod tests {
     fn test_decode_indirect_indexed_wrapping() {
         let mut cpu = setup_tests();
 
-        cpu.memory.store(cpu.registers.PC + 1, 0xcd);
+        cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         cpu.memory.store(0xcd, 0xfe);
         cpu.memory.store(0xce, 0xff);
 
-        cpu.registers.Y = 0x10;
+        cpu.registers.y_reg = 0x10;
 
         let (addr, ilen) = decode_indirect_indexed!(&cpu);
 
