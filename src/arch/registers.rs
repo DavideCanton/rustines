@@ -1,5 +1,3 @@
-use utils::other_utils::range_inclusive;
-
 #[derive(Debug)]
 pub struct Registers {
     pub pc: u16,
@@ -27,7 +25,7 @@ static mut NZ_TABLE: [u8; 1 << 8] = [0; 1 << 8];
 
 pub fn init_flags() {
     unsafe {
-        for i in range_inclusive(0u8, 255) {
+        for i in 0u8..=255 {
             NZ_TABLE[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
             // println!("{} => nz:{:?}", i, NZ_TABLE[i as usize]);
         }

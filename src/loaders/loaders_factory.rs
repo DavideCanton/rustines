@@ -5,8 +5,8 @@ use loaders::zip_loader::ZipLoader;
 pub struct LoadersFactory;
 
 impl LoadersFactory {
-    pub fn decode(extension: &str) -> Box<Loader> {
-        let loader: Box<Loader> = match extension {
+    pub fn decode(extension: &str) -> Box<dyn Loader> {
+        let loader: Box<dyn Loader> = match extension {
             "zip" => Box::new(ZipLoader::new()),
             _ => Box::new(FlatLoader::new())
         };

@@ -1,3 +1,5 @@
+#![feature(rust_2018_preview)]
+
 // extern crates
 #[macro_use]
 extern crate log;
@@ -63,7 +65,7 @@ fn get_args() -> clap::ArgMatches<'static> {
         .get_matches()
 }
 
-fn read_file(file_path: path::PathBuf) -> Result<rom_structs::NesRom, String> {
+fn read_file(file_path: &path::PathBuf) -> Result<rom_structs::NesRom, String> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
@@ -84,7 +86,8 @@ fn process_file(buf: &rom_structs::NesRom, context: &context::Context) -> Result
     info!("ROM size: {:#x}", buf.size);
 
     if context.disassemble {
-        Ok(disassemble_rom(buf))
+        disassemble_rom(buf);
+        Ok(())
     } else {
         // TODO execute ROM
         Ok(())
@@ -93,7 +96,7 @@ fn process_file(buf: &rom_structs::NesRom, context: &context::Context) -> Result
 
 pub fn main() {
     let matches = get_args();
-    let context = context::Context::build_context(matches);
+    let context = context::Context::build_context(&matches);
 
     if init_logger().is_err() {
         eprintln!("Failed to initialize logger.");
@@ -105,6 +108,6 @@ pub fn main() {
     info!("Disassemble: {}", &context.disassemble);
     info!("Using input file: {}", &context.rom_name);
 
-    let rom = read_file(file_path).unwrap();
+    let rom = read_file(&file_path).unwrap();
     process_file(&rom, &context).unwrap();
 }

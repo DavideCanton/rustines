@@ -51,7 +51,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr<'static>; 256]> = {
         Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 2b
         Instr { fun: Box::new(bit::absolute), fname: "bit::absolute", ilen: 3 }, // 2c
         Instr { fun: Box::new(and::absolute), fname: "and::absolute", ilen: 3 }, // 2d
-        Instr { fun: Box::new(rol::absolute), fname: "rol::absolue", ilen: 3 }, // 2e
+        Instr { fun: Box::new(rol::absolute), fname: "rol::absolute", ilen: 3 }, // 2e
         Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 2f
         Instr { fun: Box::new(branches::bmi), fname: "bmi", ilen: 0 }, // 30
         Instr { fun: Box::new(and::indirect_y), fname: "and::indirect_y", ilen: 2 }, // 31
@@ -281,37 +281,29 @@ fn format_hex(data: &[u8]) -> String {
 }
 
 fn get_fname_for_print(fname: &str, arg: &str) -> String {
-    let instr_name = fname.split("::").nth(0).unwrap();
+    let pieces: Vec<&str> = fname.split("::").collect();
 
-    let fname_for_print = if fname.contains("implied") {
-        instr_name.to_string()
-    } else if fname.contains("zeropage_x") {
-        format!("{} {}+x", instr_name, arg)
-    } else if fname.contains("zeropage") {
-        format!("{} {}", instr_name, arg)
-    } else if fname.contains("immediate") {
-        format!("{} #{}", instr_name, arg)
-    } else if fname.contains("absolute_x") {
-        format!("{} [{}+x]", instr_name, arg)
-    } else if fname.contains("absolute_y") {
-        format!("{} [{}+y]", instr_name, arg)
-    } else if fname.contains("absolute") {
-        format!("{} [{}]", instr_name, arg)
-    } else if fname.contains("indirect_x") {
-        format!("{} x({})", instr_name, arg)
-    } else if fname.contains("indirect_y") {
-        format!("{} y({})", instr_name, arg)
-    } else {
-        instr_name.to_string()
-    };
+    let instr_name = pieces.get(0).unwrap();
+    let address = pieces.get(1);
 
-  fname_for_print
+    match address {
+        Some(&"implied") => instr_name.to_string(),
+        Some(&"zeropage_x") => format!("{} {}+x", instr_name, arg),
+        Some(&"zeropage") => format!("{} {}", instr_name, arg),
+        Some(&"immediate") => format!("{} #{}", instr_name, arg),
+        Some(&"absolute_x") => format!("{} [{}+x]", instr_name, arg),
+        Some(&"absolute_y") => format!("{} [{}+y]", instr_name, arg),
+        Some(&"absolute") => format!("{} [{}]", instr_name, arg),
+        Some(&"indirect_x") => format!("{} x({})", instr_name, arg),
+        Some(&"indirect_y") => format!("{} y({})", instr_name, arg),
+        _ => instr_name.to_string()
+    }
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode: u8 = prg[current];
 
-    let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];    
+    let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];
     let is_error = ilen == 0xFF;
 
     if ilen == 0 || ilen == 0xFF {
@@ -323,7 +315,7 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
         format!("{} ({:02X})", fname, opcode)
     } else {
         let codes = &format_hex(&prg[current + 1..current + ilen]);
-        debug!("{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}", current+16, fname, opcode, ilen, codes);
+        debug!("{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}", current + 16, fname, opcode, ilen, codes);
         get_fname_for_print(&fname, codes)
     };
 

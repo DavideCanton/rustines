@@ -6,10 +6,10 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn build_context(matches: clap::ArgMatches) -> Context {
+    pub fn build_context(matches: &clap::ArgMatches) -> Context {
         Context {
             disassemble: matches.occurrences_of("disassemble") > 0,
-            rom_name: matches.value_of("INPUT").unwrap().to_owned(),
+            rom_name: matches.value_of("INPUT").unwrap().to_string(),
         }
     }
 }

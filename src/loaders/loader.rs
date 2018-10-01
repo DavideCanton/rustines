@@ -12,9 +12,9 @@ pub trait Loader: Any {
     fn load_header(&self, buf: &[u8]) -> Result<Header, String> {
         let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);
 
-        if &header.header != "NES\x1A".as_bytes() {
+        if &header.header != b"NES\x1A" {
             error!("Found unexpected {:?} header", header.header);
-            return Err("Invalid header!".to_owned());
+            return Err("Invalid header!".to_string());
         }
 
         info!("Mapper: {}", header.mapping_number());
@@ -31,11 +31,10 @@ pub trait Loader: Any {
 
         let mapper =
             MapperFactory::instantiate_mapper(mapping_number)
-                .ok_or(format!("Can't decode mapping number {}", mapping_number))?;
+                .ok_or_else(|| format!("Can't decode mapping number {}", mapping_number))?;
 
         let prg_banks = mapper.load_prg_rom(&buf, &header);
 
         Ok(NesRom::new(header, prg_banks, buf.len()))
     }
 }
-
