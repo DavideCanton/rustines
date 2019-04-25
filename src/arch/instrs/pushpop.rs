@@ -1,4 +1,4 @@
-use arch::cpu::CPU;
+use crate::arch::cpu::CPU;
 
 pub fn pha(cpu: &mut CPU) -> (u8, u8) {
     let a = cpu.registers.a_reg;

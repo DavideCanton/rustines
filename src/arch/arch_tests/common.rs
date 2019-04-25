@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod tests {
-    use arch::cpu::CPU;
-    use arch::memory::Memory;
+    use crate::arch::cpu::CPU;
+    use crate::arch::memory::Memory;
     
     pub fn setup_tests() -> CPU {
         let mem = Memory::new();

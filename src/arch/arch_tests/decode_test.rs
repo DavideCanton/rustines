@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use arch::arch_tests::common::tests::setup_tests;
-    use utils::bit_utils::*;
+    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::utils::bit_utils::*;
 
     #[test]
     fn test_decode_absolute() {

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use arch::arch_tests::common::tests::setup_tests;
-    use arch::instrs::branches;
+    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::instrs::branches;
 
     #[test]
     fn test_bcc_ok() {

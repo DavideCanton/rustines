@@ -1,6 +1,8 @@
-use arch::instrs::*;
-use arch::cpu::CPU;
-use utils::tls::Syncify;
+use crate::arch::cpu::CPU;
+use crate::arch::instrs::*;
+use crate::utils::tls::Syncify;
+use lazy_static::{__lazy_static_create, __lazy_static_internal, lazy_static};
+use log::{debug, log};
 
 lazy_static! {
 pub static ref INSTR_TABLE: Syncify<[Instr<'static>; 256]> = {
@@ -296,14 +298,16 @@ fn get_fname_for_print(fname: &str, arg: &str) -> String {
         Some(&"absolute") => format!("{} [{}]", instr_name, arg),
         Some(&"indirect_x") => format!("{} x({})", instr_name, arg),
         Some(&"indirect_y") => format!("{} y({})", instr_name, arg),
-        _ => instr_name.to_string()
+        _ => instr_name.to_string(),
     }
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode: u8 = prg[current];
 
-    let Instr { fname, mut ilen, .. } = INSTR_TABLE[opcode as usize];
+    let Instr {
+        fname, mut ilen, ..
+    } = INSTR_TABLE[opcode as usize];
     let is_error = ilen == 0xFF;
 
     if ilen == 0 || ilen == 0xFF {
@@ -315,7 +319,14 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
         format!("{} ({:02X})", fname, opcode)
     } else {
         let codes = &format_hex(&prg[current + 1..current + ilen]);
-        debug!("{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}", current + 16, fname, opcode, ilen, codes);
+        debug!(
+            "{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}",
+            current + 16,
+            fname,
+            opcode,
+            ilen,
+            codes
+        );
         get_fname_for_print(&fname, codes)
     };
 
@@ -326,7 +337,7 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
 
 #[macro_export]
 macro_rules! decode_absolute {
-    ( $cpu:expr ) => {{      
+    ( $cpu:expr ) => {{
         let low = $cpu.memory.fetch($cpu.registers.pc + 1);
         let high = $cpu.memory.fetch($cpu.registers.pc + 2);
         (to_u16(low, high), 3)
@@ -367,7 +378,11 @@ macro_rules! decode_zeropage_indexed {
 #[macro_export]
 macro_rules! decode_indexed_indirect {
     ( $cpu:expr ) => {{
-        let op = ($cpu.memory.fetch($cpu.registers.pc + 1).wrapping_add($cpu.registers.x_reg)) as u16 & 0xFF;
+        let op = ($cpu
+            .memory
+            .fetch($cpu.registers.pc + 1)
+            .wrapping_add($cpu.registers.x_reg)) as u16
+            & 0xFF;
         let low = $cpu.memory.fetch(op);
         let high = $cpu.memory.fetch((op + 1) & 0xFF);
 
@@ -382,6 +397,9 @@ macro_rules! decode_indirect_indexed {
         let low = $cpu.memory.fetch(op);
         let high = $cpu.memory.fetch((op + 1) & 0xFF);
 
-        (to_u16(low, high).wrapping_add($cpu.registers.y_reg as u16), 2)
+        (
+            to_u16(low, high).wrapping_add($cpu.registers.y_reg as u16),
+            2,
+        )
     }};
 }

@@ -1,4 +1,4 @@
-use arch::mappers::mapper::Mapper;
+use crate::arch::mappers::mapper::Mapper;
 use std::any::Any;
 
 pub struct Mapper0;

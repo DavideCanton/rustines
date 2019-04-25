@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use arch::arch_tests::common::tests::setup_tests;
-    use arch::instrs::lda;
+    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::instrs::lda;
 
     #[test]
     fn test_lda_immediate() {

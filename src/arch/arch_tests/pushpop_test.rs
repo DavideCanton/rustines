@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use arch::arch_tests::common::tests::setup_tests;
-    use arch::instrs::pushpop;
+    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::instrs::pushpop;
 
     #[test]
     fn test_pha() {

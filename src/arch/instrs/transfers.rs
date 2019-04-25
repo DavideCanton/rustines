@@ -1,4 +1,4 @@
-use arch::cpu::CPU;
+use crate::arch::cpu::CPU;
 
 pub fn tax(cpu: &mut CPU) -> (u8, u8) {
     cpu.registers.x_reg = cpu.registers.a_reg;

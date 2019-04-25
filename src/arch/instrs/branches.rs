@@ -1,4 +1,4 @@
-use arch::cpu::CPU;
+use crate::arch::cpu::CPU;
 
 pub fn bcc(cpu: &mut CPU) -> (u8, u8) {
     if !cpu.registers.get_c() {

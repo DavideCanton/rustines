@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::arch_tests::common::tests::setup_tests;
 
     #[test]
     fn test_push_pop_peek() {

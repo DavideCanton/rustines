@@ -1,7 +1,7 @@
-use arch::memory::Memory;
-use arch::registers::*;
-use arch::instrs::instr_table::{Instr, INSTR_TABLE};
-use utils::bit_utils::*;
+use crate::arch::memory::Memory;
+use crate::arch::registers::*;
+use crate::arch::instrs::instr_table::{Instr, INSTR_TABLE};
+use crate::utils::bit_utils::*;
 
 pub struct CPU {
     pub clock: u8,

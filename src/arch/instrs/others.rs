@@ -1,5 +1,5 @@
-use arch::cpu::CPU;
-use utils::bit_utils::*;
+use crate::arch::cpu::CPU;
+use crate::utils::bit_utils::*;
 
 pub fn nop(_: &mut CPU) -> (u8, u8) {
     // why I'm implementing this?

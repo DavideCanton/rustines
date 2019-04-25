@@ -1,4 +1,4 @@
-use arch::cpu::CPU;
+use crate::arch::cpu::CPU;
 
 pub fn clc(cpu: &mut CPU) -> (u8, u8) {
     cpu.registers.clear_c();

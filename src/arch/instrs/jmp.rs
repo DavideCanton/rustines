@@ -1,5 +1,5 @@
-use arch::cpu::CPU;
-use utils::bit_utils::to_u16;
+use crate::arch::cpu::CPU;
+use crate::utils::bit_utils::to_u16;
 
 pub fn absolute(cpu: &mut CPU) -> (u8, u8) {
     let (addr, _ilen) = decode_absolute!(cpu);

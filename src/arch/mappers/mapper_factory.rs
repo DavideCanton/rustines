@@ -1,5 +1,5 @@
-use arch::mappers::mapper::Mapper;
-use arch::mappers::mapper_0::Mapper0;
+use crate::arch::mappers::mapper::Mapper;
+use crate::arch::mappers::mapper_0::Mapper0;
 
 pub struct MapperFactory;
 

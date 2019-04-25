@@ -1,4 +1,4 @@
-use arch::cpu::CPU;
+use crate::arch::cpu::CPU;
 
 pub fn implied(cpu: &mut CPU) -> (u8, u8) {
     let mut val = cpu.registers.y_reg;

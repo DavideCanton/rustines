@@ -1,4 +1,4 @@
-use loaders::loader::Loader;
+use crate::loaders::loader::Loader;
 use std::io;
 use std::fs::File;
 use std::io::Read;

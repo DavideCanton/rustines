@@ -1,10 +1,9 @@
-extern crate zip;
-
-use loaders::loader::Loader;
-use std::io;
-use std::fs::File;
-use std::io::Read;
+use crate::loaders::loader::Loader;
+use log::{info, log};
 use std::any::Any;
+use std::fs::File;
+use std::io;
+use std::io::Read;
 
 pub struct ZipLoader {}
 

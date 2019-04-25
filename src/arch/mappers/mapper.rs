@@ -1,5 +1,6 @@
+use crate::arch::rom_structs::{Bank, Header};
+use log::{info, log};
 use std::any::Any;
-use arch::rom_structs::{Header, Bank};
 
 pub trait Mapper: Any {
     fn as_any(&self) -> &Any;

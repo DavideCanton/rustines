@@ -1,27 +1,18 @@
-// extern crates
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate arrayref;
-#[macro_use]
-extern crate lazy_static;
-extern crate env_logger;
-extern crate clap;
-
 // mod declarations
 mod arch;
-mod utils;
-mod loaders;
 mod context;
+mod loaders;
+mod utils;
 
 // use
-// use arch::memory::Memory;
-// use arch::cpu::CPU;
+// use crate::arch::memory::Memory;
+// use crate::arch::cpu::CPU;
+use crate::arch::instrs::instr_table;
+use crate::arch::rom_structs;
+use crate::loaders::loaders_factory;
+use log::{info, log};
 use std::fs;
 use std::path;
-use loaders::loaders_factory;
-use arch::rom_structs;
-use arch::instrs::instr_table;
 
 fn init_logger() -> Result<(), log::SetLoggerError> {
     let mut builder = env_logger::LogBuilder::new();
@@ -69,13 +60,13 @@ fn read_file(file_path: &path::PathBuf) -> Result<rom_structs::NesRom, String> {
         None => "",
     };
 
-    let mut file = fs::File::open(&file_path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut file = fs::File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
     let loader = loaders_factory::LoadersFactory::decode(ext);
 
-    let rom = loader.load_rom_struct(&mut file)
-                    .map_err(|e| format!("Failed to load ROM: {}", e))?;
+    let rom = loader
+        .load_rom_struct(&mut file)
+        .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
     Ok(rom)
 }
