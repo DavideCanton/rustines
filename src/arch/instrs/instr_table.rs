@@ -1,7 +1,7 @@
 use crate::arch::cpu::CPU;
 use crate::arch::instrs::*;
 use crate::utils::tls::Syncify;
-use lazy_static::{__lazy_static_create, __lazy_static_internal, lazy_static};
+use lazy_static::*;
 use log::{debug, log};
 
 lazy_static! {
