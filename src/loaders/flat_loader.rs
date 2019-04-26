@@ -1,23 +1,20 @@
 use crate::loaders::loader::Loader;
-use std::io;
-use std::fs::File;
-use std::io::Read;
-use std::any::Any;
+use std::{any::Any, fs::File, io, io::Read};
 
 pub struct FlatLoader {}
 
 impl FlatLoader {
     pub fn new() -> Self {
-        FlatLoader { }
+        FlatLoader {}
     }
 }
 
 impl Loader for FlatLoader {
-    fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {        
+    fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
         let mut buf: Vec<u8> = vec![];
 
         f.read_to_end(&mut buf)?;
-        
+
         Ok(buf)
     }
 

@@ -1,10 +1,11 @@
-use crate::arch::mappers::mapper_factory::MapperFactory;
-use crate::arch::rom_structs::{Header, NesRom};
+use crate::arch::{
+    mappers::mapper_factory::instantiate_mapper,
+    rom_structs::{Header, NesRom},
+};
 use arrayref::array_ref;
 use log::{error, info, log};
 use std;
-use std::any::Any;
-use std::fs::File;
+use std::{any::Any, fs::File};
 
 pub trait Loader: Any {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
@@ -32,7 +33,7 @@ pub trait Loader: Any {
         let header = self.load_header(&buf)?;
         let mapping_number = header.mapping_number();
 
-        let mapper = MapperFactory::instantiate_mapper(mapping_number)
+        let mapper = instantiate_mapper(mapping_number)
             .ok_or_else(|| format!("Can't decode mapping number {}", mapping_number))?;
 
         let prg_banks = mapper.load_prg_rom(&buf, &header);

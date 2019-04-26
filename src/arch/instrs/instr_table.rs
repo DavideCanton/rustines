@@ -5,271 +5,281 @@ use lazy_static::*;
 use log::{debug, log};
 
 lazy_static! {
-pub static ref INSTR_TABLE: Syncify<[Instr<'static>; 256]> = {
+pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
     unsafe { Syncify::new ([
-        Instr { fun: Box::new(others::brk), fname: "brk::implied", ilen: 0 }, // 00
-        Instr { fun: Box::new(ora::indirect_x), fname: "ora::indirect_x", ilen: 2 }, // 01
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 02
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 03
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 04
-        Instr { fun: Box::new(ora::zeropage), fname: "ora::zeropage", ilen: 2 }, // 05
-        Instr { fun: Box::new(asl::zeropage), fname: "asl::zeropage", ilen: 2 }, // 06
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 07
-        Instr { fun: Box::new(pushpop::php), fname: "php::implied", ilen: 1 }, // 08
-        Instr { fun: Box::new(ora::immediate), fname: "ora::immediate", ilen: 2 }, // 09
-        Instr { fun: Box::new(asl::accumulator), fname: "asl::accumulator", ilen: 1 }, // 0a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 0b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 0c
-        Instr { fun: Box::new(ora::absolute), fname: "ora::absolute", ilen: 3 }, // 0d
-        Instr { fun: Box::new(asl::absolute), fname: "asl::absolute", ilen: 3 }, // 0e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 0f
-        Instr { fun: Box::new(branches::bpl), fname: "bpl", ilen: 2 }, // 10
-        Instr { fun: Box::new(ora::indirect_y), fname: "ora::indirect_y", ilen: 2 }, // 11
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 12
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 13
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 14
-        Instr { fun: Box::new(ora::zeropage_x), fname: "ora::zeropage_x", ilen: 2 }, // 15
-        Instr { fun: Box::new(asl::zeropage_x), fname: "asl::zeropage_x", ilen: 2 }, // 16
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 17
-        Instr { fun: Box::new(flags::clc), fname: "clc::implied", ilen: 1 }, // 18
-        Instr { fun: Box::new(ora::absolute_y), fname: "ora::absolute_y", ilen: 3 }, // 19
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 1a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 1b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 1c
-        Instr { fun: Box::new(ora::absolute_x), fname: "ora::absolute_x", ilen: 3 }, // 1d
-        Instr { fun: Box::new(asl::absolute_x), fname: "asl::absolute_x", ilen: 3 }, // 1e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 1f
-        Instr { fun: Box::new(subroutines::jsr), fname: "jsr::absolute", ilen: 0 }, // 20
-        Instr { fun: Box::new(and::indirect_x), fname: "and::indirect_x", ilen: 2 }, // 21
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 22
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 23
-        Instr { fun: Box::new(bit::zeropage), fname: "bit::zeropage", ilen: 2 }, // 24
-        Instr { fun: Box::new(and::zeropage), fname: "and::zeropage", ilen: 2 }, // 25
-        Instr { fun: Box::new(rol::zeropage), fname: "rol::zeropage", ilen: 2 }, // 26
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 27
-        Instr { fun: Box::new(pushpop::plp), fname: "plp::implied", ilen: 1 }, // 28
-        Instr { fun: Box::new(and::immediate), fname: "and::immediate", ilen: 2 }, // 29
-        Instr { fun: Box::new(rol::accumulator), fname: "rol::accumulator", ilen: 1 }, // 2a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 2b
-        Instr { fun: Box::new(bit::absolute), fname: "bit::absolute", ilen: 3 }, // 2c
-        Instr { fun: Box::new(and::absolute), fname: "and::absolute", ilen: 3 }, // 2d
-        Instr { fun: Box::new(rol::absolute), fname: "rol::absolute", ilen: 3 }, // 2e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 2f
-        Instr { fun: Box::new(branches::bmi), fname: "bmi", ilen: 0 }, // 30
-        Instr { fun: Box::new(and::indirect_y), fname: "and::indirect_y", ilen: 2 }, // 31
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 32
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 33
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 34
-        Instr { fun: Box::new(and::zeropage_x), fname: "and::zeropage_x", ilen: 2 }, // 35
-        Instr { fun: Box::new(rol::zeropage_x), fname: "rol::zeropage_x", ilen: 2 }, // 36
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 37
-        Instr { fun: Box::new(flags::sec), fname: "sec::implied", ilen: 1 }, // 38
-        Instr { fun: Box::new(and::absolute_y), fname: "and::absolute_y", ilen: 3 }, // 39
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 3a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 3b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 3c
-        Instr { fun: Box::new(and::absolute_x), fname: "and::absolute_x", ilen: 3 }, // 3d
-        Instr { fun: Box::new(rol::absolute_x), fname: "rol::absolute_x", ilen: 3 }, // 3e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 3f
-        Instr { fun: Box::new(subroutines::rti), fname: "rti::absolute", ilen: 0 }, // 40
-        Instr { fun: Box::new(eor::indirect_x), fname: "eor::indirect_x", ilen: 2 }, // 41
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 42
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 43
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 44
-        Instr { fun: Box::new(eor::zeropage), fname: "eor::zeropage", ilen: 2 }, // 45
-        Instr { fun: Box::new(lsr::zeropage), fname: "lsr::zeropage", ilen: 2 }, // 46
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 47
-        Instr { fun: Box::new(pushpop::pha), fname: "pha::implied", ilen: 1 }, // 48
-        Instr { fun: Box::new(eor::immediate), fname: "eor::immediate", ilen: 2 }, // 49
-        Instr { fun: Box::new(lsr::accumulator), fname: "lsr::accumulator", ilen: 1 }, // 4a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 4b
-        Instr { fun: Box::new(jmp::absolute), fname: "jmp::absolute", ilen: 0 }, // 4c
-        Instr { fun: Box::new(eor::absolute), fname: "eor::absolute", ilen: 3 }, // 4d
-        Instr { fun: Box::new(lsr::absolute), fname: "lsr::absolute", ilen: 3 }, // 4e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 4f
-        Instr { fun: Box::new(branches::bvc), fname: "bvc", ilen: 2 }, // 50
-        Instr { fun: Box::new(eor::indirect_y), fname: "eor::indirect_y", ilen: 2 }, // 51
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 52
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 53
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 54
-        Instr { fun: Box::new(eor::zeropage_x), fname: "eor::zeropage_x", ilen: 2 }, // 55
-        Instr { fun: Box::new(lsr::zeropage_x), fname: "lsr::zeropage_x", ilen: 2 }, // 56
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 57
-        Instr { fun: Box::new(flags::cli), fname: "cli::implied", ilen: 1 }, // 58
-        Instr { fun: Box::new(eor::absolute_y), fname: "eor::absolute_y", ilen: 3 }, // 59
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 5a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 5b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 5c
-        Instr { fun: Box::new(eor::absolute_x), fname: "eor::absolute_x", ilen: 3 }, // 5d
-        Instr { fun: Box::new(lsr::absolute_x), fname: "lsr::absolute_x", ilen: 3 }, // 5e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 5f
-        Instr { fun: Box::new(subroutines::rts), fname: "rts::absolute", ilen: 1 }, // 60
-        Instr { fun: Box::new(adc::indirect_x), fname: "adc::indirect_x", ilen: 2 }, // 61
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 62
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 63
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 64
-        Instr { fun: Box::new(adc::zeropage), fname: "adc::zeropage", ilen: 2 }, // 65
-        Instr { fun: Box::new(ror::zeropage), fname: "ror::zeropage", ilen: 2 }, // 66
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 67
-        Instr { fun: Box::new(pushpop::pla), fname: "pla::implied", ilen: 1 }, // 68
-        Instr { fun: Box::new(adc::immediate), fname: "adc::immediate", ilen: 2 }, // 69
-        Instr { fun: Box::new(ror::accumulator), fname: "ror::accumulator", ilen: 1 }, // 6a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 6b
-        Instr { fun: Box::new(jmp::indirect_absolute), fname: "jmp::indirect_absolute", ilen: 0 }, // 6c
-        Instr { fun: Box::new(adc::absolute), fname: "adc::absolute", ilen: 3 }, // 6d
-        Instr { fun: Box::new(ror::absolute), fname: "ror::absolute", ilen: 3 }, // 6e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 6f
-        Instr { fun: Box::new(branches::bvs), fname: "bvs", ilen: 0 }, // 70
-        Instr { fun: Box::new(adc::indirect_y), fname: "adc::indirect_y", ilen: 2 }, // 71
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 72
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 73
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 74
-        Instr { fun: Box::new(adc::zeropage_x), fname: "adc::zeropage_x", ilen: 2 }, // 75
-        Instr { fun: Box::new(ror::zeropage_x), fname: "ror::zeropage_x", ilen: 2 }, // 76
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 77
-        Instr { fun: Box::new(flags::sei), fname: "sei::implied", ilen: 1 }, // 78
-        Instr { fun: Box::new(adc::absolute_y), fname: "adc::absolute_y", ilen: 3 }, // 79
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 7a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 7b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 7c
-        Instr { fun: Box::new(adc::absolute_x), fname: "adc::absolute_x", ilen: 3 }, // 7d
-        Instr { fun: Box::new(ror::absolute_x), fname: "ror::absolute_x", ilen: 3 }, // 7e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 7f
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 80
-        Instr { fun: Box::new(sta::indirect_x), fname: "sta::indirect_x", ilen: 2 }, // 81
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 82
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 83
-        Instr { fun: Box::new(sty::zeropage), fname: "sty::zeropage", ilen: 2 }, // 84
-        Instr { fun: Box::new(sta::zeropage), fname: "sta::zeropage", ilen: 2 }, // 85
-        Instr { fun: Box::new(stx::zeropage), fname: "stx::zeropage", ilen: 2 }, // 86
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 87
-        Instr { fun: Box::new(dey::implied), fname: "dey::implied", ilen: 1 }, // 88
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 89
-        Instr { fun: Box::new(transfers::txa), fname: "txa::implied", ilen: 1 }, // 8a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 8b
-        Instr { fun: Box::new(sty::absolute), fname: "sty::absolute", ilen: 3 }, // 8c
-        Instr { fun: Box::new(sta::absolute), fname: "sta::absolute", ilen: 3 }, // 8d
-        Instr { fun: Box::new(stx::absolute), fname: "stx::absolute", ilen: 3 }, // 8e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 8f
-        Instr { fun: Box::new(branches::bcc), fname: "bcc", ilen: 0 }, // 90
-        Instr { fun: Box::new(sta::indirect_y), fname: "sta::indirect_y", ilen: 2 }, // 91
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 92
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 93
-        Instr { fun: Box::new(sty::zeropage_x), fname: "sty::zeropage_x", ilen: 2 }, // 94
-        Instr { fun: Box::new(sta::zeropage_x), fname: "sta::zeropage_x", ilen: 2 }, // 95
-        Instr { fun: Box::new(stx::zeropage_y), fname: "stx::zeropage_y", ilen: 2 }, // 96
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 97
-        Instr { fun: Box::new(transfers::tya), fname: "tya::implied", ilen: 1 }, // 98
-        Instr { fun: Box::new(sta::absolute_y), fname: "sta::absolute_y", ilen: 3 }, // 99
-        Instr { fun: Box::new(transfers::txs), fname: "txs::implied", ilen: 1 }, // 9a
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 9b
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 9c
-        Instr { fun: Box::new(sta::absolute_x), fname: "sta::absolute_x", ilen: 3 }, // 9d
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 9e
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // 9f
-        Instr { fun: Box::new(ldy::immediate), fname: "ldy::immediate", ilen: 2 }, // a0
-        Instr { fun: Box::new(lda::indirect_x), fname: "lda::indirect_x", ilen: 2 }, // a1
-        Instr { fun: Box::new(ldx::immediate), fname: "ldx::immediate", ilen: 2 }, // a2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // a3
-        Instr { fun: Box::new(ldy::zeropage), fname: "ldy::zeropage", ilen: 2 }, // a4
-        Instr { fun: Box::new(lda::zeropage), fname: "lda::zeropage", ilen: 2 }, // a5
-        Instr { fun: Box::new(ldx::zeropage), fname: "ldx::zeropage", ilen: 2 }, // a6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // a7
-        Instr { fun: Box::new(transfers::tay), fname: "tay::implied", ilen: 1 }, // a8
-        Instr { fun: Box::new(lda::immediate), fname: "lda::immediate", ilen: 2 }, // a9
-        Instr { fun: Box::new(transfers::tax), fname: "tax::implied", ilen: 1 }, // aa
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // ab
-        Instr { fun: Box::new(ldy::absolute), fname: "ldy::absolute", ilen: 3 }, // ac
-        Instr { fun: Box::new(lda::absolute), fname: "lda::absolute", ilen: 3 }, // ad
-        Instr { fun: Box::new(ldx::absolute), fname: "ldx::absolute", ilen: 3 }, // ae
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // af
-        Instr { fun: Box::new(branches::bcs), fname: "bcs", ilen: 2 }, // b0
-        Instr { fun: Box::new(lda::indirect_y), fname: "lda::indirect_y", ilen: 2 }, // b1
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // b2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // b3
-        Instr { fun: Box::new(ldy::zeropage_x), fname: "ldy::zeropage_x", ilen: 2 }, // b4
-        Instr { fun: Box::new(lda::zeropage_x), fname: "lda::zeropage_x", ilen: 2 }, // b5
-        Instr { fun: Box::new(ldx::zeropage_y), fname: "ldx::zeropage_y", ilen: 2 }, // b6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // b7
-        Instr { fun: Box::new(flags::clv), fname: "clv::implied", ilen: 1 }, // b8
-        Instr { fun: Box::new(lda::absolute_y), fname: "lda::absolute_y", ilen: 3 }, // b9
-        Instr { fun: Box::new(transfers::tsx), fname: "tsx::implied", ilen: 1 }, // ba
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // bb
-        Instr { fun: Box::new(ldy::absolute_x), fname: "ldy::absolute_x", ilen: 3 }, // bc
-        Instr { fun: Box::new(lda::absolute_x), fname: "lda::absolute_x", ilen: 3 }, // bd
-        Instr { fun: Box::new(ldx::absolute_y), fname: "ldx::absolute_y", ilen: 3 }, // be
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // bf
-        Instr { fun: Box::new(cpy::immediate), fname: "cpy::immediate", ilen: 2 }, // c0
-        Instr { fun: Box::new(cmp::indirect_x), fname: "cmp::indirect_x", ilen: 2 }, // c1
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // c2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // c3
-        Instr { fun: Box::new(cpy::zeropage), fname: "cpy::zeropage", ilen: 2 }, // c4
-        Instr { fun: Box::new(cmp::zeropage), fname: "cmp::zeropage", ilen: 2 }, // c5
-        Instr { fun: Box::new(dec::zeropage), fname: "dec::zeropage", ilen: 2 }, // c6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // c7
-        Instr { fun: Box::new(iny::implied), fname: "iny::implied", ilen: 1 }, // c8
-        Instr { fun: Box::new(cmp::immediate), fname: "cmp::immediate", ilen: 2 }, // c9
-        Instr { fun: Box::new(dex::implied), fname: "dex::implied", ilen: 1 }, // ca
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // cb
-        Instr { fun: Box::new(cpy::absolute), fname: "cpy::absolute", ilen: 3 }, // cc
-        Instr { fun: Box::new(cmp::absolute), fname: "cmp::absolute", ilen: 3 }, // cd
-        Instr { fun: Box::new(dec::absolute), fname: "dec::absolute", ilen: 3 }, // ce
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // cf
-        Instr { fun: Box::new(branches::bne), fname: "bne", ilen: 2 }, // d0
-        Instr { fun: Box::new(cmp::indirect_y), fname: "cmp::indirect_y", ilen: 2 }, // d1
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // d2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // d3
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // d4
-        Instr { fun: Box::new(cmp::zeropage_x), fname: "cmp::zeropage_x", ilen: 2 }, // d5
-        Instr { fun: Box::new(dec::zeropage_x), fname: "dec::zeropage_x", ilen: 2 }, // d6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // d7
-        Instr { fun: Box::new(flags::cld), fname: "cld::implied", ilen: 1 }, // d8
-        Instr { fun: Box::new(cmp::absolute_y), fname: "cmp::absolute_y", ilen: 3 }, // d9
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // da
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // db
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // dc
-        Instr { fun: Box::new(cmp::absolute_x), fname: "cmp::absolute_x", ilen: 3 }, // dd
-        Instr { fun: Box::new(dec::absolute_x), fname: "dec::absolute_x", ilen: 3 }, // de
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // df
-        Instr { fun: Box::new(cpx::immediate), fname: "cpx::immediate", ilen: 2 }, // e0
-        Instr { fun: Box::new(sbc::indirect_x), fname: "sbc::indirect_x", ilen: 2 }, // e1
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // e2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // e3
-        Instr { fun: Box::new(cpx::zeropage), fname: "cpx::zeropage", ilen: 2 }, // e4
-        Instr { fun: Box::new(sbc::zeropage), fname: "sbc::zeropage", ilen: 2 }, // e5
-        Instr { fun: Box::new(inc::zeropage), fname: "inc::zeropage", ilen: 2 }, // e6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // e7
-        Instr { fun: Box::new(inx::implied), fname: "inx::implied", ilen: 1 }, // e8
-        Instr { fun: Box::new(sbc::immediate), fname: "sbc::immediate", ilen: 2 }, // e9
-        Instr { fun: Box::new(others::nop), fname: "nop::implied", ilen: 1 }, // ea
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // eb
-        Instr { fun: Box::new(cpx::absolute), fname: "cpx::absolute", ilen: 3 }, // ec
-        Instr { fun: Box::new(sbc::absolute), fname: "sbc::absolute", ilen: 3 }, // ed
-        Instr { fun: Box::new(inc::absolute), fname: "inc::absolute", ilen: 3 }, // ee
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // ef
-        Instr { fun: Box::new(branches::beq), fname: "beq", ilen: 0 }, // f0
-        Instr { fun: Box::new(sbc::indirect_y), fname: "sbc::indirect_y", ilen: 2 }, // f1
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // f2
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // f3
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // f4
-        Instr { fun: Box::new(sbc::zeropage_x), fname: "sbc::zeropage_x", ilen: 2 }, // f5
-        Instr { fun: Box::new(inc::zeropage_x), fname: "inc::zeropage_x", ilen: 2 }, // f6
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // f7
-        Instr { fun: Box::new(flags::sed), fname: "sed::implied", ilen: 1 }, // f8
-        Instr { fun: Box::new(sbc::absolute_y), fname: "sbc::absolute_y", ilen: 3 }, // f9
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // fa
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // fb
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 }, // fc
-        Instr { fun: Box::new(sbc::absolute_x), fname: "sbc::absolute_x", ilen: 3 }, // fd
-        Instr { fun: Box::new(inc::absolute_x), fname: "inc::absolute_x", ilen: 3 }, // fe
-        Instr { fun: Box::new(error_fn), fname: "error_fn", ilen: 255 } /* ff */,
+        Instr::new(Box::new(others::brk), "brk::implied", 0 ), // 00
+        Instr::new(Box::new(ora::indirect_x), "ora::indirect_x", 2 ), // 01
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 02
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 03
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 04
+        Instr::new(Box::new(ora::zeropage), "ora::zeropage", 2 ), // 05
+        Instr::new(Box::new(asl::zeropage), "asl::zeropage", 2 ), // 06
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 07
+        Instr::new(Box::new(pushpop::php), "php::implied", 1 ), // 08
+        Instr::new(Box::new(ora::immediate), "ora::immediate", 2 ), // 09
+        Instr::new(Box::new(asl::accumulator), "asl::accumulator", 1 ), // 0a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 0b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 0c
+        Instr::new(Box::new(ora::absolute), "ora::absolute", 3 ), // 0d
+        Instr::new(Box::new(asl::absolute), "asl::absolute", 3 ), // 0e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 0f
+        Instr::new(Box::new(branches::bpl), "bpl", 2 ), // 10
+        Instr::new(Box::new(ora::indirect_y), "ora::indirect_y", 2 ), // 11
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 12
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 13
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 14
+        Instr::new(Box::new(ora::zeropage_x), "ora::zeropage_x", 2 ), // 15
+        Instr::new(Box::new(asl::zeropage_x), "asl::zeropage_x", 2 ), // 16
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 17
+        Instr::new(Box::new(flags::clc), "clc::implied", 1 ), // 18
+        Instr::new(Box::new(ora::absolute_y), "ora::absolute_y", 3 ), // 19
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 1a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 1b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 1c
+        Instr::new(Box::new(ora::absolute_x), "ora::absolute_x", 3 ), // 1d
+        Instr::new(Box::new(asl::absolute_x), "asl::absolute_x", 3 ), // 1e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 1f
+        Instr::new(Box::new(subroutines::jsr), "jsr::absolute", 0 ), // 20
+        Instr::new(Box::new(and::indirect_x), "and::indirect_x", 2 ), // 21
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 22
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 23
+        Instr::new(Box::new(bit::zeropage), "bit::zeropage", 2 ), // 24
+        Instr::new(Box::new(and::zeropage), "and::zeropage", 2 ), // 25
+        Instr::new(Box::new(rol::zeropage), "rol::zeropage", 2 ), // 26
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 27
+        Instr::new(Box::new(pushpop::plp), "plp::implied", 1 ), // 28
+        Instr::new(Box::new(and::immediate), "and::immediate", 2 ), // 29
+        Instr::new(Box::new(rol::accumulator), "rol::accumulator", 1 ), // 2a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 2b
+        Instr::new(Box::new(bit::absolute), "bit::absolute", 3 ), // 2c
+        Instr::new(Box::new(and::absolute), "and::absolute", 3 ), // 2d
+        Instr::new(Box::new(rol::absolute), "rol::absolute", 3 ), // 2e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 2f
+        Instr::new(Box::new(branches::bmi), "bmi", 0 ), // 30
+        Instr::new(Box::new(and::indirect_y), "and::indirect_y", 2 ), // 31
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 32
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 33
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 34
+        Instr::new(Box::new(and::zeropage_x), "and::zeropage_x", 2 ), // 35
+        Instr::new(Box::new(rol::zeropage_x), "rol::zeropage_x", 2 ), // 36
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 37
+        Instr::new(Box::new(flags::sec), "sec::implied", 1 ), // 38
+        Instr::new(Box::new(and::absolute_y), "and::absolute_y", 3 ), // 39
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 3a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 3b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 3c
+        Instr::new(Box::new(and::absolute_x), "and::absolute_x", 3 ), // 3d
+        Instr::new(Box::new(rol::absolute_x), "rol::absolute_x", 3 ), // 3e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 3f
+        Instr::new(Box::new(subroutines::rti), "rti::absolute", 0 ), // 40
+        Instr::new(Box::new(eor::indirect_x), "eor::indirect_x", 2 ), // 41
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 42
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 43
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 44
+        Instr::new(Box::new(eor::zeropage), "eor::zeropage", 2 ), // 45
+        Instr::new(Box::new(lsr::zeropage), "lsr::zeropage", 2 ), // 46
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 47
+        Instr::new(Box::new(pushpop::pha), "pha::implied", 1 ), // 48
+        Instr::new(Box::new(eor::immediate), "eor::immediate", 2 ), // 49
+        Instr::new(Box::new(lsr::accumulator), "lsr::accumulator", 1 ), // 4a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 4b
+        Instr::new(Box::new(jmp::absolute), "jmp::absolute", 0 ), // 4c
+        Instr::new(Box::new(eor::absolute), "eor::absolute", 3 ), // 4d
+        Instr::new(Box::new(lsr::absolute), "lsr::absolute", 3 ), // 4e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 4f
+        Instr::new(Box::new(branches::bvc), "bvc", 2 ), // 50
+        Instr::new(Box::new(eor::indirect_y), "eor::indirect_y", 2 ), // 51
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 52
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 53
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 54
+        Instr::new(Box::new(eor::zeropage_x), "eor::zeropage_x", 2 ), // 55
+        Instr::new(Box::new(lsr::zeropage_x), "lsr::zeropage_x", 2 ), // 56
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 57
+        Instr::new(Box::new(flags::cli), "cli::implied", 1 ), // 58
+        Instr::new(Box::new(eor::absolute_y), "eor::absolute_y", 3 ), // 59
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 5a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 5b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 5c
+        Instr::new(Box::new(eor::absolute_x), "eor::absolute_x", 3 ), // 5d
+        Instr::new(Box::new(lsr::absolute_x), "lsr::absolute_x", 3 ), // 5e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 5f
+        Instr::new(Box::new(subroutines::rts), "rts::absolute", 1 ), // 60
+        Instr::new(Box::new(adc::indirect_x), "adc::indirect_x", 2 ), // 61
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 62
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 63
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 64
+        Instr::new(Box::new(adc::zeropage), "adc::zeropage", 2 ), // 65
+        Instr::new(Box::new(ror::zeropage), "ror::zeropage", 2 ), // 66
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 67
+        Instr::new(Box::new(pushpop::pla), "pla::implied", 1 ), // 68
+        Instr::new(Box::new(adc::immediate), "adc::immediate", 2 ), // 69
+        Instr::new(Box::new(ror::accumulator), "ror::accumulator", 1 ), // 6a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 6b
+        Instr::new(Box::new(jmp::indirect_absolute), "jmp::indirect_absolute", 0 ), // 6c
+        Instr::new(Box::new(adc::absolute), "adc::absolute", 3 ), // 6d
+        Instr::new(Box::new(ror::absolute), "ror::absolute", 3 ), // 6e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 6f
+        Instr::new(Box::new(branches::bvs), "bvs", 0 ), // 70
+        Instr::new(Box::new(adc::indirect_y), "adc::indirect_y", 2 ), // 71
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 72
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 73
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 74
+        Instr::new(Box::new(adc::zeropage_x), "adc::zeropage_x", 2 ), // 75
+        Instr::new(Box::new(ror::zeropage_x), "ror::zeropage_x", 2 ), // 76
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 77
+        Instr::new(Box::new(flags::sei), "sei::implied", 1 ), // 78
+        Instr::new(Box::new(adc::absolute_y), "adc::absolute_y", 3 ), // 79
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 7a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 7b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 7c
+        Instr::new(Box::new(adc::absolute_x), "adc::absolute_x", 3 ), // 7d
+        Instr::new(Box::new(ror::absolute_x), "ror::absolute_x", 3 ), // 7e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 7f
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 80
+        Instr::new(Box::new(sta::indirect_x), "sta::indirect_x", 2 ), // 81
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 82
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 83
+        Instr::new(Box::new(sty::zeropage), "sty::zeropage", 2 ), // 84
+        Instr::new(Box::new(sta::zeropage), "sta::zeropage", 2 ), // 85
+        Instr::new(Box::new(stx::zeropage), "stx::zeropage", 2 ), // 86
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 87
+        Instr::new(Box::new(dey::implied), "dey::implied", 1 ), // 88
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 89
+        Instr::new(Box::new(transfers::txa), "txa::implied", 1 ), // 8a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 8b
+        Instr::new(Box::new(sty::absolute), "sty::absolute", 3 ), // 8c
+        Instr::new(Box::new(sta::absolute), "sta::absolute", 3 ), // 8d
+        Instr::new(Box::new(stx::absolute), "stx::absolute", 3 ), // 8e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 8f
+        Instr::new(Box::new(branches::bcc), "bcc", 0 ), // 90
+        Instr::new(Box::new(sta::indirect_y), "sta::indirect_y", 2 ), // 91
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 92
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 93
+        Instr::new(Box::new(sty::zeropage_x), "sty::zeropage_x", 2 ), // 94
+        Instr::new(Box::new(sta::zeropage_x), "sta::zeropage_x", 2 ), // 95
+        Instr::new(Box::new(stx::zeropage_y), "stx::zeropage_y", 2 ), // 96
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 97
+        Instr::new(Box::new(transfers::tya), "tya::implied", 1 ), // 98
+        Instr::new(Box::new(sta::absolute_y), "sta::absolute_y", 3 ), // 99
+        Instr::new(Box::new(transfers::txs), "txs::implied", 1 ), // 9a
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 9b
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 9c
+        Instr::new(Box::new(sta::absolute_x), "sta::absolute_x", 3 ), // 9d
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 9e
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // 9f
+        Instr::new(Box::new(ldy::immediate), "ldy::immediate", 2 ), // a0
+        Instr::new(Box::new(lda::indirect_x), "lda::indirect_x", 2 ), // a1
+        Instr::new(Box::new(ldx::immediate), "ldx::immediate", 2 ), // a2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // a3
+        Instr::new(Box::new(ldy::zeropage), "ldy::zeropage", 2 ), // a4
+        Instr::new(Box::new(lda::zeropage), "lda::zeropage", 2 ), // a5
+        Instr::new(Box::new(ldx::zeropage), "ldx::zeropage", 2 ), // a6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // a7
+        Instr::new(Box::new(transfers::tay), "tay::implied", 1 ), // a8
+        Instr::new(Box::new(lda::immediate), "lda::immediate", 2 ), // a9
+        Instr::new(Box::new(transfers::tax), "tax::implied", 1 ), // aa
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // ab
+        Instr::new(Box::new(ldy::absolute), "ldy::absolute", 3 ), // ac
+        Instr::new(Box::new(lda::absolute), "lda::absolute", 3 ), // ad
+        Instr::new(Box::new(ldx::absolute), "ldx::absolute", 3 ), // ae
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // af
+        Instr::new(Box::new(branches::bcs), "bcs", 2 ), // b0
+        Instr::new(Box::new(lda::indirect_y), "lda::indirect_y", 2 ), // b1
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // b2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // b3
+        Instr::new(Box::new(ldy::zeropage_x), "ldy::zeropage_x", 2 ), // b4
+        Instr::new(Box::new(lda::zeropage_x), "lda::zeropage_x", 2 ), // b5
+        Instr::new(Box::new(ldx::zeropage_y), "ldx::zeropage_y", 2 ), // b6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // b7
+        Instr::new(Box::new(flags::clv), "clv::implied", 1 ), // b8
+        Instr::new(Box::new(lda::absolute_y), "lda::absolute_y", 3 ), // b9
+        Instr::new(Box::new(transfers::tsx), "tsx::implied", 1 ), // ba
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // bb
+        Instr::new(Box::new(ldy::absolute_x), "ldy::absolute_x", 3 ), // bc
+        Instr::new(Box::new(lda::absolute_x), "lda::absolute_x", 3 ), // bd
+        Instr::new(Box::new(ldx::absolute_y), "ldx::absolute_y", 3 ), // be
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // bf
+        Instr::new(Box::new(cpy::immediate), "cpy::immediate", 2 ), // c0
+        Instr::new(Box::new(cmp::indirect_x), "cmp::indirect_x", 2 ), // c1
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // c2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // c3
+        Instr::new(Box::new(cpy::zeropage), "cpy::zeropage", 2 ), // c4
+        Instr::new(Box::new(cmp::zeropage), "cmp::zeropage", 2 ), // c5
+        Instr::new(Box::new(dec::zeropage), "dec::zeropage", 2 ), // c6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // c7
+        Instr::new(Box::new(iny::implied), "iny::implied", 1 ), // c8
+        Instr::new(Box::new(cmp::immediate), "cmp::immediate", 2 ), // c9
+        Instr::new(Box::new(dex::implied), "dex::implied", 1 ), // ca
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // cb
+        Instr::new(Box::new(cpy::absolute), "cpy::absolute", 3 ), // cc
+        Instr::new(Box::new(cmp::absolute), "cmp::absolute", 3 ), // cd
+        Instr::new(Box::new(dec::absolute), "dec::absolute", 3 ), // ce
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // cf
+        Instr::new(Box::new(branches::bne), "bne", 2 ), // d0
+        Instr::new(Box::new(cmp::indirect_y), "cmp::indirect_y", 2 ), // d1
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // d2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // d3
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // d4
+        Instr::new(Box::new(cmp::zeropage_x), "cmp::zeropage_x", 2 ), // d5
+        Instr::new(Box::new(dec::zeropage_x), "dec::zeropage_x", 2 ), // d6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // d7
+        Instr::new(Box::new(flags::cld), "cld::implied", 1 ), // d8
+        Instr::new(Box::new(cmp::absolute_y), "cmp::absolute_y", 3 ), // d9
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // da
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // db
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // dc
+        Instr::new(Box::new(cmp::absolute_x), "cmp::absolute_x", 3 ), // dd
+        Instr::new(Box::new(dec::absolute_x), "dec::absolute_x", 3 ), // de
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // df
+        Instr::new(Box::new(cpx::immediate), "cpx::immediate", 2 ), // e0
+        Instr::new(Box::new(sbc::indirect_x), "sbc::indirect_x", 2 ), // e1
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // e2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // e3
+        Instr::new(Box::new(cpx::zeropage), "cpx::zeropage", 2 ), // e4
+        Instr::new(Box::new(sbc::zeropage), "sbc::zeropage", 2 ), // e5
+        Instr::new(Box::new(inc::zeropage), "inc::zeropage", 2 ), // e6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // e7
+        Instr::new(Box::new(inx::implied), "inx::implied", 1 ), // e8
+        Instr::new(Box::new(sbc::immediate), "sbc::immediate", 2 ), // e9
+        Instr::new(Box::new(others::nop), "nop::implied", 1 ), // ea
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // eb
+        Instr::new(Box::new(cpx::absolute), "cpx::absolute", 3 ), // ec
+        Instr::new(Box::new(sbc::absolute), "sbc::absolute", 3 ), // ed
+        Instr::new(Box::new(inc::absolute), "inc::absolute", 3 ), // ee
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // ef
+        Instr::new(Box::new(branches::beq), "beq", 0 ), // f0
+        Instr::new(Box::new(sbc::indirect_y), "sbc::indirect_y", 2 ), // f1
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // f2
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // f3
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // f4
+        Instr::new(Box::new(sbc::zeropage_x), "sbc::zeropage_x", 2 ), // f5
+        Instr::new(Box::new(inc::zeropage_x), "inc::zeropage_x", 2 ), // f6
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // f7
+        Instr::new(Box::new(flags::sed), "sed::implied", 1 ), // f8
+        Instr::new(Box::new(sbc::absolute_y), "sbc::absolute_y", 3 ), // f9
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // fa
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // fb
+        Instr::new(Box::new(error_fn), "error_fn", 255 ), // fc
+        Instr::new(Box::new(sbc::absolute_x), "sbc::absolute_x", 3 ), // fd
+        Instr::new(Box::new(inc::absolute_x), "inc::absolute_x", 3 ), // fe
+        Instr::new(Box::new(error_fn), "error_fn", 255) /* ff */,
     ])}};
 }
 
-pub struct Instr<'a> {
+pub struct Instr {
     pub fun: Box<Fn(&mut CPU) -> (u8, u8)>,
-    pub fname: &'a str,
+    pub fname: String,
     pub ilen: usize,
+}
+
+impl Instr {
+    fn new<S: Into<String>>(fun: Box<Fn(&mut CPU) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
+        Instr {
+            fun,
+            fname: fname.into(),
+            ilen,
+        }
+    }
 }
 
 pub fn error_fn(_cpu: &mut CPU) -> (u8, u8) {
@@ -306,8 +316,9 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode: u8 = prg[current];
 
     let Instr {
-        fname, mut ilen, ..
+        ref fname, mut ilen, ..
     } = INSTR_TABLE[opcode as usize];
+
     let is_error = ilen == 0xFF;
 
     if ilen == 0 || ilen == 0xFF {
@@ -320,7 +331,7 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     } else {
         let codes = &format_hex(&prg[current + 1..current + ilen]);
         debug!(
-            "{:02X}> Found function {}, opcode: {:02X}, ilen: {}, bytes: {:?}",
+            "{:02X}> Found function {}, opcode: {:02X}, {}, bytes: {:?}",
             current + 16,
             fname,
             opcode,

@@ -5,14 +5,12 @@ mod loaders;
 mod utils;
 
 // use
-// use crate::arch::memory::Memory;
-// use crate::arch::cpu::CPU;
-use crate::arch::instrs::instr_table;
-use crate::arch::rom_structs;
-use crate::loaders::loaders_factory;
+use crate::{
+    arch::{instrs::instr_table, rom_structs},
+    loaders::loaders_factory::decode_loader,
+};
 use log::{info, log};
-use std::fs;
-use std::path;
+use std::{fs, path};
 
 fn init_logger() -> Result<(), log::SetLoggerError> {
     let mut builder = env_logger::LogBuilder::new();
@@ -62,7 +60,7 @@ fn read_file(file_path: &path::PathBuf) -> Result<rom_structs::NesRom, String> {
 
     let mut file = fs::File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
-    let loader = loaders_factory::LoadersFactory::decode(ext);
+    let loader = decode_loader(ext);
 
     let rom = loader
         .load_rom_struct(&mut file)

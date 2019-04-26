@@ -1,9 +1,6 @@
 use crate::loaders::loader::Loader;
 use log::{info, log};
-use std::any::Any;
-use std::fs::File;
-use std::io;
-use std::io::Read;
+use std::{any::Any, fs::File, io, io::Read};
 
 pub struct ZipLoader {}
 

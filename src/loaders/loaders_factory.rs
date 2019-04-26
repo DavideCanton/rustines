@@ -1,21 +1,15 @@
-use crate::loaders::flat_loader::FlatLoader;
-use crate::loaders::loader::Loader;
-use crate::loaders::zip_loader::ZipLoader;
+use crate::loaders::{flat_loader::FlatLoader, loader::Loader, zip_loader::ZipLoader};
 use log::{info, log};
 
-pub struct LoadersFactory;
+pub fn decode_loader(extension: &str) -> Box<dyn Loader> {
+    let loader: Box<dyn Loader> = match extension {
+        "zip" => Box::new(ZipLoader::new()),
+        _ => Box::new(FlatLoader::new()),
+    };
 
-impl LoadersFactory {
-    pub fn decode(extension: &str) -> Box<dyn Loader> {
-        let loader: Box<dyn Loader> = match extension {
-            "zip" => Box::new(ZipLoader::new()),
-            _ => Box::new(FlatLoader::new()),
-        };
+    info!("Selected loader {}", loader.name());
 
-        info!("Selected loader {}", loader.name());
-
-        loader
-    }
+    loader
 }
 
 #[cfg(test)]
@@ -25,7 +19,7 @@ mod test {
     #[test]
     fn it_detects_zip_correctly() {
         let ext = "zip";
-        let loader = LoadersFactory::decode(ext);
+        let loader = decode_loader(ext);
 
         assert!(loader.as_any().is::<ZipLoader>());
     }
@@ -33,7 +27,7 @@ mod test {
     #[test]
     fn it_detects_empty_correctly() {
         let ext = "";
-        let loader = LoadersFactory::decode(ext);
+        let loader = decode_loader(ext);
 
         assert!(loader.as_any().is::<FlatLoader>());
     }
@@ -41,7 +35,7 @@ mod test {
     #[test]
     fn it_detects_nes_correctly() {
         let ext = "nes";
-        let loader = LoadersFactory::decode(ext);
+        let loader = decode_loader(ext);
 
         assert!(loader.as_any().is::<FlatLoader>());
     }

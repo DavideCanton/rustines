@@ -1,7 +1,11 @@
-use crate::arch::memory::Memory;
-use crate::arch::registers::*;
-use crate::arch::instrs::instr_table::{Instr, INSTR_TABLE};
-use crate::utils::bit_utils::*;
+use crate::{
+    arch::{
+        instrs::instr_table::{Instr, INSTR_TABLE},
+        memory::Memory,
+        registers::*,
+    },
+    utils::bit_utils::*,
+};
 
 pub struct CPU {
     pub clock: u8,
@@ -31,7 +35,11 @@ impl CPU {
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
-            let Instr{ ref fun, fname, ilen } = INSTR_TABLE[opcode as usize];
+            let Instr {
+                ref fun,
+                ref fname,
+                ilen,
+            } = INSTR_TABLE[opcode as usize];
 
             println!("Fetched instr {}, pc = {}", fname, self.registers.pc);
 
