@@ -1,9 +1,9 @@
 use crate::arch::rom_structs::{Bank, Header};
-use log::{info, log};
+use log::info;
 use std::any::Any;
 
 pub trait Mapper: Any {
-    fn as_any(&self) -> &Any;
+    fn as_any(&self) -> &dyn Any;
 
     fn load_prg_rom(&self, buf: &[u8], header: &Header) -> Vec<Bank> {
         info!("Rom has trainer? {}", header.has_trainer());

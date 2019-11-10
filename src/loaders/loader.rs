@@ -3,14 +3,14 @@ use crate::arch::{
     rom_structs::{Header, NesRom},
 };
 use arrayref::array_ref;
-use log::{error, info, log};
+use log::{error, info};
 use std;
 use std::{any::Any, fs::File};
 
 pub trait Loader: Any {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
     fn name(&self) -> String;
-    fn as_any(&self) -> &Any;
+    fn as_any(&self) -> &dyn Any;
 
     fn load_header(&self, buf: &[u8]) -> Result<Header, String> {
         let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);

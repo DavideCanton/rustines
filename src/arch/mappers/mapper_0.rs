@@ -10,5 +10,5 @@ impl Mapper0 {
 }
 
 impl Mapper for Mapper0 {
-    fn as_any(&self) -> &Any { self }
+    fn as_any(&self) -> &dyn Any { self }
 }

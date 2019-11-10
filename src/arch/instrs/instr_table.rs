@@ -2,7 +2,7 @@ use crate::arch::cpu::CPU;
 use crate::arch::instrs::*;
 use crate::utils::tls::Syncify;
 use lazy_static::*;
-use log::{debug, log};
+use log::debug;
 
 lazy_static! {
 pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
@@ -267,13 +267,13 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
 }
 
 pub struct Instr {
-    pub fun: Box<Fn(&mut CPU) -> (u8, u8)>,
+    pub fun: Box<dyn Fn(&mut CPU) -> (u8, u8)>,
     pub fname: String,
     pub ilen: usize,
 }
 
 impl Instr {
-    fn new<S: Into<String>>(fun: Box<Fn(&mut CPU) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
+    fn new<S: Into<String>>(fun: Box<dyn Fn(&mut CPU) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
         Instr {
             fun,
             fname: fname.into(),
@@ -316,7 +316,9 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode: u8 = prg[current];
 
     let Instr {
-        ref fname, mut ilen, ..
+        ref fname,
+        mut ilen,
+        ..
     } = INSTR_TABLE[opcode as usize];
 
     let is_error = ilen == 0xFF;

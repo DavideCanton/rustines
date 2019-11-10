@@ -1,5 +1,5 @@
 use crate::loaders::loader::Loader;
-use log::{info, log};
+use log::info;
 use std::{any::Any, fs::File, io, io::Read};
 
 pub struct ZipLoader {}
@@ -29,7 +29,7 @@ impl Loader for ZipLoader {
         String::from("ZipLoader")
     }
 
-    fn as_any(&self) -> &Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 }

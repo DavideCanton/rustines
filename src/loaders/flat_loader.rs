@@ -22,7 +22,7 @@ impl Loader for FlatLoader {
         String::from("FlatLoader")
     }
 
-    fn as_any(&self) -> &Any {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 }

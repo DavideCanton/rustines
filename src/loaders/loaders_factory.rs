@@ -1,5 +1,5 @@
 use crate::loaders::{flat_loader::FlatLoader, loader::Loader, zip_loader::ZipLoader};
-use log::{info, log};
+use log::info;
 
 pub fn decode_loader(extension: &str) -> Box<dyn Loader> {
     let loader: Box<dyn Loader> = match extension {

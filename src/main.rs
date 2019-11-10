@@ -9,13 +9,14 @@ use crate::{
     arch::{instrs::instr_table, rom_structs},
     loaders::loaders_factory::decode_loader,
 };
-use log::{info, log};
+use env_logger::Builder;
+use log::{info, LevelFilter};
 use std::{fs, path};
 
-fn init_logger() -> Result<(), log::SetLoggerError> {
-    let mut builder = env_logger::LogBuilder::new();
-    builder.filter(None, log::LogLevelFilter::Info);
-    builder.init()
+fn init_logger() {
+    let mut builder = Builder::from_default_env();
+
+    builder.filter(None, LevelFilter::Info).init();
 }
 
 fn disassemble_rom(rom: &rom_structs::NesRom) {
@@ -85,10 +86,7 @@ pub fn main() {
     let matches = get_args();
     let context = context::Context::build_context(&matches);
 
-    if init_logger().is_err() {
-        eprintln!("Failed to initialize logger.");
-        return;
-    }
+    init_logger();
 
     let file_path = path::PathBuf::from(&context.rom_name);
 

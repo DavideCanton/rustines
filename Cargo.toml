@@ -5,9 +5,9 @@ authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-log = "*"
-env_logger = "*"
-zip = "0.2"
-arrayref = "*"
-clap = "*"
-lazy_static = "*"
+log = "0.4.8"
+env_logger = "0.7.1"
+zip = "0.5.3"
+arrayref = "0.3.5"
+clap = "2.33.0"
+lazy_static = "1.4.0"
