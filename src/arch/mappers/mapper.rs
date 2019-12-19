@@ -2,6 +2,14 @@ use crate::arch::rom_structs::{Bank, Header};
 use log::info;
 use std::any::Any;
 
+macro_rules! impl_mapper {
+    () => {
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    };
+}
+
 pub trait Mapper: Any {
     fn as_any(&self) -> &dyn Any;
 

@@ -3,8 +3,8 @@ use log::info;
 
 pub fn decode_loader(extension: &str) -> Box<dyn Loader> {
     let loader: Box<dyn Loader> = match extension {
-        "zip" => Box::new(ZipLoader::new()),
-        _ => Box::new(FlatLoader::new()),
+        "zip" => Box::new(ZipLoader),
+        _ => Box::new(FlatLoader),
     };
 
     info!("Selected loader {}", loader.name());

@@ -2,13 +2,7 @@ use crate::loaders::loader::Loader;
 use log::info;
 use std::{any::Any, fs::File, io, io::Read};
 
-pub struct ZipLoader {}
-
-impl ZipLoader {
-    pub fn new() -> Self {
-        ZipLoader {}
-    }
-}
+pub struct ZipLoader;
 
 impl Loader for ZipLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
@@ -25,11 +19,5 @@ impl Loader for ZipLoader {
         Ok(buf)
     }
 
-    fn name(&self) -> String {
-        String::from("ZipLoader")
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    impl_loader!("ZipLoader");
 }

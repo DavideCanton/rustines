@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+#[macro_use]
 pub mod loader;
 #[allow(dead_code)]
 pub mod flat_loader;

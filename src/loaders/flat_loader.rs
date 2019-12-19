@@ -1,13 +1,7 @@
 use crate::loaders::loader::Loader;
-use std::{any::Any, fs::File, io, io::Read};
+use std::{fs::File, io, io::Read, any::Any};
 
-pub struct FlatLoader {}
-
-impl FlatLoader {
-    pub fn new() -> Self {
-        FlatLoader {}
-    }
-}
+pub struct FlatLoader;
 
 impl Loader for FlatLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
@@ -18,11 +12,5 @@ impl Loader for FlatLoader {
         Ok(buf)
     }
 
-    fn name(&self) -> String {
-        String::from("FlatLoader")
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
+    impl_loader!("FlatLoader");
 }

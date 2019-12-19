@@ -7,6 +7,18 @@ use log::{error, info};
 use std;
 use std::{any::Any, fs::File};
 
+macro_rules! impl_loader {
+    ($class_name:expr) => {
+        fn name(&self) -> String {
+            String::from($class_name)
+        }
+    
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    };
+}
+
 pub trait Loader: Any {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
     fn name(&self) -> String;
