@@ -1,4 +1,4 @@
-use crate::arch::cpu::CPU;
+use crate::arch::cpu::Cpu;
 use crate::arch::instrs::*;
 use crate::utils::tls::Syncify;
 use lazy_static::*;
@@ -267,13 +267,13 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
 }
 
 pub struct Instr {
-    pub fun: Box<dyn Fn(&mut CPU) -> (u8, u8)>,
+    pub fun: Box<dyn Fn(&mut Cpu) -> (u8, u8)>,
     pub fname: String,
     pub ilen: usize,
 }
 
 impl Instr {
-    fn new<S: Into<String>>(fun: Box<dyn Fn(&mut CPU) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
+    fn new<S: Into<String>>(fun: Box<dyn Fn(&mut Cpu) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
         Instr {
             fun,
             fname: fname.into(),
@@ -282,7 +282,7 @@ impl Instr {
     }
 }
 
-pub fn error_fn(_cpu: &mut CPU) -> (u8, u8) {
+pub fn error_fn(_cpu: &mut Cpu) -> (u8, u8) {
     // panic!("Invalid opcode!");
     (0xFF, 0xFF)
 }

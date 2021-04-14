@@ -1,6 +1,6 @@
-use crate::arch::cpu::CPU;
+use crate::arch::cpu::Cpu;
 
-pub fn bcc(cpu: &mut CPU) -> (u8, u8) {
+pub fn bcc(cpu: &mut Cpu) -> (u8, u8) {
     if !cpu.registers.get_c() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -13,7 +13,7 @@ pub fn bcc(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bcs(cpu: &mut CPU) -> (u8, u8) {
+pub fn bcs(cpu: &mut Cpu) -> (u8, u8) {
     if cpu.registers.get_c() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -26,7 +26,7 @@ pub fn bcs(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn beq(cpu: &mut CPU) -> (u8, u8) {
+pub fn beq(cpu: &mut Cpu) -> (u8, u8) {
     if !cpu.registers.get_z() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -39,7 +39,7 @@ pub fn beq(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bne(cpu: &mut CPU) -> (u8, u8) {
+pub fn bne(cpu: &mut Cpu) -> (u8, u8) {
     if cpu.registers.get_z() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -52,7 +52,7 @@ pub fn bne(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bmi(cpu: &mut CPU) -> (u8, u8) {
+pub fn bmi(cpu: &mut Cpu) -> (u8, u8) {
     if !cpu.registers.get_n() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -65,7 +65,7 @@ pub fn bmi(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bpl(cpu: &mut CPU) -> (u8, u8) {
+pub fn bpl(cpu: &mut Cpu) -> (u8, u8) {
     if cpu.registers.get_n() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -78,7 +78,7 @@ pub fn bpl(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bvs(cpu: &mut CPU) -> (u8, u8) {
+pub fn bvs(cpu: &mut Cpu) -> (u8, u8) {
     if !cpu.registers.get_v() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
@@ -91,7 +91,7 @@ pub fn bvs(cpu: &mut CPU) -> (u8, u8) {
     }
 }
 
-pub fn bvc(cpu: &mut CPU) -> (u8, u8) {
+pub fn bvc(cpu: &mut Cpu) -> (u8, u8) {
     if cpu.registers.get_v() {
         let addr = decode_zeropage!(cpu).0 as i8;
         let new_pc = cpu.registers.pc.wrapping_add(addr as u16);

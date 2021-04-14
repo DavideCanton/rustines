@@ -1,8 +1,14 @@
-use crate::loaders::loader::Loader;
+use std::{fs::File, io, io::Read};
+
 use log::info;
-use std::{any::Any, fs::File, io, io::Read};
+
+use crate::impl_named;
+use crate::loaders::loader::Loader;
+use crate::utils::named::Named;
 
 pub struct ZipLoader;
+
+impl_named!(ZipLoader);
 
 impl Loader for ZipLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
@@ -18,6 +24,4 @@ impl Loader for ZipLoader {
 
         Ok(buf)
     }
-
-    impl_loader!("ZipLoader");
 }

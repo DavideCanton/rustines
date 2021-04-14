@@ -1,28 +1,16 @@
+use std::{fs::File};
+
+use arrayref::array_ref;
+use log::{error, info};
+
 use crate::arch::{
     mappers::mapper_factory::instantiate_mapper,
     rom_structs::{Header, NesRom},
 };
-use arrayref::array_ref;
-use log::{error, info};
-use std;
-use std::{any::Any, fs::File};
+use crate::utils::named::Named;
 
-macro_rules! impl_loader {
-    ($class_name:expr) => {
-        fn name(&self) -> String {
-            String::from($class_name)
-        }
-    
-        fn as_any(&self) -> &dyn Any {
-            self
-        }
-    };
-}
-
-pub trait Loader: Any {
+pub trait Loader: Named {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
-    fn name(&self) -> String;
-    fn as_any(&self) -> &dyn Any;
 
     fn load_header(&self, buf: &[u8]) -> Result<Header, String> {
         let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);

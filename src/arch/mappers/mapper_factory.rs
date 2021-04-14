@@ -7,7 +7,6 @@ pub fn instantiate_mapper(mapping_number: u8) -> Option<Box<dyn Mapper>> {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -17,7 +16,7 @@ mod test {
         let mapper = instantiate_mapper(0);
 
         assert!(mapper.is_some());
-        assert!(mapper.unwrap().as_any().is::<Mapper0>());
+        assert_eq!(mapper.unwrap().name(), "Mapper0");
     }
 
     #[test]

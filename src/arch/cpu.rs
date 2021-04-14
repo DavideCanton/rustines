@@ -7,7 +7,7 @@ use crate::{
     utils::bit_utils::*,
 };
 
-pub struct CPU {
+pub struct Cpu {
     pub clock: u8,
     pub registers: Registers,
     pub memory: Memory,
@@ -16,11 +16,11 @@ pub struct CPU {
     pub rst: bool,
 }
 
-impl CPU {
+impl Cpu {
     pub fn new(mem: Memory) -> Self {
         init_flags();
 
-        CPU {
+        Cpu {
             clock: 0,
             registers: Registers::new(),
             memory: mem,

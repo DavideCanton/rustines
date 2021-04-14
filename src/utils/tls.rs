@@ -1,5 +1,3 @@
-//#![feature(thread_local)]
-
 use std::{ops, marker};
 
 /// Add `Sync` to an arbitrary type.

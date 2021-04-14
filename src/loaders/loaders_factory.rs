@@ -21,7 +21,7 @@ mod test {
         let ext = "zip";
         let loader = decode_loader(ext);
 
-        assert!(loader.as_any().is::<ZipLoader>());
+        assert_eq!(loader.name(), "ZipLoader");
     }
 
     #[test]
@@ -29,7 +29,7 @@ mod test {
         let ext = "";
         let loader = decode_loader(ext);
 
-        assert!(loader.as_any().is::<FlatLoader>());
+        assert_eq!(loader.name(), "FlatLoader");
     }
 
     #[test]
@@ -37,6 +37,6 @@ mod test {
         let ext = "nes";
         let loader = decode_loader(ext);
 
-        assert!(loader.as_any().is::<FlatLoader>());
+        assert_eq!(loader.name(), "FlatLoader");
     }
 }

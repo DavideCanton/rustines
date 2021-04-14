@@ -1,7 +1,12 @@
+use std::{fs::File, io, io::Read};
+
+use crate::impl_named;
 use crate::loaders::loader::Loader;
-use std::{fs::File, io, io::Read, any::Any};
+use crate::utils::named::Named;
 
 pub struct FlatLoader;
+
+impl_named!(FlatLoader);
 
 impl Loader for FlatLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
@@ -11,6 +16,4 @@ impl Loader for FlatLoader {
 
         Ok(buf)
     }
-
-    impl_loader!("FlatLoader");
 }
