@@ -340,10 +340,10 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
             ilen,
             codes
         );
-        get_fname_for_print(&fname, codes)
+        get_fname_for_print(fname, codes)
     };
 
-    (a.to_owned(), current + ilen)
+    (a, current + ilen)
 }
 
 // decode functions

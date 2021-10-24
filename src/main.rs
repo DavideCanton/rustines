@@ -53,7 +53,7 @@ fn get_args() -> clap::ArgMatches<'static> {
         .get_matches()
 }
 
-fn read_file(file_path: &path::PathBuf) -> Result<rom_structs::NesRom, String> {
+fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
