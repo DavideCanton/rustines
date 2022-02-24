@@ -34,18 +34,18 @@ fn disassemble_rom(rom: &rom_structs::NesRom) {
     }
 }
 
-fn get_args() -> clap::ArgMatches<'static> {
-    clap::App::new("rustines")
+fn get_args() -> clap::ArgMatches {
+    clap::Command::new("rustines")
         .version("1.0")
         .author("Davide C. <davide.canton5@gmail.com>")
         .about("NES emulator written in Rust")
         .arg(
-            clap::Arg::with_name("disassemble")
-                .short("d")
+            clap::Arg::new("disassemble")
+                .short('d')
                 .help("Disassemble ROM"),
         )
         .arg(
-            clap::Arg::with_name("INPUT")
+            clap::Arg::new("INPUT")
                 .help("Sets the input rom file to use")
                 .required(true)
                 .index(1),
