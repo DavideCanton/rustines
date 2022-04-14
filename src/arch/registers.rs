@@ -32,6 +32,22 @@ pub fn init_flags() {
     }
 }
 
+macro_rules! gen_methods {
+    ($get_name: ident, $set_name: ident, $clear_name: ident, $field: ident, $mask: expr) => {
+        pub fn $get_name(&self) -> bool {
+            (self.$field & $mask) != 0
+        }
+
+        pub fn $set_name(&mut self) {
+            self.$field |= $mask;
+        }
+
+        pub fn $clear_name(&mut self) {
+            self.$field &= !$mask;
+        }
+    };
+}
+
 impl Registers {
     pub fn new() -> Registers {
         Registers {
@@ -74,87 +90,11 @@ impl Registers {
         self.bdi = (p >> 2) & 0x7;
     }
 
-    pub fn get_n(&self) -> bool {
-        (self.nz & 0x2) != 0
-    }
-
-    pub fn set_n(&mut self) {
-        self.nz |= 0x2;
-    }
-
-    pub fn clear_n(&mut self) {
-        self.nz &= 0xFD;
-    }
-
-    pub fn get_z(&self) -> bool {
-        (self.nz & 0x1) != 0
-    }
-
-    pub fn set_z(&mut self) {
-        self.nz |= 0x1;
-    }
-
-    pub fn clear_z(&mut self) {
-        self.nz &= 0xFE;
-    }
-
-    pub fn get_v(&self) -> bool {
-        (self.vc & 0x2) != 0
-    }
-
-    pub fn set_v(&mut self) {
-        self.vc |= 0x2;
-    }
-
-    pub fn clear_v(&mut self) {
-        self.vc &= 0xFD;
-    }
-
-    pub fn get_c(&self) -> bool {
-        (self.vc & 0x1) != 0
-    }
-
-    pub fn set_c(&mut self) {
-        self.vc |= 0x1;
-    }
-
-    pub fn clear_c(&mut self) {
-        self.vc &= 0xFE;
-    }
-
-    pub fn get_b(&self) -> bool {
-        (self.bdi & 0x4) != 0
-    }
-
-    pub fn set_b(&mut self) {
-        self.bdi |= 0x4;
-    }
-
-    pub fn clear_b(&mut self) {
-        self.nz &= 0xFB;
-    }
-
-    pub fn get_d(&self) -> bool {
-        (self.bdi & 0x2) != 0
-    }
-
-    pub fn set_d(&mut self) {
-        self.bdi |= 0x2;
-    }
-
-    pub fn clear_d(&mut self) {
-        self.bdi &= 0xFB;
-    }
-
-    pub fn get_i(&self) -> bool {
-        (self.bdi & 0x1) != 0
-    }
-
-    pub fn set_i(&mut self) {
-        self.bdi |= 0x1;
-    }
-
-    pub fn clear_i(&mut self) {
-        self.bdi &= 0xFE;
-    }
+    gen_methods!(get_z, set_z, clear_z, nz, 0x1);
+    gen_methods!(get_n, set_n, clear_n, nz, 0x2);
+    gen_methods!(get_v, set_v, clear_v, vc, 0x2);
+    gen_methods!(get_c, set_c, clear_c, vc, 0x1);
+    gen_methods!(get_b, set_b, clear_b, bdi, 0x4);
+    gen_methods!(get_d, set_d, clear_d, bdi, 0x2);
+    gen_methods!(get_i, set_i, clear_i, bdi, 0x1);
 }
