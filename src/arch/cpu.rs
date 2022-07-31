@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::{
     arch::{
         instrs::instr_table::{Instr, INSTR_TABLE},
@@ -22,7 +24,7 @@ impl Cpu {
 
         Cpu {
             clock: 0,
-            registers: Registers::new(),
+            registers: Registers::new(mem.get_reset()),
             memory: mem,
             irq: false,
             nmi: false,
@@ -32,6 +34,8 @@ impl Cpu {
 
     pub fn execute(&mut self) {
         loop {
+            debug!("Running at {}...", self.registers.pc);
+
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 

@@ -49,9 +49,9 @@ macro_rules! gen_methods {
 }
 
 impl Registers {
-    pub fn new() -> Registers {
+    pub fn new(reset: u16) -> Registers {
         Registers {
-            pc: 0,
+            pc: reset,
             sp: 0xFF,
             a_reg: 0,
             x_reg: 0,

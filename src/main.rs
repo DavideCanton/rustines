@@ -6,7 +6,7 @@ mod utils;
 
 // use
 use crate::{
-    arch::{instrs::instr_table, rom_structs},
+    arch::{cpu::Cpu, instrs::instr_table, memory::Memory, rom_structs},
     loaders::loaders_factory::decode_loader,
 };
 use env_logger::Builder;
@@ -16,10 +16,10 @@ use std::{fs, path};
 fn init_logger() {
     let mut builder = Builder::from_default_env();
 
-    builder.filter(None, LevelFilter::Info).init();
+    builder.filter(None, LevelFilter::Debug).init();
 }
 
-fn disassemble_rom(rom: &rom_structs::NesRom) {
+fn disassemble_rom(rom: rom_structs::NesRom) {
     for bank in rom.prg_rom_banks.iter() {
         let mut cnt: usize = 0;
 
@@ -34,16 +34,22 @@ fn disassemble_rom(rom: &rom_structs::NesRom) {
     }
 }
 
+fn execute_rom(rom: rom_structs::NesRom) {
+    let mem = Memory::new(rom);
+    let mut cpu = Cpu::new(mem);
+    cpu.execute();
+}
+
 fn get_args() -> clap::ArgMatches {
     clap::Command::new("rustines")
         .version("1.0")
         .author("Davide C. <davide.canton5@gmail.com>")
         .about("NES emulator written in Rust")
-        .arg(
-            clap::Arg::new("disassemble")
-                .short('d')
-                .help("Disassemble ROM"),
-        )
+        .subcommands(vec![
+            clap::Command::new("dis").about("Disassemble ROM"),
+            clap::Command::new("ex").about("Execute ROM instructions"),
+            clap::Command::new("play").about("Play ROM"),
+        ])
         .arg(
             clap::Arg::new("INPUT")
                 .help("Sets the input rom file to use")
@@ -70,15 +76,19 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
     Ok(rom)
 }
 
-fn process_file(buf: &rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
+fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
     info!("ROM size: {:#x}", buf.size);
 
-    if context.disassemble {
-        disassemble_rom(buf);
-        Ok(())
-    } else {
-        // TODO execute ROM
-        Ok(())
+    match context.subcommand.as_str() {
+        "dis" => {
+            disassemble_rom(buf);
+            Ok(())
+        }
+        "ex" => {
+            execute_rom(buf);
+            Ok(())
+        }
+        _ => Ok(()),
     }
 }
 
@@ -90,9 +100,9 @@ pub fn main() {
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
-    info!("Disassemble: {}", &context.disassemble);
+    info!("Subcommand: {}", &context.subcommand);
     info!("Using input file: {}", &context.rom_name);
 
     let rom = read_file(&file_path).unwrap();
-    process_file(&rom, &context).unwrap();
+    process_file(rom, &context).unwrap();
 }

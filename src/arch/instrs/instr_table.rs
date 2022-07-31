@@ -83,7 +83,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(eor::immediate), "eor::immediate", 2 ), // 49
         Instr::new(Box::new(lsr::accumulator), "lsr::accumulator", 1 ), // 4a
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 4b
-        Instr::new(Box::new(jmp::absolute), "jmp::absolute", 0 ), // 4c
+        Instr::new(Box::new(jmp::absolute), "jmp::absolute", 3 ), // 4c
         Instr::new(Box::new(eor::absolute), "eor::absolute", 3 ), // 4d
         Instr::new(Box::new(lsr::absolute), "lsr::absolute", 3 ), // 4e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 4f
@@ -115,7 +115,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(adc::immediate), "adc::immediate", 2 ), // 69
         Instr::new(Box::new(ror::accumulator), "ror::accumulator", 1 ), // 6a
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 6b
-        Instr::new(Box::new(jmp::indirect_absolute), "jmp::indirect_absolute", 0 ), // 6c
+        Instr::new(Box::new(jmp::indirect_absolute), "jmp::indirect_absolute", 3 ), // 6c
         Instr::new(Box::new(adc::absolute), "adc::absolute", 3 ), // 6d
         Instr::new(Box::new(ror::absolute), "ror::absolute", 3 ), // 6e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 6f
