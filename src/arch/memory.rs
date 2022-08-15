@@ -1,5 +1,3 @@
-use crate::utils::bit_utils::to_u16;
-
 use super::rom_structs::NesRom;
 
 pub struct Memory {
@@ -31,15 +29,10 @@ impl Memory {
         let mut mem = vec![0; 0x10000];
         unsafe {
             let ptr = mem.as_mut_ptr();
-            if rom.prg_rom_banks.len() == 1 {
-                // 1 prg rom of 32k
-                let prg = &rom.prg_rom_banks[0];
-                std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0x8000), 0x8000);
-            } else {
-                // 2 prg rom of 16k
+            if rom.header.prg_rom_size == 1 {
+                // TODO for now let's handle just this case...
                 let prg = &rom.prg_rom_banks[0];
                 std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0x8000), 0x4000);
-                let prg = &rom.prg_rom_banks[1];
                 std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0xC000), 0x4000);
             }
         }
@@ -147,7 +140,8 @@ impl Memory {
     }
 
     fn _fetch_from_prg_rom(&self, addr: usize) -> u8 {
-        unimplemented!();
+        // TODO
+        self.mem[addr]
     }
 
     fn _store_prg_rom(&mut self, addr: usize, val: u8) -> u8 {
@@ -162,9 +156,5 @@ impl Memory {
     pub fn peek8(&self, sp: u8) -> u8 {
         let sp = sp as u16 + 0x0100;
         self.fetch(sp)
-    }
-
-    pub fn get_reset(&self) -> u16 {
-        to_u16(self.mem[0xFFFC], self.mem[0xFFFD])
     }
 }

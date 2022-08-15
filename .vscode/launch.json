@@ -21,7 +21,7 @@
             },
             "args": [
                 "${workspaceFolder}/roms/nestest.nes",
-                "-d"
+                "ex"
             ],
             "cwd": "${workspaceFolder}"
         },

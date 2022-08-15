@@ -1,4 +1,5 @@
-#[derive(Debug)]
+use std::fmt;
+
 pub struct Registers {
     pub pc: u16,
     pub sp: u8,
@@ -49,9 +50,9 @@ macro_rules! gen_methods {
 }
 
 impl Registers {
-    pub fn new(reset: u16) -> Registers {
+    pub fn new() -> Registers {
         Registers {
-            pc: reset,
+            pc: 0,
             sp: 0xFF,
             a_reg: 0,
             x_reg: 0,
@@ -98,3 +99,36 @@ impl Registers {
     gen_methods!(get_d, set_d, clear_d, bdi, 0x2);
     gen_methods!(get_i, set_i, clear_i, bdi, 0x1);
 }
+
+impl fmt::Debug for Registers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Registers")
+         .field("pc", &format!("{:#04x}", self.pc))
+         .field("sp", &format!("{:#04x}", self.sp))
+         .field("a_reg", &format!("{:#04x}", self.a_reg))
+         .field("x_reg", &format!("{:#04x}", self.x_reg))
+         .field("y_reg", &format!("{:#04x}", self.y_reg))         
+         .field("z_flag", &self.get_z())
+         .field("n_flag", &self.get_n())
+         .field("v_flag", &self.get_v())
+         .field("c_flag", &self.get_c())
+         .field("b_flag", &self.get_b())
+         .field("d_flag", &self.get_d())
+         .field("i_flag", &self.get_i())
+         .finish()
+    }
+}
+
+
+
+// pub pc: u16,
+// pub sp: u8,
+// // pub P: u8,
+// pub a_reg: u8, // o i8?
+// pub x_reg: u8,
+// pub y_reg: u8,
+
+// // flags
+// nz: u8,
+// vc: u8,
+// bdi: u8,

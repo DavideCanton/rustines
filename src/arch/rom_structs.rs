@@ -25,6 +25,9 @@ macro_rules! extract_flag {
     }};
 }
 
+pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
+pub const CHR_ROM_BANK_SIZE: usize = 1 << 13;
+
 
 impl Header {
     pub fn from_bytes(buf: &[u8; 16]) -> Self {
@@ -32,7 +35,7 @@ impl Header {
     }
 
     pub fn prg_rom_size(&self) -> usize {
-        (self.prg_rom_size as usize) << 14
+        (self.prg_rom_size as usize) * PRG_ROM_BANK_SIZE
     }
 
     pub fn prg_rom_banks(&self) -> usize {
@@ -40,7 +43,7 @@ impl Header {
     }
 
     pub fn chr_rom_size(&self) -> usize {
-        (self.chr_rom_size as usize) << 13
+        (self.chr_rom_size as usize) * CHR_ROM_BANK_SIZE
     }
 
     pub fn uses_chr_ram(&self) -> bool {
@@ -80,7 +83,7 @@ pub struct Bank {
     pub writable: bool,
     pub battery: bool,
     pub id: String,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
 }
 
 pub struct NesRom {

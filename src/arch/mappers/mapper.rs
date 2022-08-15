@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::arch::rom_structs::{Bank, Header};
+use crate::arch::rom_structs::{Bank, Header, PRG_ROM_BANK_SIZE};
 use crate::utils::named::Named;
 
 pub trait Mapper: Named {
@@ -17,8 +17,8 @@ pub trait Mapper: Named {
         let mut banks = Vec::with_capacity(header.prg_rom_banks());
 
         for i in 0..header.prg_rom_banks() {
-            let start = prg_start + i * 0x4000;
-            let end = start + 0x4000;
+            let start = prg_start + i * PRG_ROM_BANK_SIZE;
+            let end = start + PRG_ROM_BANK_SIZE;
 
             info!("Bank {}", i);
             info!("{:#x}-{:#x}", start, end);

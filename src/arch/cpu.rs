@@ -1,5 +1,3 @@
-use log::debug;
-
 use crate::{
     arch::{
         instrs::instr_table::{Instr, INSTR_TABLE},
@@ -24,7 +22,7 @@ impl Cpu {
 
         Cpu {
             clock: 0,
-            registers: Registers::new(mem.get_reset()),
+            registers: Registers::new(),
             memory: mem,
             irq: false,
             nmi: false,
@@ -33,9 +31,10 @@ impl Cpu {
     }
 
     pub fn execute(&mut self) {
-        loop {
-            debug!("Running at {}...", self.registers.pc);
+        // load pc from reset vector
+        self.perform_rst();
 
+        loop {
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
@@ -45,7 +44,7 @@ impl Cpu {
                 ilen,
             } = INSTR_TABLE[opcode as usize];
 
-            println!("Fetched instr {}, pc = {}", fname, self.registers.pc);
+            println!("Fetched instr {}, pc = {:#04x}", fname, self.registers.pc);
 
             // execute
             let (cycles, _) = fun(self);
@@ -122,5 +121,37 @@ impl Cpu {
         let high = to_u16(high_l, high_h);
 
         to_u32(low, high)
+    }
+
+    fn save_state_before_interrupt(&mut self) {
+        let pc = self.registers.pc;
+        self.push16(pc);
+        let p = self.registers.get_p();
+        self.push8(p);
+    }
+
+    fn perform_irq(&mut self) {
+        self.save_state_before_interrupt();
+
+        let low = self.memory.fetch(0xFFFE);
+        let high = self.memory.fetch(0xFFFF);
+
+        self.registers.pc = to_u16(low, high);
+    }
+
+    fn perform_nmi(&mut self) {
+        self.save_state_before_interrupt();
+
+        let low = self.memory.fetch(0xFFFA);
+        let high = self.memory.fetch(0xFFFB);
+
+        self.registers.pc = to_u16(low, high);
+    }
+
+    fn perform_rst(&mut self) {
+        let low = self.memory.fetch(0xFFFC);
+        let high = self.memory.fetch(0xFFFD);
+
+        self.registers.pc = to_u16(low, high);
     }
 }
