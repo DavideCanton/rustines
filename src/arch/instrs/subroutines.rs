@@ -7,13 +7,13 @@ pub fn jsr(cpu: &mut Cpu) -> (u8, u8) {
     cpu.push16(t);
     cpu.registers.pc = addr;
     
-    (6, 0) // this is a jump
+    (6, 0)
 }
 
 pub fn rts(cpu: &mut Cpu) -> (u8, u8) {
     let v = cpu.pop16();
     cpu.registers.pc = v + 1;
-    (6, 1)
+    (6, 0)
 }
 
 pub fn rti(cpu: &mut Cpu) -> (u8, u8) {

@@ -39,7 +39,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(ora::absolute_x), "ora::absolute_x", 3 ), // 1d
         Instr::new(Box::new(asl::absolute_x), "asl::absolute_x", 3 ), // 1e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 1f
-        Instr::new(Box::new(subroutines::jsr), "jsr::absolute", 0 ), // 20
+        Instr::new(Box::new(subroutines::jsr), "jsr::absolute", 3 ), // 20
         Instr::new(Box::new(and::indirect_x), "and::indirect_x", 2 ), // 21
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 22
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 23
@@ -55,7 +55,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(and::absolute), "and::absolute", 3 ), // 2d
         Instr::new(Box::new(rol::absolute), "rol::absolute", 3 ), // 2e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 2f
-        Instr::new(Box::new(branches::bmi), "bmi", 0 ), // 30
+        Instr::new(Box::new(branches::bmi), "bmi", 2 ), // 30
         Instr::new(Box::new(and::indirect_y), "and::indirect_y", 2 ), // 31
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 32
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 33
@@ -71,7 +71,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(and::absolute_x), "and::absolute_x", 3 ), // 3d
         Instr::new(Box::new(rol::absolute_x), "rol::absolute_x", 3 ), // 3e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 3f
-        Instr::new(Box::new(subroutines::rti), "rti::absolute", 0 ), // 40
+        Instr::new(Box::new(subroutines::rti), "rti::absolute", 1 ), // 40
         Instr::new(Box::new(eor::indirect_x), "eor::indirect_x", 2 ), // 41
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 42
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 43
@@ -119,7 +119,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(adc::absolute), "adc::absolute", 3 ), // 6d
         Instr::new(Box::new(ror::absolute), "ror::absolute", 3 ), // 6e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 6f
-        Instr::new(Box::new(branches::bvs), "bvs", 0 ), // 70
+        Instr::new(Box::new(branches::bvs), "bvs", 2 ), // 70
         Instr::new(Box::new(adc::indirect_y), "adc::indirect_y", 2 ), // 71
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 72
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 73
@@ -151,7 +151,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(sta::absolute), "sta::absolute", 3 ), // 8d
         Instr::new(Box::new(stx::absolute), "stx::absolute", 3 ), // 8e
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 8f
-        Instr::new(Box::new(branches::bcc), "bcc", 0 ), // 90
+        Instr::new(Box::new(branches::bcc), "bcc", 2 ), // 90
         Instr::new(Box::new(sta::indirect_y), "sta::indirect_y", 2 ), // 91
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 92
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // 93
@@ -247,7 +247,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(sbc::absolute), "sbc::absolute", 3 ), // ed
         Instr::new(Box::new(inc::absolute), "inc::absolute", 3 ), // ee
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // ef
-        Instr::new(Box::new(branches::beq), "beq", 0 ), // f0
+        Instr::new(Box::new(branches::beq), "beq", 2 ), // f0
         Instr::new(Box::new(sbc::indirect_y), "sbc::indirect_y", 2 ), // f1
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // f2
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // f3

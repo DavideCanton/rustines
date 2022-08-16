@@ -25,3 +25,11 @@ pub fn to_u16_lh(v: u32) -> (u16, u16) {
 
     (low, high)
 }
+
+#[macro_export]
+macro_rules! hex {
+    ( $val:expr ) => {{
+        let formatted = format!("{:#04X}", $val);
+        formatted[2..].to_uppercase().to_string()
+    }};
+}

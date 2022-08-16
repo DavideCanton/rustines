@@ -1,9 +1,12 @@
+use log::info;
+
 use crate::{
     arch::{
         instrs::instr_table::{Instr, INSTR_TABLE},
         memory::Memory,
         registers::*,
     },
+    hex,
     utils::bit_utils::*,
 };
 
@@ -33,6 +36,7 @@ impl Cpu {
     pub fn execute(&mut self) {
         // load pc from reset vector
         self.perform_rst();
+        let mut cycles_tot = 0;
 
         loop {
             // fetch
@@ -44,22 +48,39 @@ impl Cpu {
                 ilen,
             } = INSTR_TABLE[opcode as usize];
 
-            println!("Fetched instr {}, pc = {:#04x}", fname, self.registers.pc);
+            let mut data = Vec::with_capacity(ilen);
+            for i in 0..ilen {
+                data.push(self.memory.fetch(self.registers.pc + (i as u16)));
+            }
 
             // execute
-            let (cycles, _) = fun(self);
+            let (cycles, actual_ilen) = fun(self);
 
             if cycles == 0xFF {
                 break;
             }
+            cycles_tot += cycles;
 
-            self.registers.pc += ilen as u16;
+            info!(
+                "[{}]\t{: <20}\t{: <10}\t{} {} {} {} {}\t{}",
+                hex!(self.registers.pc),
+                fname,
+                data.iter().map(|n| hex!(n)).collect::<Vec<_>>().join(" "),
+                hex!(self.registers.a_reg),
+                hex!(self.registers.x_reg),
+                hex!(self.registers.y_reg),
+                hex!(self.registers.get_p()),
+                hex!(self.registers.sp),
+                cycles_tot
+            );
 
-            println!("Registers: {:?}", self.registers);
+            self.registers.pc += actual_ilen as u16;
+
+            // println!("Registers: {:?}", self.registers);
 
             // update time?
 
-            println!("{}", cycles);
+            // println!("{}", cycles);
         }
     }
 
