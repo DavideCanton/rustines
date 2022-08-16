@@ -1,8 +1,8 @@
 use crate::arch::cpu::Cpu;
 use crate::arch::instrs::*;
+use crate::hex;
 use crate::utils::tls::Syncify;
 use lazy_static::*;
-use log::debug;
 
 lazy_static! {
 pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
@@ -266,14 +266,16 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
     ])}};
 }
 
+pub type InstrFn = Box<dyn Fn(&mut Cpu) -> (u8, u8)>;
+
 pub struct Instr {
-    pub fun: Box<dyn Fn(&mut Cpu) -> (u8, u8)>,
+    pub fun: InstrFn,
     pub fname: String,
     pub ilen: usize,
 }
 
 impl Instr {
-    fn new<S: Into<String>>(fun: Box<dyn Fn(&mut Cpu) -> (u8, u8)>, fname: S, ilen: usize) -> Self {
+    fn new<S: Into<String>>(fun: InstrFn, fname: S, ilen: usize) -> Self {
         Instr {
             fun,
             fname: fname.into(),
@@ -288,28 +290,29 @@ pub fn error_fn(_cpu: &mut Cpu) -> (u8, u8) {
 }
 
 fn format_hex(data: &[u8]) -> String {
-    let hexes: Vec<_> = data.iter().map(|v| format!("{:02X}", v)).collect();
-    hexes.join("")
+    data.iter().skip(1).map(|v| hex!(v)).collect::<Vec<_>>().join("")
 }
 
-fn get_fname_for_print(fname: &str, arg: &str) -> String {
+pub fn get_fname_for_print(fname: &str, data: &[u8]) -> String {
+    let codes = format_hex(data);
     let pieces: Vec<&str> = fname.split("::").collect();
 
-    let instr_name = pieces.get(0).unwrap();
+    let instr_name = pieces.first().unwrap();
     let address = pieces.get(1);
 
-    match address {
+    let ret = match address {
         Some(&"implied") => instr_name.to_string(),
-        Some(&"zeropage_x") => format!("{} {}+x", instr_name, arg),
-        Some(&"zeropage") => format!("{} {}", instr_name, arg),
-        Some(&"immediate") => format!("{} #{}", instr_name, arg),
-        Some(&"absolute_x") => format!("{} [{}+x]", instr_name, arg),
-        Some(&"absolute_y") => format!("{} [{}+y]", instr_name, arg),
-        Some(&"absolute") => format!("{} [{}]", instr_name, arg),
-        Some(&"indirect_x") => format!("{} x({})", instr_name, arg),
-        Some(&"indirect_y") => format!("{} y({})", instr_name, arg),
+        Some(&"zeropage_x") => format!("{} {}+x", instr_name, codes),
+        Some(&"zeropage") => format!("{} {}", instr_name, codes),
+        Some(&"immediate") => format!("{} #{}", instr_name, codes),
+        Some(&"absolute_x") => format!("{} [{}+x]", instr_name, codes),
+        Some(&"absolute_y") => format!("{} [{}+y]", instr_name, codes),
+        Some(&"absolute") => format!("{} [{}]", instr_name, codes),
+        Some(&"indirect_x") => format!("{} x({})", instr_name, codes),
+        Some(&"indirect_y") => format!("{} y({})", instr_name, codes),
         _ => instr_name.to_string(),
-    }
+    };
+    format!("({}) {}", hex!(data[0]), ret)
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
@@ -329,18 +332,9 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     }
 
     let a = if is_error {
-        format!("{} ({:02X})", fname, opcode)
+        format!("{} ({})", fname, hex!(opcode))
     } else {
-        let codes = &format_hex(&prg[current + 1..current + ilen]);
-        debug!(
-            "{:02X}> Found function {}, opcode: {:02X}, {}, bytes: {:?}",
-            current + 16,
-            fname,
-            opcode,
-            ilen,
-            codes
-        );
-        get_fname_for_print(fname, codes)
+        get_fname_for_print(fname, &prg[current..current + ilen])
     };
 
     (a, current + ilen)

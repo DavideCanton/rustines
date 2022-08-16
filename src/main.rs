@@ -37,7 +37,7 @@ fn disassemble_rom(rom: rom_structs::NesRom) {
 fn execute_rom(rom: rom_structs::NesRom) {
     let mem = Memory::new(rom);
     let mut cpu = Cpu::new(mem);
-    cpu.execute();
+    cpu.execute_verbose();
 }
 
 fn get_args() -> clap::ArgMatches {
