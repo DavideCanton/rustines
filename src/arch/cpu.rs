@@ -6,7 +6,7 @@ use crate::{
         memory::Memory,
         registers::*,
     },
-    hex,
+    bin, hex,
     utils::bit_utils::*,
 };
 
@@ -42,18 +42,24 @@ impl Cpu {
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
-            let Instr {
-                ref fun,
-                ref fname,
-                ilen,
-            } = INSTR_TABLE[opcode as usize];
+            let instr = &INSTR_TABLE[opcode as usize];
+            let Instr { fun, ilen, .. } = instr;
 
-            let mut data = Vec::with_capacity(ilen);
-            for i in 0..ilen {
-                data.push(self.memory.fetch(self.registers.pc + (i as u16)));
-            }
+            let data = self.memory.fetch_many(self.registers.pc, *ilen as u16);
 
-            let old_pc = self.registers.pc;
+            let p = self.registers.get_p();
+            info!(
+                "[{}] {: <20}A:{} X:{} Y:{} P:{} ({}) SP:{} {}",
+                hex!(self.registers.pc),
+                get_fname_for_print(instr, &data),
+                hex!(self.registers.a_reg),
+                hex!(self.registers.x_reg),
+                hex!(self.registers.y_reg),
+                hex!(p),
+                bin!(p),
+                hex!(self.registers.sp),
+                cycles_tot
+            );
 
             // execute
             let (cycles, actual_ilen) = fun(self);
@@ -62,18 +68,6 @@ impl Cpu {
                 break;
             }
             cycles_tot += cycles;
-
-            info!(
-                "[{}] {: <20}A:{} X:{} Y:{} P:{} SP:{} {}",
-                hex!(old_pc),
-                get_fname_for_print(fname, &data),
-                hex!(self.registers.a_reg),
-                hex!(self.registers.x_reg),
-                hex!(self.registers.y_reg),
-                hex!(self.registers.get_p()),
-                hex!(self.registers.sp),
-                cycles_tot
-            );
 
             self.registers.pc += actual_ilen as u16;
         }

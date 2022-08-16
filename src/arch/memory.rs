@@ -54,6 +54,14 @@ impl Memory {
         )
     }
 
+    pub fn fetch_many(&self, addr: u16, count: u16) -> Box<[u8]> {
+        let mut v = Vec::with_capacity(count as usize);
+        for i in addr..(addr + count) {
+            v.push(self.fetch(i));
+        }
+        v.into_boxed_slice()
+    }
+
     pub fn store(&mut self, addr: u16, val: u8) -> u8 {
         let addr = addr as usize;
 
@@ -67,6 +75,12 @@ impl Memory {
             self._store_sram(addr, val),
             self._store_prg_rom(addr, val)
         )
+    }
+
+    pub fn store_many(&mut self, addr: u16, values: &[u8]) {
+        for (i, v) in values.iter().enumerate() {
+            self.store(addr + (i as u16), *v);
+        }
     }
 
     fn _is_ram_addr(&self, addr: usize) -> bool {

@@ -289,13 +289,15 @@ pub fn error_fn(_cpu: &mut Cpu) -> (u8, u8) {
     (0xFF, 0xFF)
 }
 
-fn format_hex(data: &[u8]) -> String {
-    data.iter().skip(1).map(|v| hex!(v)).collect::<Vec<_>>().join("")
-}
+pub fn get_fname_for_print(instr: &Instr, data: &[u8]) -> String {
+    let codes = data
+        .iter()
+        .skip(1)
+        .map(|v| hex!(v))
+        .collect::<Vec<_>>()
+        .join(" ");
 
-pub fn get_fname_for_print(fname: &str, data: &[u8]) -> String {
-    let codes = format_hex(data);
-    let pieces: Vec<&str> = fname.split("::").collect();
+    let pieces: Vec<&str> = instr.fname.split("::").collect();
 
     let instr_name = pieces.first().unwrap();
     let address = pieces.get(1);
@@ -310,7 +312,10 @@ pub fn get_fname_for_print(fname: &str, data: &[u8]) -> String {
         Some(&"absolute") => format!("{} [{}]", instr_name, codes),
         Some(&"indirect_x") => format!("{} x({})", instr_name, codes),
         Some(&"indirect_y") => format!("{} y({})", instr_name, codes),
-        _ => instr_name.to_string(),
+        _ => match instr.ilen {
+            1 => instr_name.to_string(),
+            _ => format!("{} {}", instr_name, codes),
+        },
     };
     format!("({}) {}", hex!(data[0]), ret)
 }
@@ -318,26 +323,25 @@ pub fn get_fname_for_print(fname: &str, data: &[u8]) -> String {
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let opcode: u8 = prg[current];
 
+    let instr = &INSTR_TABLE[opcode as usize];
     let Instr {
-        ref fname,
-        mut ilen,
-        ..
-    } = INSTR_TABLE[opcode as usize];
+        fname, mut ilen, ..
+    } = instr;
 
     let is_error = ilen == 0xFF;
 
-    if ilen == 0 || ilen == 0xFF {
-        // branches or error
+    if ilen == 0xFF {
+        // error
         ilen = 1;
     }
 
-    let a = if is_error {
+    let msg = if is_error {
         format!("{} ({})", fname, hex!(opcode))
     } else {
-        get_fname_for_print(fname, &prg[current..current + ilen])
+        get_fname_for_print(instr, &prg[current..current + ilen])
     };
 
-    (a, current + ilen)
+    (msg, current + ilen)
 }
 
 // decode functions

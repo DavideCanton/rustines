@@ -32,3 +32,10 @@ macro_rules! hex {
         format!("{:02X}", $val)
     }};
 }
+
+#[macro_export]
+macro_rules! bin {
+    ( $val:expr ) => {{
+        format!("{:08b}", $val)
+    }};
+}
