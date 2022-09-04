@@ -415,8 +415,13 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+ "rustines_macro",
  "zip",
 ]
+
+[[package]]
+name = "rustines_macro"
+version = "0.1.0"
 
 [[package]]
 name = "sha1"

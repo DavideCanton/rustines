@@ -1,13 +1,2 @@
-[package]
-name = "rustines"
-version = "0.1.0"
-authors = ["DavideCanton <davide.canton5@gmail.com>"]
-edition = "2021"
-
-[dependencies]
-log = "0.4.8"
-env_logger = "0.9.0"
-zip = "0.6.2"
-arrayref = "0.3.5"
-clap = "3.1.2"
-lazy_static = "1.4.0"
+[workspace]
+members = ["rustines", "rustines_macro"]
