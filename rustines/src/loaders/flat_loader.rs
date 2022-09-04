@@ -1,12 +1,12 @@
 use std::{fs::File, io, io::Read};
 
-use crate::impl_named;
+use rustines_macro::Named;
+
 use crate::loaders::loader::Loader;
 use crate::utils::named::Named;
 
+#[derive(Named)]
 pub struct FlatLoader;
-
-impl_named!(FlatLoader);
 
 impl Loader for FlatLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {

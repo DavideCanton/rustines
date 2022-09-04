@@ -1,14 +1,13 @@
 use std::{fs::File, io, io::Read};
 
 use log::info;
+use rustines_macro::Named;
 
-use crate::impl_named;
 use crate::loaders::loader::Loader;
 use crate::utils::named::Named;
 
+#[derive(Named)]
 pub struct ZipLoader;
-
-impl_named!(ZipLoader);
 
 impl Loader for ZipLoader {
     fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
