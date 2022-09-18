@@ -2,11 +2,11 @@
 pub mod tests {
     use crate::arch::cpu::Cpu;
     use crate::arch::memory::Memory;
-    use crate::arch::rom_structs::{Bank, Header, NesRom};
+    use crate::arch::rom_structs::{Bank, INesHeader, NesRom};
 
     pub fn setup_tests() -> Cpu {
         let rom = NesRom::new(
-            Header::from_bytes(&[0; 16]),
+            INesHeader::from_bytes(&[0; 16]),
             vec![
                 Bank {
                     ram: false,
