@@ -7,8 +7,10 @@ mod utils;
 // use
 use crate::{
     arch::{cpu::Cpu, instrs::instr_table, memory::Memory, rom_structs},
+    context::Args,
     loaders::loaders_factory::decode_loader,
 };
+use clap::StructOpt;
 use env_logger::Builder;
 use log::{info, LevelFilter};
 use std::{fs, path};
@@ -40,24 +42,6 @@ fn execute_rom(rom: rom_structs::NesRom) {
     cpu.execute_verbose();
 }
 
-fn get_args() -> clap::ArgMatches {
-    clap::Command::new("rustines")
-        .version("1.0")
-        .author("Davide C. <davide.canton5@gmail.com>")
-        .about("NES emulator written in Rust")
-        .subcommands(vec![
-            clap::Command::new("dis").about("Disassemble ROM"),
-            clap::Command::new("ex").about("Execute ROM instructions"),
-            clap::Command::new("play").about("Play ROM"),
-        ])
-        .arg(
-            clap::Arg::new("INPUT")
-                .help("Sets the input rom file to use")
-                .required(true)
-                .index(1),
-        )
-        .get_matches()
-}
 
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
     let ext = match file_path.extension() {
@@ -77,14 +61,15 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
 }
 
 fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
+    use context::Commands;
     info!("ROM size: {:#x}", buf.size);
 
-    match context.subcommand.as_str() {
-        "dis" => {
+    match context.subcommand {
+        Commands::Dis => {
             disassemble_rom(buf);
             Ok(())
         }
-        "ex" => {
+        Commands::Ex => {
             execute_rom(buf);
             Ok(())
         }
@@ -93,14 +78,14 @@ fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<
 }
 
 pub fn main() {
-    let matches = get_args();
-    let context = context::Context::build_context(&matches);
+    let matches = Args::parse();
+    let context = context::Context::from_args(matches);
 
     init_logger();
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
-    info!("Subcommand: {}", &context.subcommand);
+    info!("Subcommand: {:?}", &context.subcommand);
     info!("Using input file: {}", &context.rom_name);
 
     let rom = read_file(&file_path).unwrap();

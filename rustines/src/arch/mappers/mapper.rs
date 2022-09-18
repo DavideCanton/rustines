@@ -1,14 +1,14 @@
 use log::info;
 
-use crate::arch::rom_structs::{Bank, Header, PRG_ROM_BANK_SIZE};
+use crate::arch::rom_structs::{Bank, INesHeader, PRG_ROM_BANK_SIZE};
 use crate::utils::named::Named;
 
 pub trait Mapper: Named {
-    fn load_prg_rom(&self, buf: &[u8], header: &Header) -> Vec<Bank> {
+    fn load_prg_rom(&self, buf: &[u8], header: &INesHeader) -> Vec<Bank> {
         info!("Rom has trainer? {}", header.has_trainer());
 
         let trainer_size = if header.has_trainer() { 512 } else { 0 };
-        let prg_start = 16 + trainer_size as usize;
+        let prg_start = 0x10 + trainer_size as usize;
         let prg_end = prg_start + header.prg_rom_size();
 
         info!("PRG ROM from {:#x} to {:#x}", prg_start, prg_end);

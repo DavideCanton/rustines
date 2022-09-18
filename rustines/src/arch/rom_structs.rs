@@ -2,7 +2,7 @@ use std::mem;
 
 #[repr(packed)]
 #[derive(Debug)]
-pub struct Header {
+pub struct INesHeader {
     pub header: [u8; 4],
     pub prg_rom_size: u8,
     pub chr_rom_size: u8,
@@ -29,7 +29,7 @@ pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
 pub const CHR_ROM_BANK_SIZE: usize = 1 << 13;
 
 
-impl Header {
+impl INesHeader {
     pub fn from_bytes(buf: &[u8; 16]) -> Self {
         unsafe { mem::transmute_copy(buf) }
     }
@@ -88,12 +88,12 @@ pub struct Bank {
 
 pub struct NesRom {
     pub prg_rom_banks: Vec<Bank>,
-    pub header: Header,
+    pub header: INesHeader,
     pub size: usize,
 }
 
 impl NesRom {
-    pub fn new(header: Header, prg_rom_banks: Vec<Bank>, size: usize) -> Self {
+    pub fn new(header: INesHeader, prg_rom_banks: Vec<Bank>, size: usize) -> Self {
         NesRom {
             header,
             prg_rom_banks,

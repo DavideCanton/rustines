@@ -1,19 +1,19 @@
-use std::{fs::File};
+use std::fs::File;
 
 use arrayref::array_ref;
-use log::{error, info};
+use log::{debug, error, info};
 
 use crate::arch::{
     mappers::mapper_factory::instantiate_mapper,
-    rom_structs::{Header, NesRom},
+    rom_structs::{INesHeader, NesRom},
 };
 use crate::utils::named::Named;
 
 pub trait Loader: Named {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
 
-    fn load_header(&self, buf: &[u8]) -> Result<Header, String> {
-        let header = Header::from_bytes(array_ref![buf[0..16], 0, 16]);
+    fn load_header(&self, buf: &[u8]) -> Result<INesHeader, String> {
+        let header = INesHeader::from_bytes(array_ref![buf[0..16], 0, 16]);
 
         if &header.header != b"NES\x1A" {
             error!("Found unexpected {:?} header", header.header);
@@ -21,6 +21,7 @@ pub trait Loader: Named {
         }
 
         info!("Mapper: {}", header.mapping_number());
+        debug!("Found header: {:?}", header);
 
         Ok(header)
     }
