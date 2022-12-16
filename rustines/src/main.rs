@@ -10,7 +10,7 @@ use crate::{
     context::Args,
     loaders::loaders_factory::decode_loader,
 };
-use clap::StructOpt;
+use clap::Parser;
 use env_logger::Builder;
 use log::{info, LevelFilter};
 use std::{fs, path};
@@ -42,14 +42,13 @@ fn execute_rom(rom: rom_structs::NesRom) {
     cpu.execute_verbose();
 }
 
-
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
     };
 
-    let mut file = fs::File::open(&file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut file = fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
     let loader = decode_loader(ext);
 
