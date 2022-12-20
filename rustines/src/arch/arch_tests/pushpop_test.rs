@@ -128,13 +128,13 @@ mod tests {
         assert_eq!(4, cycles);
         assert_eq!(1, ilen);
 
-        assert_eq!(cpu.registers.get_c(), true);
-        assert_eq!(cpu.registers.get_n(), true);
-        assert_eq!(cpu.registers.get_z(), true);
-        assert_eq!(cpu.registers.get_v(), true);
-        assert_eq!(cpu.registers.get_b(), true);
-        assert_eq!(cpu.registers.get_d(), true);
-        assert_eq!(cpu.registers.get_i(), true);
+        assert!(cpu.registers.get_c());
+        assert!(cpu.registers.get_n());
+        assert!(cpu.registers.get_z());
+        assert!(cpu.registers.get_v());
+        assert!(cpu.registers.get_b());
+        assert!(cpu.registers.get_d());
+        assert!(cpu.registers.get_i());
 
         let sp = cpu.registers.sp;
         assert_eq!(sp, old_sp);
@@ -152,13 +152,13 @@ mod tests {
         assert_eq!(4, cycles);
         assert_eq!(1, ilen);
 
-        assert_eq!(cpu.registers.get_c(), false);
-        assert_eq!(cpu.registers.get_n(), false);
-        assert_eq!(cpu.registers.get_z(), false);
-        assert_eq!(cpu.registers.get_v(), false);
-        assert_eq!(cpu.registers.get_b(), false);
-        assert_eq!(cpu.registers.get_d(), false);
-        assert_eq!(cpu.registers.get_i(), false);
+        assert!(!cpu.registers.get_c());
+        assert!(!cpu.registers.get_n());
+        assert!(!cpu.registers.get_z());
+        assert!(!cpu.registers.get_v());
+        assert!(!cpu.registers.get_b());
+        assert!(!cpu.registers.get_d());
+        assert!(!cpu.registers.get_i());
 
         let sp = cpu.registers.sp;
         assert_eq!(sp, old_sp);
@@ -176,13 +176,13 @@ mod tests {
         assert_eq!(4, cycles);
         assert_eq!(1, ilen);
 
-        assert_eq!(cpu.registers.get_n(), true);
-        assert_eq!(cpu.registers.get_v(), false);
-        assert_eq!(cpu.registers.get_b(), false);
-        assert_eq!(cpu.registers.get_d(), true);
-        assert_eq!(cpu.registers.get_i(), false);
-        assert_eq!(cpu.registers.get_z(), true);
-        assert_eq!(cpu.registers.get_c(), false);
+        assert!(cpu.registers.get_n());
+        assert!(!cpu.registers.get_v());
+        assert!(!cpu.registers.get_b());
+        assert!(cpu.registers.get_d());
+        assert!(!cpu.registers.get_i());
+        assert!(cpu.registers.get_z());
+        assert!(!cpu.registers.get_c());
 
         let sp = cpu.registers.sp;
         assert_eq!(sp, old_sp);
