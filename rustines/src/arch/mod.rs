@@ -10,10 +10,11 @@ pub mod memory;
 pub mod registers;
 #[allow(non_snake_case)]
 #[allow(dead_code)]
-#[macro_use]
 pub mod instrs;
-mod arch_tests;
 pub mod mappers;
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 pub mod rom_structs;
+
+#[cfg(test)]
+mod arch_tests;
