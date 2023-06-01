@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arch::registers::{Registers, init_flags};
+    use crate::arch::registers::{init_flags, Registers};
 
     #[test]
     fn test_num_n() {

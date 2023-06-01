@@ -1,8 +1,7 @@
 use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::*;
 
 pub fn immediate(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_immediate!(cpu);
+    let (addr, ilen) = cpu.decode_immediate();
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     if res & 0x80 == 0 {
@@ -14,7 +13,7 @@ pub fn immediate(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
-    let (mut addr, ilen) = decode_zeropage!(cpu);
+    let (mut addr, ilen) = cpu.decode_zeropage();
     addr = cpu.memory.fetch(addr as u16);
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
@@ -27,7 +26,7 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute!(cpu);
+    let (addr, ilen) = cpu.decode_absolute();
     let addr = cpu.memory.fetch(addr);
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);

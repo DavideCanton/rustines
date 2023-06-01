@@ -1,5 +1,4 @@
 use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::*;
 
 pub fn accumulator(cpu: &mut Cpu) -> (u8, u8) {
     let mut val = cpu.registers.a_reg;
@@ -15,7 +14,7 @@ pub fn accumulator(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_zeropage!(cpu);
+    let (addr, ilen) = cpu.decode_zeropage();
 
     let mut val = cpu.memory.fetch(addr as u16);
     if val & 0x80 != 0 {
@@ -30,7 +29,7 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn zeropage_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_zeropage_indexed!(cpu, cpu.registers.x_reg);
+    let (addr, ilen) = cpu.decode_zeropage_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr as u16);
     if val & 0x80 != 0 {
@@ -45,7 +44,7 @@ pub fn zeropage_x(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute!(cpu);
+    let (addr, ilen) = cpu.decode_absolute();
 
     let mut val = cpu.memory.fetch(addr);
     if val & 0x80 != 0 {
@@ -60,7 +59,7 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute_indexed!(cpu, cpu.registers.x_reg);
+    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr);
     if val & 0x80 != 0 {

@@ -262,7 +262,7 @@ pub static ref INSTR_TABLE: Syncify<[Instr; 256]> = {
         Instr::new(Box::new(error_fn), "error_fn", 255 ), // fc
         Instr::new(Box::new(sbc::absolute_x), "sbc::absolute_x", 3 ), // fd
         Instr::new(Box::new(inc::absolute_x), "inc::absolute_x", 3 ), // fe
-        Instr::new(Box::new(error_fn), "error_fn", 255) /* ff */,
+        Instr::new(Box::new(error_fn), "error_fn", 255) // ff
     ])}};
 }
 
@@ -275,10 +275,10 @@ pub struct Instr {
 }
 
 impl Instr {
-    fn new<S: Into<String>>(fun: InstrFn, fname: S, ilen: usize) -> Self {
+    fn new(fun: InstrFn, fname: &str, ilen: usize) -> Self {
         Instr {
             fun,
-            fname: fname.into(),
+            fname: fname.to_string(),
             ilen,
         }
     }
@@ -342,75 +342,4 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     };
 
     (msg, current + ilen)
-}
-
-// decode functions
-
-#[macro_export]
-macro_rules! decode_absolute {
-    ( $cpu:expr ) => {{
-        let low = $cpu.memory.fetch($cpu.registers.pc + 1);
-        let high = $cpu.memory.fetch($cpu.registers.pc + 2);
-        (to_u16(low, high), 3)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_immediate {
-    ( $cpu:expr ) => {{
-        ($cpu.memory.fetch($cpu.registers.pc + 1), 2)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_zeropage {
-    ( $cpu:expr ) => {{
-        ($cpu.memory.fetch($cpu.registers.pc + 1), 2)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_absolute_indexed {
-    ( $cpu:expr, $offset:expr ) => {{
-        let low = $cpu.memory.fetch($cpu.registers.pc + 1);
-        let high = $cpu.memory.fetch($cpu.registers.pc + 2);
-        (to_u16(low, high).wrapping_add($offset as u16), 3)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_zeropage_indexed {
-    ( $cpu:expr, $offset:expr ) => {{
-        let addr = $cpu.memory.fetch($cpu.registers.pc + 1);
-        (addr.wrapping_add($offset), 2)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_indexed_indirect {
-    ( $cpu:expr ) => {{
-        let op = ($cpu
-            .memory
-            .fetch($cpu.registers.pc + 1)
-            .wrapping_add($cpu.registers.x_reg)) as u16
-            & 0xFF;
-        let low = $cpu.memory.fetch(op);
-        let high = $cpu.memory.fetch((op + 1) & 0xFF);
-
-        (to_u16(low, high), 2)
-    }};
-}
-
-#[macro_export]
-macro_rules! decode_indirect_indexed {
-    ( $cpu:expr ) => {{
-        let op = $cpu.memory.fetch($cpu.registers.pc + 1) as u16;
-        let low = $cpu.memory.fetch(op);
-        let high = $cpu.memory.fetch((op + 1) & 0xFF);
-
-        (
-            to_u16(low, high).wrapping_add($cpu.registers.y_reg as u16),
-            2,
-        )
-    }};
 }

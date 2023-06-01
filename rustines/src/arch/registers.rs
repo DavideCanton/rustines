@@ -103,23 +103,21 @@ impl Registers {
 impl fmt::Debug for Registers {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Registers")
-         .field("pc", &format!("{:#04x}", self.pc))
-         .field("sp", &format!("{:#04x}", self.sp))
-         .field("a_reg", &format!("{:#04x}", self.a_reg))
-         .field("x_reg", &format!("{:#04x}", self.x_reg))
-         .field("y_reg", &format!("{:#04x}", self.y_reg))         
-         .field("z_flag", &self.get_z())
-         .field("n_flag", &self.get_n())
-         .field("v_flag", &self.get_v())
-         .field("c_flag", &self.get_c())
-         .field("b_flag", &self.get_b())
-         .field("d_flag", &self.get_d())
-         .field("i_flag", &self.get_i())
-         .finish()
+            .field("pc", &format!("{:#04x}", self.pc))
+            .field("sp", &format!("{:#04x}", self.sp))
+            .field("a_reg", &format!("{:#04x}", self.a_reg))
+            .field("x_reg", &format!("{:#04x}", self.x_reg))
+            .field("y_reg", &format!("{:#04x}", self.y_reg))
+            .field("z_flag", &self.get_z())
+            .field("n_flag", &self.get_n())
+            .field("v_flag", &self.get_v())
+            .field("c_flag", &self.get_c())
+            .field("b_flag", &self.get_b())
+            .field("d_flag", &self.get_d())
+            .field("i_flag", &self.get_i())
+            .finish()
     }
 }
-
-
 
 // pub pc: u16,
 // pub sp: u8,

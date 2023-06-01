@@ -1,12 +1,11 @@
 use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::to_u16;
 
 pub fn jsr(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute!(cpu);
-    let t = cpu.registers.pc + ilen - 1; // next instr address
+    let (addr, ilen) = cpu.decode_absolute();
+    let t = cpu.registers.pc + (ilen as u16) - 1; // next instr address
     cpu.push16(t);
     cpu.registers.pc = addr;
-    
+
     (6, 0)
 }
 

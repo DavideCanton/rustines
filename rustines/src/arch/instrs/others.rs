@@ -14,8 +14,8 @@ pub fn brk(cpu: &mut Cpu) -> (u8, u8) {
     cpu.push8(p);
     let l = cpu.memory.fetch(0xFFFE);
     let h = cpu.memory.fetch(0xFFFF);
-    
+
     cpu.registers.pc = to_u16(l, h);
-   
+
     (7, 0)
 }

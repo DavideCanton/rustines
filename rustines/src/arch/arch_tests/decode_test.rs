@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::arch::arch_tests::common::tests::setup_tests;
-    use crate::utils::bit_utils::*;
 
     #[test]
     fn test_decode_absolute() {
@@ -10,7 +9,7 @@ mod tests {
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
         cpu.memory.store(cpu.registers.pc + 2, 0xab);
 
-        let (addr, ilen) = decode_absolute!(&cpu);
+        let (addr, ilen) = cpu.decode_absolute();
 
         assert_eq!(ilen, 3);
         assert_eq!(addr, 0xabcd);
@@ -22,7 +21,7 @@ mod tests {
 
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
-        let (addr, ilen) = decode_immediate!(&cpu);
+        let (addr, ilen) = cpu.decode_immediate();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xcd);
@@ -34,7 +33,7 @@ mod tests {
 
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
-        let (addr, ilen) = decode_zeropage!(&cpu);
+        let (addr, ilen) = cpu.decode_zeropage();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xcd);
@@ -47,7 +46,7 @@ mod tests {
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
         cpu.memory.store(cpu.registers.pc + 2, 0xab);
 
-        let (addr, ilen) = decode_absolute_indexed!(&cpu, 0x10);
+        let (addr, ilen) = cpu.decode_absolute_indexed(0x10);
 
         assert_eq!(ilen, 3);
         assert_eq!(addr, 0xabdd);
@@ -60,7 +59,7 @@ mod tests {
         cpu.memory.store(cpu.registers.pc + 1, 0xfe);
         cpu.memory.store(cpu.registers.pc + 2, 0xff);
 
-        let (addr, ilen) = decode_absolute_indexed!(&cpu, 0x10);
+        let (addr, ilen) = cpu.decode_absolute_indexed(0x10);
 
         assert_eq!(ilen, 3);
         assert_eq!(addr, 0x000e);
@@ -70,12 +69,9 @@ mod tests {
     fn test_decode_zeropage_indexed() {
         let mut cpu = setup_tests();
 
-
-
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
-
-        let (addr, ilen) = decode_zeropage_indexed!(&cpu, 0x10);
+        let (addr, ilen) = cpu.decode_zeropage_indexed(0x10);
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xdd);
@@ -85,12 +81,9 @@ mod tests {
     fn test_decode_zeropage_indexed_wrapping() {
         let mut cpu = setup_tests();
 
-
-
         cpu.memory.store(cpu.registers.pc + 1, 0xfe);
 
-
-        let (addr, ilen) = decode_zeropage_indexed!(&cpu, 0x10);
+        let (addr, ilen) = cpu.decode_zeropage_indexed(0x10);
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0x0e);
@@ -100,17 +93,14 @@ mod tests {
     fn test_decode_indexed_indirect() {
         let mut cpu = setup_tests();
 
-
-
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         cpu.memory.store(0xdd, 0xcd);
         cpu.memory.store(0xde, 0xab);
 
-
         cpu.registers.x_reg = 0x10;
 
-        let (addr, ilen) = decode_indexed_indirect!(&cpu);
+        let (addr, ilen) = cpu.decode_indexed_indirect();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xabcd);
@@ -127,7 +117,7 @@ mod tests {
 
         cpu.registers.x_reg = 0x10;
 
-        let (addr, ilen) = decode_indexed_indirect!(&cpu);
+        let (addr, ilen) = cpu.decode_indexed_indirect();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xabcd);
@@ -137,8 +127,6 @@ mod tests {
     fn test_decode_indirect_indexed() {
         let mut cpu = setup_tests();
 
-
-
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
 
         cpu.memory.store(0xcd, 0xcd);
@@ -146,7 +134,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, ilen) = decode_indirect_indexed!(&cpu);
+        let (addr, ilen) = cpu.decode_indirect_indexed();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xabdd);
@@ -163,7 +151,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, ilen) = decode_indirect_indexed!(&cpu);
+        let (addr, ilen) = cpu.decode_indirect_indexed();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0x000e);

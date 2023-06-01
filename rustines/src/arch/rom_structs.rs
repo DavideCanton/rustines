@@ -28,7 +28,6 @@ macro_rules! extract_flag {
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
 pub const CHR_ROM_BANK_SIZE: usize = 1 << 13;
 
-
 impl INesHeader {
     pub fn from_bytes(buf: &[u8; 16]) -> Self {
         unsafe { mem::transmute_copy(buf) }
@@ -97,7 +96,7 @@ impl NesRom {
         NesRom {
             header,
             prg_rom_banks,
-            size
+            size,
         }
     }
 }

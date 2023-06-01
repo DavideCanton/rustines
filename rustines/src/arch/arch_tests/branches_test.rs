@@ -90,5 +90,4 @@ mod tests {
         let val = cpu.registers.pc;
         assert_eq!(val, old_pc);
     }
-
 }

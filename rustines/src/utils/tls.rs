@@ -1,4 +1,4 @@
-use std::{ops, marker};
+use std::{marker, ops};
 
 /// Add `Sync` to an arbitrary type.
 ///

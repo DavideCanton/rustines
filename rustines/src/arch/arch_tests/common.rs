@@ -7,16 +7,14 @@ pub mod tests {
     pub fn setup_tests() -> Cpu {
         let rom = NesRom::new(
             INesHeader::from_bytes(&[0; 16]),
-            vec![
-                Bank {
-                    ram: false,
-                    enabled: true,
-                    writable: false,
-                    battery: false,
-                    id: "bank0".to_string(),
-                    data: vec![0; 0x8000],
-                }
-            ],
+            vec![Bank {
+                ram: false,
+                enabled: true,
+                writable: false,
+                battery: false,
+                id: "bank0".to_string(),
+                data: vec![0; 0x8000],
+            }],
             1,
         );
         let mem = Memory::new(rom);

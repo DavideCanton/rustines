@@ -1,8 +1,7 @@
 use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::*;
 
 pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_zeropage!(cpu);
+    let (addr, ilen) = cpu.decode_zeropage();
     let addr = cpu.memory.fetch(addr as u16);
     let res = addr & cpu.registers.a_reg;
 
@@ -26,7 +25,7 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = decode_absolute!(cpu);
+    let (addr, ilen) = cpu.decode_absolute();
     let addr = cpu.memory.fetch(addr);
     let res = addr & cpu.registers.a_reg;
 

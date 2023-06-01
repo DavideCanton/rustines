@@ -154,6 +154,56 @@ impl Cpu {
         to_u32(low, high)
     }
 
+    // decode functions
+
+    pub fn decode_absolute(&self) -> (u16, u8) {
+        let low = self.memory.fetch(self.registers.pc + 1);
+        let high = self.memory.fetch(self.registers.pc + 2);
+        (to_u16(low, high), 3)
+    }
+
+    pub fn decode_immediate(&self) -> (u8, u8) {
+        (self.memory.fetch(self.registers.pc + 1), 2)
+    }
+
+    pub fn decode_zeropage(&self) -> (u8, u8) {
+        (self.memory.fetch(self.registers.pc + 1), 2)
+    }
+
+    pub fn decode_absolute_indexed(&self, offset: u8) -> (u16, u8) {
+        let low = self.memory.fetch(self.registers.pc + 1);
+        let high = self.memory.fetch(self.registers.pc + 2);
+        (to_u16(low, high).wrapping_add(offset as u16), 3)
+    }
+
+    pub fn decode_zeropage_indexed(&self, offset: u8) -> (u8, u8) {
+        let addr = self.memory.fetch(self.registers.pc + 1);
+        (addr.wrapping_add(offset), 2)
+    }
+
+    pub fn decode_indexed_indirect(&self) -> (u16, u8) {
+        let op = (self
+            .memory
+            .fetch(self.registers.pc + 1)
+            .wrapping_add(self.registers.x_reg)) as u16
+            & 0xFF;
+        let low = self.memory.fetch(op);
+        let high = self.memory.fetch((op + 1) & 0xFF);
+
+        (to_u16(low, high), 2)
+    }
+
+    pub fn decode_indirect_indexed(&self) -> (u16, u8) {
+        let op = self.memory.fetch(self.registers.pc + 1) as u16;
+        let low = self.memory.fetch(op);
+        let high = self.memory.fetch((op + 1) & 0xFF);
+
+        (
+            to_u16(low, high).wrapping_add(self.registers.y_reg as u16),
+            2,
+        )
+    }
+
     fn save_state_before_interrupt(&mut self) {
         let pc = self.registers.pc;
         self.push16(pc);
