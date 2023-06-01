@@ -2,26 +2,7 @@ use super::rom_structs::NesRom;
 
 pub struct Memory {
     mem: Vec<u8>,
-}
-
-macro_rules! switch_addr {
-    ( $self:ident, $addr:expr, $fn_ram:expr, $fn_ppu:expr, $fn_io:expr, $fn_exp:expr, $fn_sram:expr, $fn_prg:expr ) => {{
-        if $self._is_ram_addr($addr) {
-            $fn_ram
-        } else if $self._is_ppu_register($addr) {
-            $fn_ppu
-        } else if $self._is_io_register($addr) {
-            $fn_io
-        } else if $self._is_exp_rom($addr) {
-            $fn_exp
-        } else if $self._is_sram($addr) {
-            $fn_sram
-        } else if $self._is_prg_rom($addr) {
-            $fn_prg
-        } else {
-            0
-        }
-    }};
+    handlers: Vec<Box<dyn MemoryRegionHandler>>,
 }
 
 impl Memory {
@@ -36,22 +17,24 @@ impl Memory {
                 std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0xC000), 0x4000);
             }
         }
-        Memory { mem }
+        Memory {
+            mem,
+            handlers: vec![
+                Box::new(RamRegionHandler),
+                Box::new(PpuRegionHandler),
+                Box::new(IoRegionHandler),
+                Box::new(ExpRomRegionHandler),
+                Box::new(SramRegionHandler),
+                Box::new(PrgRomRegionHandler),
+            ],
+        }
     }
 
     pub fn fetch(&self, addr: u16) -> u8 {
         let addr = addr as usize;
 
-        switch_addr!(
-            self,
-            addr,
-            self._fetch_from_ram(addr),
-            self._fetch_from_ppu_register(addr),
-            self._fetch_from_io_register(addr),
-            self._fetch_from_exp_rom(addr),
-            self._fetch_from_sram(addr),
-            self._fetch_from_prg_rom(addr)
-        )
+        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
+        h.fetch(&self.mem, addr)
     }
 
     pub fn fetch_many(&self, addr: u16, count: u16) -> Box<[u8]> {
@@ -64,102 +47,14 @@ impl Memory {
 
     pub fn store(&mut self, addr: u16, val: u8) -> u8 {
         let addr = addr as usize;
-
-        switch_addr!(
-            self,
-            addr,
-            self._store_ram(addr, val),
-            self._store_ppu_register(addr, val),
-            self._store_io_register(addr, val),
-            self._store_exp_rom(addr, val),
-            self._store_sram(addr, val),
-            self._store_prg_rom(addr, val)
-        )
+        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
+        h.store(&mut self.mem, addr, val)
     }
 
     pub fn store_many(&mut self, addr: u16, values: &[u8]) {
         for (i, v) in values.iter().enumerate() {
             self.store(addr + (i as u16), *v);
         }
-    }
-
-    fn _is_ram_addr(&self, addr: usize) -> bool {
-        addr <= 0x1FFF
-    }
-
-    fn _fetch_from_ram(&self, addr: usize) -> u8 {
-        let addr = addr & 0x7FF;
-        self.mem[addr]
-    }
-
-    fn _store_ram(&mut self, addr: usize, val: u8) -> u8 {
-        let addr = addr & 0x7FF;
-        let old = self.mem[addr];
-        self.mem[addr] = val;
-        old
-    }
-
-    fn _is_ppu_register(&self, addr: usize) -> bool {
-        addr <= 0x3FFF
-    }
-
-    fn _fetch_from_ppu_register(&self, addr: usize) -> u8 {
-        let addr = addr & 0x7;
-        0
-    }
-
-    fn _store_ppu_register(&mut self, addr: usize, val: u8) -> u8 {
-        // let addr = addr & 0x7;
-        unimplemented!();
-    }
-
-    fn _is_io_register(&self, addr: usize) -> bool {
-        addr <= 0x401F
-    }
-
-    fn _fetch_from_io_register(&self, addr: usize) -> u8 {
-        unimplemented!();
-    }
-
-    fn _store_io_register(&mut self, addr: usize, val: u8) -> u8 {
-        unimplemented!();
-    }
-
-    fn _is_exp_rom(&self, addr: usize) -> bool {
-        addr <= 0x6000
-    }
-
-    fn _fetch_from_exp_rom(&self, addr: usize) -> u8 {
-        unimplemented!();
-    }
-
-    fn _store_exp_rom(&mut self, addr: usize, val: u8) -> u8 {
-        unimplemented!();
-    }
-
-    fn _is_sram(&self, addr: usize) -> bool {
-        addr <= 0x8000
-    }
-
-    fn _fetch_from_sram(&self, addr: usize) -> u8 {
-        unimplemented!();
-    }
-
-    fn _store_sram(&mut self, addr: usize, val: u8) -> u8 {
-        unimplemented!();
-    }
-
-    fn _is_prg_rom(&self, addr: usize) -> bool {
-        addr <= 0xFFFF
-    }
-
-    fn _fetch_from_prg_rom(&self, addr: usize) -> u8 {
-        // TODO
-        self.mem[addr]
-    }
-
-    fn _store_prg_rom(&mut self, addr: usize, val: u8) -> u8 {
-        unimplemented!();
     }
 
     pub fn push8(&mut self, sp: u8, val: u8) {
@@ -170,5 +65,114 @@ impl Memory {
     pub fn peek8(&self, sp: u8) -> u8 {
         let sp = sp as u16 + 0x0100;
         self.fetch(sp)
+    }
+}
+
+trait MemoryRegionHandler {
+    fn matches(&self, addr: usize) -> bool;
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8;
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8;
+}
+
+struct RamRegionHandler;
+
+impl MemoryRegionHandler for RamRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0x1FFF
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        let addr = addr & 0x7FF;
+        memory[addr]
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        let addr = addr & 0x7FF;
+        let old = memory[addr];
+        memory[addr] = val;
+        old
+    }
+}
+
+struct PpuRegionHandler;
+
+impl MemoryRegionHandler for PpuRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0x3FFF
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        let addr = addr & 0x7;
+        0
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        // let addr = addr & 0x7;
+        unimplemented!();
+    }
+}
+
+struct IoRegionHandler;
+
+impl MemoryRegionHandler for IoRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0x401F
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        unimplemented!();
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        unimplemented!();
+    }
+}
+
+struct ExpRomRegionHandler;
+
+impl MemoryRegionHandler for ExpRomRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0x6000
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        unimplemented!();
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        unimplemented!();
+    }
+}
+
+struct SramRegionHandler;
+
+impl MemoryRegionHandler for SramRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0x8000
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        unimplemented!();
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        unimplemented!();
+    }
+}
+
+struct PrgRomRegionHandler;
+
+impl MemoryRegionHandler for PrgRomRegionHandler {
+    fn matches(&self, addr: usize) -> bool {
+        addr <= 0xFFFF
+    }
+
+    fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
+        // TODO
+        memory[addr]
+    }
+
+    fn store(&self, memory: &mut [u8], addr: usize, val: u8) -> u8 {
+        unimplemented!();
     }
 }
