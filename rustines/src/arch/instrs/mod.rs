@@ -1,6 +1,3 @@
-#[allow(non_snake_case)]
-#[allow(dead_code)]
-pub mod instr_table;
 pub mod adc;
 pub mod and;
 pub mod asl;
@@ -15,6 +12,9 @@ pub mod dey;
 pub mod eor;
 pub mod flags;
 pub mod inc;
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+pub mod instr_table;
 pub mod inx;
 pub mod iny;
 pub mod jmp;

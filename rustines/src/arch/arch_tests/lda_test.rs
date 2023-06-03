@@ -126,7 +126,7 @@ mod tests {
 
         let (cycles, ilen) = lda::absolute_x(&mut cpu);
 
-        assert_eq!(4, cycles);
+        assert_eq!(5, cycles);
         assert_eq!(3, ilen);
 
         let val = cpu.registers.a_reg;
@@ -168,7 +168,7 @@ mod tests {
 
         let (cycles, ilen) = lda::absolute_y(&mut cpu);
 
-        assert_eq!(4, cycles);
+        assert_eq!(5, cycles);
         assert_eq!(3, ilen);
 
         let val = cpu.registers.a_reg;
@@ -260,7 +260,7 @@ mod tests {
 
         let (cycles, ilen) = lda::indirect_y(&mut cpu);
 
-        assert_eq!(5, cycles);
+        assert_eq!(6, cycles);
         assert_eq!(2, ilen);
 
         let val = cpu.registers.a_reg;

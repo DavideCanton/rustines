@@ -3,11 +3,7 @@ use crate::arch::cpu::Cpu;
 pub fn accumulator(cpu: &mut Cpu) -> (u8, u8) {
     let mut val = cpu.registers.a_reg;
     let old_c = cpu.registers.get_c() as u8;
-    if val & 0x80 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x80 != 0);
     val = (val << 1) & 0xFE | old_c;
     cpu.registers.a_reg = val;
     cpu.registers.compute_nz_flags(val);
@@ -19,11 +15,7 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
 
     let mut val = cpu.memory.fetch(addr as u16);
     let old_c = cpu.registers.get_c() as u8;
-    if val & 0x80 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x80 != 0);
     val = (val << 1) & 0xFE | old_c;
     cpu.registers.compute_nz_flags(val);
     cpu.memory.store(addr as u16, val);
@@ -35,11 +27,7 @@ pub fn zeropage_x(cpu: &mut Cpu) -> (u8, u8) {
 
     let mut val = cpu.memory.fetch(addr as u16);
     let old_c = cpu.registers.get_c() as u8;
-    if val & 0x80 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x80 != 0);
     val = (val << 1) & 0xFE | old_c;
     cpu.registers.compute_nz_flags(val);
     cpu.memory.store(addr as u16, val);
@@ -51,11 +39,7 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 
     let mut val = cpu.memory.fetch(addr);
     let old_c = cpu.registers.get_c() as u8;
-    if val & 0x80 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x80 != 0);
     val = (val << 1) & 0xFE | old_c;
     cpu.registers.compute_nz_flags(val);
     cpu.memory.store(addr, val);
@@ -63,15 +47,11 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
+    let (addr, ilen, _) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr);
     let old_c = cpu.registers.get_c() as u8;
-    if val & 0x80 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x80 != 0);
     val = (val << 1) & 0xFE | old_c;
     cpu.registers.compute_nz_flags(val);
     cpu.memory.store(addr, val);

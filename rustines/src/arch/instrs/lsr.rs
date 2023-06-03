@@ -2,11 +2,7 @@ use crate::arch::cpu::Cpu;
 
 pub fn accumulator(cpu: &mut Cpu) -> (u8, u8) {
     let mut val = cpu.registers.a_reg;
-    if val & 0x1 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x1 != 0);
     val = (val >> 1) & 0x7f;
     cpu.registers.a_reg = val;
     cpu.registers.compute_nz_flags(val);
@@ -18,11 +14,7 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
     let (addr, ilen) = cpu.decode_zeropage();
 
     let mut val = cpu.memory.fetch(addr as u16);
-    if val & 0x1 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x1 != 0);
     val = (val >> 1) & 0x7f;
     cpu.registers.compute_nz_flags(val);
     cpu.registers.clear_n();
@@ -34,11 +26,7 @@ pub fn zeropage_x(cpu: &mut Cpu) -> (u8, u8) {
     let (addr, ilen) = cpu.decode_zeropage_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr as u16);
-    if val & 0x1 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x1 != 0);
     val = (val >> 1) & 0x7f;
     cpu.registers.compute_nz_flags(val);
     cpu.registers.clear_n();
@@ -50,11 +38,7 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
     let (addr, ilen) = cpu.decode_absolute();
 
     let mut val = cpu.memory.fetch(addr);
-    if val & 0x1 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x1 != 0);
     val = (val >> 1) & 0x7f;
     cpu.registers.compute_nz_flags(val);
     cpu.registers.clear_n();
@@ -63,14 +47,10 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
+    let (addr, ilen, _) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr);
-    if val & 0x1 != 0 {
-        cpu.registers.set_c()
-    } else {
-        cpu.registers.clear_c()
-    };
+    cpu.registers.set_c_from_bool(val & 0x1 != 0);
     val = (val >> 1) & 0x7f;
     cpu.registers.compute_nz_flags(val);
     cpu.registers.clear_n();

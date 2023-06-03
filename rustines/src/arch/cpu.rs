@@ -21,8 +21,6 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(mem: Memory) -> Self {
-        init_flags();
-
         Cpu {
             clock: 0,
             registers: Registers::new(),
@@ -170,10 +168,14 @@ impl Cpu {
         (self.memory.fetch(self.registers.pc + 1), 2)
     }
 
-    pub fn decode_absolute_indexed(&self, offset: u8) -> (u16, u8) {
+    pub fn decode_absolute_indexed(&self, offset: u8) -> (u16, u8, u8) {
         let low = self.memory.fetch(self.registers.pc + 1);
         let high = self.memory.fetch(self.registers.pc + 2);
-        (to_u16(low, high).wrapping_add(offset as u16), 3)
+        (
+            to_u16(low, high).wrapping_add(offset as u16),
+            3,
+            overflow_page_boundary(low, offset),
+        )
     }
 
     pub fn decode_zeropage_indexed(&self, offset: u8) -> (u8, u8) {
@@ -193,14 +195,16 @@ impl Cpu {
         (to_u16(low, high), 2)
     }
 
-    pub fn decode_indirect_indexed(&self) -> (u16, u8) {
+    pub fn decode_indirect_indexed(&self) -> (u16, u8, u8) {
         let op = self.memory.fetch(self.registers.pc + 1) as u16;
         let low = self.memory.fetch(op);
         let high = self.memory.fetch((op + 1) & 0xFF);
+        let offset = self.registers.y_reg;
 
         (
-            to_u16(low, high).wrapping_add(self.registers.y_reg as u16),
+            to_u16(low, high).wrapping_add(offset as u16),
             2,
+            overflow_page_boundary(low, offset),
         )
     }
 
@@ -234,5 +238,13 @@ impl Cpu {
         let high = self.memory.fetch(0xFFFD);
 
         self.registers.pc = to_u16(low, high);
+    }
+}
+
+fn overflow_page_boundary(low: u8, offset: u8) -> u8 {
+    if low.overflowing_add(offset).1 {
+        1
+    } else {
+        0
     }
 }

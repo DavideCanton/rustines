@@ -34,7 +34,7 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
+    let (addr, ilen, _) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
 
     let mut val = cpu.memory.fetch(addr);
     val = val.wrapping_add(1);

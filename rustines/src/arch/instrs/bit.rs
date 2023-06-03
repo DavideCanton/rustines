@@ -5,21 +5,9 @@ pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
     let addr = cpu.memory.fetch(addr as u16);
     let res = addr & cpu.registers.a_reg;
 
-    if res & 0x80 != 0 {
-        cpu.registers.set_n()
-    } else {
-        cpu.registers.clear_n()
-    }
-    if res & 0x40 != 0 {
-        cpu.registers.set_v()
-    } else {
-        cpu.registers.clear_v()
-    }
-    if res == 0 {
-        cpu.registers.set_z()
-    } else {
-        cpu.registers.clear_z()
-    }
+    cpu.registers.set_n_from_bool(res & 0x80 != 0);
+    cpu.registers.set_v_from_bool(res & 0x40 != 0);
+    cpu.registers.set_z_from_bool(res == 0);
 
     (3, ilen)
 }
@@ -29,21 +17,9 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
     let addr = cpu.memory.fetch(addr);
     let res = addr & cpu.registers.a_reg;
 
-    if res & 0x80 != 0 {
-        cpu.registers.set_n()
-    } else {
-        cpu.registers.clear_n()
-    }
-    if res & 0x40 != 0 {
-        cpu.registers.set_v()
-    } else {
-        cpu.registers.clear_v()
-    }
-    if res == 0 {
-        cpu.registers.set_z()
-    } else {
-        cpu.registers.clear_z()
-    }
+    cpu.registers.set_n_from_bool(res & 0x80 != 0);
+    cpu.registers.set_v_from_bool(res & 0x40 != 0);
+    cpu.registers.set_z_from_bool(res == 0);
 
     (4, ilen)
 }

@@ -46,7 +46,7 @@ mod tests {
         cpu.memory.store(cpu.registers.pc + 1, 0xcd);
         cpu.memory.store(cpu.registers.pc + 2, 0xab);
 
-        let (addr, ilen) = cpu.decode_absolute_indexed(0x10);
+        let (addr, ilen, _) = cpu.decode_absolute_indexed(0x10);
 
         assert_eq!(ilen, 3);
         assert_eq!(addr, 0xabdd);
@@ -59,7 +59,7 @@ mod tests {
         cpu.memory.store(cpu.registers.pc + 1, 0xfe);
         cpu.memory.store(cpu.registers.pc + 2, 0xff);
 
-        let (addr, ilen) = cpu.decode_absolute_indexed(0x10);
+        let (addr, ilen, _) = cpu.decode_absolute_indexed(0x10);
 
         assert_eq!(ilen, 3);
         assert_eq!(addr, 0x000e);
@@ -134,7 +134,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, ilen) = cpu.decode_indirect_indexed();
+        let (addr, ilen, _) = cpu.decode_indirect_indexed();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0xabdd);
@@ -151,7 +151,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, ilen) = cpu.decode_indirect_indexed();
+        let (addr, ilen, _) = cpu.decode_indirect_indexed();
 
         assert_eq!(ilen, 2);
         assert_eq!(addr, 0x000e);

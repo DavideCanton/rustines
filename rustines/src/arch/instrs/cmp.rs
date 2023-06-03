@@ -36,23 +36,21 @@ pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn absolute_x(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
+    let (addr, ilen, boundary) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
     let addr = cpu.memory.fetch(addr);
     let res = cpu.registers.a_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.compute_c_flag(res & 0x80 == 0);
-    (4, ilen)
-    // TODO +1 if page boundary
+    (4 + boundary, ilen)
 }
 
 pub fn absolute_y(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute_indexed(cpu.registers.y_reg);
+    let (addr, ilen, boundary) = cpu.decode_absolute_indexed(cpu.registers.y_reg);
     let addr = cpu.memory.fetch(addr);
     let res = cpu.registers.a_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.compute_c_flag(res & 0x80 == 0);
-    (4, ilen)
-    // TODO +1 if page boundary
+    (4 + boundary, ilen)
 }
 
 pub fn indirect_x(cpu: &mut Cpu) -> (u8, u8) {
@@ -65,11 +63,10 @@ pub fn indirect_x(cpu: &mut Cpu) -> (u8, u8) {
 }
 
 pub fn indirect_y(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_indirect_indexed();
+    let (addr, ilen, boundary) = cpu.decode_indirect_indexed();
     let addr = cpu.memory.fetch(addr);
     let res = cpu.registers.a_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.compute_c_flag(res & 0x80 == 0);
-    (5, ilen)
-    // TODO +1 if page boundary
+    (5 + boundary, ilen)
 }

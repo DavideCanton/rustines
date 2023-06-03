@@ -1,3 +1,4 @@
+use paste::paste;
 use std::fmt;
 
 pub struct Registers {
@@ -12,6 +13,9 @@ pub struct Registers {
     nz: u8,
     vc: u8,
     bdi: u8,
+
+    // table
+    nz_table: [u8; 1 << 8],
 }
 
 pub const FLAG_C: u8 = 1;
@@ -22,35 +26,40 @@ pub const FLAG_B: u8 = 1 << 4;
 pub const FLAG_V: u8 = 1 << 6;
 pub const FLAG_N: u8 = 1 << 7;
 
-static mut NZ_TABLE: [u8; 1 << 8] = [0; 1 << 8];
-
-pub fn init_flags() {
-    unsafe {
-        for i in 0u8..=255 {
-            NZ_TABLE[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
-            // println!("{} => nz:{:?}", i, NZ_TABLE[i as usize]);
-        }
-    }
-}
-
 macro_rules! gen_methods {
-    ($get_name: ident, $set_name: ident, $clear_name: ident, $field: ident, $mask: expr) => {
-        pub fn $get_name(&self) -> bool {
-            (self.$field & $mask) != 0
-        }
+    ($name: ident, $field: ident, $mask: expr) => {
+        paste! {
+            pub fn [<get_ $name>](&self) -> bool {
+                (self.$field & $mask) != 0
+            }
 
-        pub fn $set_name(&mut self) {
-            self.$field |= $mask;
-        }
+            pub fn [<set_ $name>](&mut self) {
+                self.$field |= $mask;
+            }
 
-        pub fn $clear_name(&mut self) {
-            self.$field &= !$mask;
+            pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
+                if val {
+                    self.[<set_ $name>]();
+                } else {
+                    self.[<clear_ $name>]();
+                }
+            }
+
+            pub fn [<clear_ $name>](&mut self) {
+                self.$field &= !$mask;
+            }
         }
     };
 }
 
 impl Registers {
     pub fn new() -> Registers {
+        let mut nz_table = [0; 1 << 8];
+        for i in 0u8..=255 {
+            nz_table[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
+            // println!("{} => nz:{:?}", i, nz_table[i as usize]);
+        }
+
         Registers {
             pc: 0,
             sp: 0xFF,
@@ -60,14 +69,13 @@ impl Registers {
             nz: 0,
             vc: 0,
             bdi: 0,
+            nz_table,
         }
         // reg.P |= 1 << 5; // the unused flag is always 1?
     }
 
     pub fn compute_nz_flags(&mut self, a: u8) {
-        unsafe {
-            self.nz = NZ_TABLE[a as usize];
-        }
+        self.nz = self.nz_table[a as usize];
     }
 
     pub fn compute_vc_flags(&mut self, v: bool, c: bool) {
@@ -91,13 +99,13 @@ impl Registers {
         self.bdi = (p >> 2) & 0x7;
     }
 
-    gen_methods!(get_z, set_z, clear_z, nz, 0x1);
-    gen_methods!(get_n, set_n, clear_n, nz, 0x2);
-    gen_methods!(get_v, set_v, clear_v, vc, 0x2);
-    gen_methods!(get_c, set_c, clear_c, vc, 0x1);
-    gen_methods!(get_b, set_b, clear_b, bdi, 0x4);
-    gen_methods!(get_d, set_d, clear_d, bdi, 0x2);
-    gen_methods!(get_i, set_i, clear_i, bdi, 0x1);
+    gen_methods!(z, nz, 0x1);
+    gen_methods!(n, nz, 0x2);
+    gen_methods!(v, vc, 0x2);
+    gen_methods!(c, vc, 0x1);
+    gen_methods!(b, bdi, 0x4);
+    gen_methods!(d, bdi, 0x2);
+    gen_methods!(i, bdi, 0x1);
 }
 
 impl fmt::Debug for Registers {
@@ -118,15 +126,3 @@ impl fmt::Debug for Registers {
             .finish()
     }
 }
-
-// pub pc: u16,
-// pub sp: u8,
-// // pub P: u8,
-// pub a_reg: u8, // o i8?
-// pub x_reg: u8,
-// pub y_reg: u8,
-
-// // flags
-// nz: u8,
-// vc: u8,
-// bdi: u8,
