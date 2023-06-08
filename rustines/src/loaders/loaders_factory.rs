@@ -14,29 +14,16 @@ pub fn decode_loader(extension: &str) -> Box<dyn Loader> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn it_detects_zip_correctly() {
-        let ext = "zip";
+    use super::decode_loader;
+
+    #[test_case("zip", "ZipLoader"; "zip")]
+    #[test_case("", "FlatLoader"; "empty")]
+    #[test_case("nes", "FlatLoader"; "nes")]
+    fn test_ext(ext: &str, name: &str) {
         let loader = decode_loader(ext);
 
-        assert_eq!(loader.name(), "ZipLoader");
-    }
-
-    #[test]
-    fn it_detects_empty_correctly() {
-        let ext = "";
-        let loader = decode_loader(ext);
-
-        assert_eq!(loader.name(), "FlatLoader");
-    }
-
-    #[test]
-    fn it_detects_nes_correctly() {
-        let ext = "nes";
-        let loader = decode_loader(ext);
-
-        assert_eq!(loader.name(), "FlatLoader");
+        assert_eq!(loader.name(), name);
     }
 }

@@ -20,7 +20,7 @@
                 }
             },
             "args": [
-                "${workspaceFolder}/roms/nestest.nes",
+                "${workspaceFolder}/rom/prova.rom",
                 "ex"
             ],
             "cwd": "${workspaceFolder}"
