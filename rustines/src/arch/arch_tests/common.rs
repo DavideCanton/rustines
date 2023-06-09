@@ -5,8 +5,11 @@ pub mod tests {
     use crate::arch::rom_structs::{Bank, INesHeader, NesRom};
 
     pub fn setup_tests() -> Cpu {
+        let mut header = INesHeader::from_bytes(&[0; 16]);
+        header.prg_rom_size = 1;
+
         let rom = NesRom::new(
-            INesHeader::from_bytes(&[0; 16]),
+            header,
             vec![Bank {
                 ram: false,
                 enabled: true,
