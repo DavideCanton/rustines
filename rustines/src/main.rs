@@ -7,7 +7,7 @@ mod utils;
 // use
 use crate::{
     arch::{cpu::Cpu, instrs::instr_table, memory::Memory, rom_structs},
-    context::Args,
+    context::RustinesArgs,
     loaders::loaders_factory::decode_loader,
 };
 use clap::Parser;
@@ -36,10 +36,14 @@ fn disassemble_rom(rom: rom_structs::NesRom) {
     }
 }
 
-fn execute_rom(rom: rom_structs::NesRom) {
+fn execute_rom(rom: rom_structs::NesRom, verbose: bool) {
     let mem = Memory::new(rom);
     let mut cpu = Cpu::new(mem);
-    cpu.execute_verbose();
+    if verbose {
+        cpu.execute_verbose();
+    } else {
+        cpu.execute();
+    }
 }
 
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
@@ -63,21 +67,20 @@ fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<
     use context::Commands;
     info!("ROM size: {:#x}", buf.size);
 
-    match context.subcommand {
+    match &context.subcommand {
         Commands::Dis => {
             disassemble_rom(buf);
-            Ok(())
         }
-        Commands::Ex => {
-            execute_rom(buf);
-            Ok(())
+        Commands::Ex(args) => {
+            execute_rom(buf, args.verbose);
         }
-        _ => Ok(()),
-    }
+        _ => {}
+    };
+    Ok(())
 }
 
 pub fn main() {
-    let matches = Args::parse();
+    let matches = RustinesArgs::parse();
     let context = context::Context::from_args(matches);
 
     init_logger();

@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 pub struct Context {
     pub subcommand: Commands,
@@ -6,7 +6,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn from_args(matches: Args) -> Context {
+    pub fn from_args(matches: RustinesArgs) -> Context {
         Context {
             subcommand: matches.subcommand,
             rom_name: matches.file_path,
@@ -14,12 +14,19 @@ impl Context {
     }
 }
 
+#[derive(Args, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[command(author, version, about, long_about = None)]
+pub struct ExArgs {
+    #[arg(short, long, default_value_t = false)]
+    pub(crate) verbose: bool,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Disassemble ROM
     Dis,
     /// Execute ROM instructions
-    Ex,
+    Ex(ExArgs),
     /// Play ROM
     Play,
 }
@@ -31,7 +38,7 @@ pub enum Commands {
     about="NES emulator written in Rust", 
     long_about = None
 )]
-pub struct Args {
+pub struct RustinesArgs {
     #[clap(subcommand)]
     subcommand: Commands,
     #[clap(help = "Sets the input rom file to use")]

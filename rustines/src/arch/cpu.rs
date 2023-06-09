@@ -27,16 +27,16 @@ impl Cpu {
             memory: mem,
             irq: false,
             nmi: false,
-            rst: false,
+            rst: true,
         }
     }
 
     pub fn execute_verbose(&mut self) {
-        // load pc from reset vector
-        self.perform_rst();
         let mut cycles_tot = 0;
 
         loop {
+            self.handle_interrupts();
+
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
@@ -72,10 +72,11 @@ impl Cpu {
     }
 
     pub fn execute(&mut self) {
-        // load pc from reset vector
-        self.perform_rst();
-
         loop {
+            if self.rst {
+                self.perform_rst();
+            }
+
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
@@ -238,6 +239,21 @@ impl Cpu {
         let high = self.memory.fetch(0xFFFD);
 
         self.registers.pc = to_u16(low, high);
+    }
+
+    fn handle_interrupts(&mut self) {
+        // TODO verify priority
+        if self.nmi {
+            self.perform_nmi();
+        } else if self.irq {
+            self.perform_irq();
+        } else if self.rst {
+            self.perform_rst();
+        }
+
+        self.irq = false;
+        self.nmi = false;
+        self.rst = false;
     }
 }
 
