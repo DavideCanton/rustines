@@ -10,12 +10,24 @@ impl Memory {
         let mut mem = vec![0; 0x10000];
         unsafe {
             let ptr = mem.as_mut_ptr();
-            if rom.header.prg_rom_size == 1 {
-                // TODO for now let's handle just this case...
-                let prg = &rom.prg_rom_banks[0];
-                std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0x8000), 0x4000);
-                std::ptr::copy_nonoverlapping(prg.data.as_ptr(), ptr.offset(0xC000), 0x4000);
+            let first;
+            let second;
+
+            // TODO this should be handled by the mapper
+            match rom.header.prg_rom_size {
+                1 => {
+                    let prg = &rom.prg_rom_banks[0];
+                    first = prg.data.as_ptr();
+                    second = prg.data.as_ptr();
+                }
+                2 => {
+                    first = rom.prg_rom_banks[0].data.as_ptr();
+                    second = rom.prg_rom_banks[1].data.as_ptr();
+                }
+                _ => panic!("Unsupported banks"),
             }
+            std::ptr::copy_nonoverlapping(first, ptr.offset(0x8000), 0x4000);
+            std::ptr::copy_nonoverlapping(second, ptr.offset(0xC000), 0x4000);
         }
         Memory {
             mem,
@@ -78,7 +90,7 @@ struct RamRegionHandler;
 
 impl MemoryRegionHandler for RamRegionHandler {
     fn matches(&self, addr: usize) -> bool {
-        addr <= 0x1FFF
+        addr < 0x2000
     }
 
     fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
@@ -98,7 +110,7 @@ struct PpuRegionHandler;
 
 impl MemoryRegionHandler for PpuRegionHandler {
     fn matches(&self, addr: usize) -> bool {
-        addr <= 0x3FFF
+        addr < 0x4000
     }
 
     fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
@@ -116,7 +128,7 @@ struct IoRegionHandler;
 
 impl MemoryRegionHandler for IoRegionHandler {
     fn matches(&self, addr: usize) -> bool {
-        addr <= 0x401F
+        addr < 0x4020
     }
 
     fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
@@ -132,7 +144,7 @@ struct ExpRomRegionHandler;
 
 impl MemoryRegionHandler for ExpRomRegionHandler {
     fn matches(&self, addr: usize) -> bool {
-        addr <= 0x6000
+        addr < 0x6000
     }
 
     fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
@@ -148,7 +160,7 @@ struct SramRegionHandler;
 
 impl MemoryRegionHandler for SramRegionHandler {
     fn matches(&self, addr: usize) -> bool {
-        addr <= 0x8000
+        addr < 0x8000
     }
 
     fn fetch(&self, memory: &[u8], addr: usize) -> u8 {
