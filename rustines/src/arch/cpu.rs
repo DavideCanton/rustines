@@ -3,7 +3,7 @@ use log::info;
 use crate::{
     arch::{
         instrs::instr_table::{get_fname_for_print, Instr, INSTR_TABLE},
-        memory::Memory,
+        memory::{FetchStore, Memory},
         registers::*,
     },
     bin, hex,

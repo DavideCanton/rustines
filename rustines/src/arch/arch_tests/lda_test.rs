@@ -2,6 +2,7 @@
 mod tests {
     use crate::arch::arch_tests::common::tests::setup_tests;
     use crate::arch::instrs::lda;
+    use crate::arch::memory::FetchStore;
 
     #[test]
     fn test_lda_immediate() {

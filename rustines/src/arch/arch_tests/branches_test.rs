@@ -2,6 +2,7 @@
 mod tests {
     use crate::arch::arch_tests::common::tests::setup_tests;
     use crate::arch::instrs::branches;
+    use crate::arch::memory::FetchStore;
 
     #[test]
     fn test_bcc_ok() {

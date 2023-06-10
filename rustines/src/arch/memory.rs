@@ -1,5 +1,20 @@
 use super::rom_structs::NesRom;
 
+pub trait FetchStore {
+    fn fetch(&self, addr: u16) -> u8;
+    fn store(&mut self, addr: u16, val: u8) -> u8;
+
+    fn fetch_many(&self, addr: u16, count: u16) -> Box<[u8]> {
+        (addr..(addr + count)).map(|a| self.fetch(a)).collect()
+    }
+
+    fn store_many(&mut self, addr: u16, values: &[u8]) {
+        for (i, v) in values.iter().enumerate() {
+            self.store(addr + (i as u16), *v);
+        }
+    }
+}
+
 pub struct Memory {
     mem: Vec<u8>,
     handlers: Vec<Box<dyn MemoryRegionHandler>>,
@@ -42,33 +57,6 @@ impl Memory {
         }
     }
 
-    pub fn fetch(&self, addr: u16) -> u8 {
-        let addr = addr as usize;
-
-        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
-        h.fetch(&self.mem, addr)
-    }
-
-    pub fn fetch_many(&self, addr: u16, count: u16) -> Box<[u8]> {
-        let mut v = Vec::with_capacity(count as usize);
-        for i in addr..(addr + count) {
-            v.push(self.fetch(i));
-        }
-        v.into_boxed_slice()
-    }
-
-    pub fn store(&mut self, addr: u16, val: u8) -> u8 {
-        let addr = addr as usize;
-        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
-        h.store(&mut self.mem, addr, val)
-    }
-
-    pub fn store_many(&mut self, addr: u16, values: &[u8]) {
-        for (i, v) in values.iter().enumerate() {
-            self.store(addr + (i as u16), *v);
-        }
-    }
-
     pub fn push8(&mut self, sp: u8, val: u8) {
         let sp = sp as u16 + 0x0100;
         self.store(sp, val);
@@ -77,6 +65,21 @@ impl Memory {
     pub fn peek8(&self, sp: u8) -> u8 {
         let sp = sp as u16 + 0x0100;
         self.fetch(sp)
+    }
+}
+
+impl FetchStore for Memory {
+    fn fetch(&self, addr: u16) -> u8 {
+        let addr = addr as usize;
+
+        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
+        h.fetch(&self.mem, addr)
+    }
+
+    fn store(&mut self, addr: u16, val: u8) -> u8 {
+        let addr = addr as usize;
+        let h = self.handlers.iter().find(|h| h.matches(addr)).unwrap();
+        h.store(&mut self.mem, addr, val)
     }
 }
 
@@ -172,6 +175,7 @@ impl MemoryRegionHandler for SramRegionHandler {
     }
 }
 
+// TODO this should be handled by the mapper, understand how to relate cpu, memory and mapper
 struct PrgRomRegionHandler;
 
 impl MemoryRegionHandler for PrgRomRegionHandler {

@@ -1,9 +1,10 @@
 use log::info;
 
+use crate::arch::memory::FetchStore;
 use crate::arch::rom_structs::{Bank, INesHeader, PRG_ROM_BANK_SIZE};
 use crate::utils::named::Named;
 
-pub trait Mapper: Named {
+pub trait Mapper: Named + FetchStore {
     fn load_prg_rom(&self, buf: &[u8], header: &INesHeader) -> Vec<Bank> {
         info!("Rom has trainer? {}", header.has_trainer());
 

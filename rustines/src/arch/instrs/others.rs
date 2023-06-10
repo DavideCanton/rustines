@@ -1,4 +1,5 @@
 use crate::arch::cpu::Cpu;
+use crate::arch::memory::FetchStore;
 use crate::utils::bit_utils::*;
 
 pub fn nop(_: &mut Cpu) -> (u8, u8) {

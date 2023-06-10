@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::{arch_tests::common::tests::setup_tests, memory::FetchStore};
 
     #[test]
     fn test_decode_absolute() {

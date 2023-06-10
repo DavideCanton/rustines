@@ -1,4 +1,4 @@
-use crate::arch::cpu::Cpu;
+use crate::arch::{cpu::Cpu, memory::FetchStore};
 
 pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
     let (addr, ilen) = cpu.decode_zeropage();
