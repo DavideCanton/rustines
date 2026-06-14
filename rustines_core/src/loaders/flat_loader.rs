@@ -25,9 +25,9 @@ mod tests {
     use crate::loaders::loader::Loader;
 
     use super::FlatLoader;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, rngs::StdRng};
     use std::env::temp_dir;
-    use std::fs::{write, File};
+    use std::fs::{File, write};
 
     #[test]
     fn test_load() {

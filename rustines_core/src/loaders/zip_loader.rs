@@ -30,13 +30,13 @@ impl Loader for ZipLoader {
 mod tests {
     use super::ZipLoader;
     use crate::loaders::loader::Loader;
-    use rand::{rngs::StdRng, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, rngs::StdRng};
     use std::{
         env::temp_dir,
         fs::{File, OpenOptions},
         io::Write,
     };
-    use zip::{write::SimpleFileOptions, ZipWriter};
+    use zip::{ZipWriter, write::SimpleFileOptions};
 
     #[test]
     fn test_load() {

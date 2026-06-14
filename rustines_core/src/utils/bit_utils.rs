@@ -28,14 +28,10 @@ pub fn to_u16_lh(v: u32) -> (u16, u16) {
 
 #[macro_export]
 macro_rules! hex {
-    ( $val:expr ) => {{
-        format!("{:02X}", $val)
-    }};
+    ( $val:expr ) => {{ format!("{:02X}", $val) }};
 }
 
 #[macro_export]
 macro_rules! bin {
-    ( $val:expr ) => {{
-        format!("{:08b}", $val)
-    }};
+    ( $val:expr ) => {{ format!("{:08b}", $val) }};
 }

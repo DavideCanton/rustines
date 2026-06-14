@@ -21,9 +21,7 @@ pub enum MirroringType {
 }
 
 macro_rules! extract_flag {
-    ( $val:expr, $offset:expr ) => {{
-        ($val & (1 << $offset)) > 0
-    }};
+    ( $val:expr, $offset:expr ) => {{ ($val & (1 << $offset)) > 0 }};
 }
 
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
