@@ -742,7 +742,38 @@ dependencies = [
  "log",
  "paste",
  "rand",
+ "rustines_core",
+ "test-case",
+ "zip",
+]
+
+[[package]]
+name = "rustines_core"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "clap",
+ "lazy_static",
+ "log",
+ "paste",
+ "rand",
  "rustines_macro",
+ "test-case",
+ "zip",
+]
+
+[[package]]
+name = "rustines_debug_commands"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "clap",
+ "env_logger",
+ "lazy_static",
+ "log",
+ "paste",
+ "rand",
+ "rustines_core",
  "test-case",
  "zip",
 ]

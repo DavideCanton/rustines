@@ -23,7 +23,7 @@ impl Cpu {
     pub fn new(mem: Memory) -> Self {
         Cpu {
             clock: 0,
-            registers: Registers::new(),
+            registers: Registers::default(),
             memory: mem,
             irq: false,
             nmi: false,

@@ -1,49 +1,18 @@
-// mod declarations
-mod arch;
 mod context;
-mod loaders;
-mod utils;
 
-// use
-use crate::{
-    arch::{cpu::Cpu, instrs::instr_table, memory::Memory, rom_structs},
-    context::RustinesArgs,
-    loaders::loaders_factory::decode_loader,
-};
 use clap::Parser;
+// use
 use env_logger::Builder;
-use log::{info, LevelFilter};
+use log::{LevelFilter, info};
+use rustines_core::{arch::rom_structs, loaders::loaders_factory::decode_loader};
 use std::{fs, path};
+
+use crate::context::RustinesArgs;
 
 fn init_logger() {
     let mut builder = Builder::from_default_env();
 
     builder.filter(None, LevelFilter::Debug).init();
-}
-
-fn disassemble_rom(rom: rom_structs::NesRom) {
-    for bank in rom.prg_rom_banks.iter() {
-        let mut cnt: usize = 0;
-
-        println!("Bank {}", bank.id);
-        let data = &bank.data;
-
-        while cnt < data.len() {
-            let (string, cnt_2) = instr_table::disassemble_instr(data, cnt);
-            cnt = cnt_2;
-            println!("{}", string);
-        }
-    }
-}
-
-fn execute_rom(rom: rom_structs::NesRom, verbose: bool) {
-    let mem = Memory::new(rom);
-    let mut cpu = Cpu::new(mem);
-    if verbose {
-        cpu.execute_verbose();
-    } else {
-        cpu.execute();
-    }
 }
 
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
@@ -63,22 +32,6 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
     Ok(rom)
 }
 
-fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
-    use context::Commands;
-    info!("ROM size: {:#x}", buf.size);
-
-    match &context.subcommand {
-        Commands::Dis => {
-            disassemble_rom(buf);
-        }
-        Commands::Ex(args) => {
-            execute_rom(buf, args.verbose);
-        }
-        _ => {}
-    };
-    Ok(())
-}
-
 pub fn main() {
     let matches = RustinesArgs::parse();
     let context = context::Context::from_args(matches);
@@ -87,9 +40,8 @@ pub fn main() {
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
-    info!("Subcommand: {:?}", &context.subcommand);
     info!("Using input file: {}", &context.rom_name);
 
-    let rom = read_file(&file_path).unwrap();
-    process_file(rom, &context).unwrap();
+    let _ = read_file(&file_path).unwrap();
+    todo!()
 }

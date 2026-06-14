@@ -337,9 +337,10 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
 
     let instr = &INSTR_TABLE[opcode as usize];
     let Instr {
-        fname, mut ilen, ..
+        fname, ilen, ..
     } = instr;
 
+    let mut ilen = *ilen;
     let is_error = ilen == 0xFF;
 
     if is_error {

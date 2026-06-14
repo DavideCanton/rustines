@@ -1,34 +1,15 @@
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
 
 pub struct Context {
-    pub subcommand: Commands,
     pub rom_name: String,
 }
 
 impl Context {
     pub fn from_args(matches: RustinesArgs) -> Context {
         Context {
-            subcommand: matches.subcommand,
             rom_name: matches.file_path,
         }
     }
-}
-
-#[derive(Args, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[command(author, version, about, long_about = None)]
-pub struct ExArgs {
-    #[arg(short, long, default_value_t = false)]
-    pub(crate) verbose: bool,
-}
-
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    /// Disassemble ROM
-    Dis,
-    /// Execute ROM instructions
-    Ex(ExArgs),
-    /// Play ROM
-    Play,
 }
 
 #[derive(Parser, Debug)]
@@ -39,8 +20,6 @@ pub enum Commands {
     long_about = None
 )]
 pub struct RustinesArgs {
-    #[clap(subcommand)]
-    subcommand: Commands,
     #[clap(help = "Sets the input rom file to use")]
     file_path: String,
 }

@@ -1,5 +1,5 @@
 [package]
-name = "rustines"
+name = "rustines_debug_commands"
 version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
@@ -9,11 +9,15 @@ log = "0.4"
 env_logger = "0.11"
 zip = "8.6"
 arrayref = "0.3"
-clap = { version = "4.6", features = ["derive"] }
 lazy_static = "1.5"
 paste = "1.0"
+clap.workspace = true
 rustines_core = { path = "../rustines_core" }
 
 [dev-dependencies]
 rand = "0.10"
 test-case = "3.1"
+
+[[bin]]
+name = "rustines_dbg"
+path = "src/main.rs"

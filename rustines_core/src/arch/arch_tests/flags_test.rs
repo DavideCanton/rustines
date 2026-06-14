@@ -4,7 +4,7 @@ mod tests {
 
     #[test]
     fn test_num_n() {
-        let mut reg = Registers::new();
+        let mut reg = Registers::default();
         assert!(!reg.get_n());
 
         reg.compute_nz_flags(0xFF);
@@ -16,7 +16,7 @@ mod tests {
 
     #[test]
     fn test_num_z() {
-        let mut reg = Registers::new();
+        let mut reg = Registers::default();
         assert!(!reg.get_z());
 
         reg.compute_nz_flags(0x0);
@@ -29,7 +29,7 @@ mod tests {
     #[test]
     fn test_z() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_z,
             Registers::set_z,
             Registers::clear_z,
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_n() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_n,
             Registers::set_n,
             Registers::clear_n,
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_c() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_c,
             Registers::set_c,
             Registers::clear_c,
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_v() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_v,
             Registers::set_v,
             Registers::clear_v,
@@ -73,7 +73,7 @@ mod tests {
     #[test]
     fn test_b() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_b,
             Registers::set_b,
             Registers::clear_b,
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn test_i() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_i,
             Registers::set_i,
             Registers::clear_i,
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn test_d() {
         _run_test(
-            &mut Registers::new(),
+            &mut Registers::default(),
             Registers::get_d,
             Registers::set_d,
             Registers::clear_d,
