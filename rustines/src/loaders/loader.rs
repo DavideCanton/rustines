@@ -31,7 +31,7 @@ pub trait Loader: Named {
             .load_rom(file)
             .map_err(|e| format!("Error during load: {}", e))?;
 
-        if cfg!(debug) {
+        if cfg!(debug_assertions) {
             std::fs::write("dump.hex", &buf).unwrap();
         }
 

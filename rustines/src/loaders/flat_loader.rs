@@ -25,7 +25,7 @@ mod tests {
     use crate::loaders::loader::Loader;
 
     use super::FlatLoader;
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
     use std::env::temp_dir;
     use std::fs::{write, File};
 

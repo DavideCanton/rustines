@@ -30,13 +30,13 @@ impl Loader for ZipLoader {
 mod tests {
     use super::ZipLoader;
     use crate::loaders::loader::Loader;
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
     use std::{
         env::temp_dir,
         fs::{File, OpenOptions},
         io::Write,
     };
-    use zip::{write::FileOptions, ZipWriter};
+    use zip::{write::SimpleFileOptions, ZipWriter};
 
     #[test]
     fn test_load() {
@@ -54,7 +54,8 @@ mod tests {
             .unwrap();
 
         let mut zip = ZipWriter::new(archive);
-        zip.start_file("test.rom", FileOptions::default()).unwrap();
+        zip.start_file("test.rom", SimpleFileOptions::default())
+            .unwrap();
         zip.write_all(&buf).unwrap();
         zip.finish().unwrap();
 
