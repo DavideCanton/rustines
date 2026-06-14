@@ -4,8 +4,10 @@ pub trait FetchStore {
     fn fetch(&self, addr: u16) -> u8;
     fn store(&mut self, addr: u16, val: u8) -> u8;
 
-    fn fetch_many(&self, addr: u16, count: u16) -> Box<[u8]> {
-        (addr..(addr + count)).map(|a| self.fetch(a)).collect()
+    fn fetch_many(&self, addr: u16, destination: &mut [u8]) {
+        for (i, v) in destination.iter_mut().enumerate() {
+            *v = self.fetch(addr + i as u16);
+        }
     }
 
     fn store_many(&mut self, addr: u16, values: &[u8]) {
@@ -23,27 +25,20 @@ pub struct Memory {
 impl Memory {
     pub fn new(rom: NesRom) -> Self {
         let mut mem = vec![0; 0x10000];
-        unsafe {
-            let ptr = mem.as_mut_ptr();
-            let first;
-            let second;
 
-            // TODO this should be handled by the mapper
-            match rom.header.prg_rom_size {
-                1 => {
-                    let prg = &rom.prg_rom_banks[0];
-                    first = prg.data.as_ptr();
-                    second = prg.data.as_ptr();
-                }
-                2 => {
-                    first = rom.prg_rom_banks[0].data.as_ptr();
-                    second = rom.prg_rom_banks[1].data.as_ptr();
-                }
-                _ => panic!("Unsupported banks"),
+        // TODO this should be handled by the mapper
+        match rom.header.prg_rom_size {
+            1 => {
+                mem[0x8000..0xC000].copy_from_slice(&rom.prg_rom_banks[0].data);
+                mem[0xC000..0x10000].copy_from_slice(&rom.prg_rom_banks[0].data);
             }
-            std::ptr::copy_nonoverlapping(first, ptr.offset(0x8000), 0x4000);
-            std::ptr::copy_nonoverlapping(second, ptr.offset(0xC000), 0x4000);
+            2 => {
+                mem[0x8000..0xC000].copy_from_slice(&rom.prg_rom_banks[0].data);
+                mem[0xC000..0x10000].copy_from_slice(&rom.prg_rom_banks[1].data);
+            }
+            _ => panic!("Unsupported banks"),
         }
+
         Memory {
             mem,
             handlers: vec![

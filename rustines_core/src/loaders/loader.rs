@@ -42,7 +42,8 @@ pub trait Loader: Named {
             .ok_or_else(|| format!("Can't decode mapping number {}", mapping_number))?;
 
         let prg_banks = mapper.load_prg_rom(&buf, &header);
+        let chr_banks = mapper.load_chr_rom(&buf, &header);
 
-        Ok(NesRom::new(header, prg_banks, buf.len()))
+        Ok(NesRom::new(header, prg_banks, chr_banks, buf.len()))
     }
 }

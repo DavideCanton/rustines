@@ -86,15 +86,22 @@ pub struct Bank {
 
 pub struct NesRom {
     pub prg_rom_banks: Vec<Bank>,
+    pub chr_rom_banks: Vec<Bank>,
     pub header: INesHeader,
     pub size: usize,
 }
 
 impl NesRom {
-    pub fn new(header: INesHeader, prg_rom_banks: Vec<Bank>, size: usize) -> Self {
+    pub fn new(
+        header: INesHeader,
+        prg_rom_banks: Vec<Bank>,
+        chr_rom_banks: Vec<Bank>,
+        size: usize,
+    ) -> Self {
         NesRom {
             header,
             prg_rom_banks,
+            chr_rom_banks,
             size,
         }
     }
@@ -121,10 +128,10 @@ mod tests {
         assert_eq!(header.prg_ram_size, 9);
         assert_eq!(header.flags_9, 10);
         assert_eq!(header.flags_10, 11);
-        assert_eq!(header.padding, [12u8, 13, 14, 15, 6]);
+        assert_eq!(header.padding, [12u8, 13, 14, 15, 16]);
 
-        assert_eq!(header.prg_rom_size(), 5);
-        assert_eq!(header.prg_rom_banks(), 5 * PRG_ROM_BANK_SIZE);
+        assert_eq!(header.prg_rom_size(), 5 * PRG_ROM_BANK_SIZE);
+        assert_eq!(header.prg_rom_banks(), 5);
     }
 
     #[test_case(10, false)]

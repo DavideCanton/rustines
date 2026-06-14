@@ -43,7 +43,9 @@ impl Cpu {
             let instr = &INSTR_TABLE[opcode as usize];
             let Instr { fun, ilen, .. } = instr;
 
-            let data = self.memory.fetch_many(self.registers.pc, *ilen as u16);
+            let mut data = vec![0; *ilen];
+
+            self.memory.fetch_many(self.registers.pc, &mut data);
 
             let p = self.registers.get_p();
             info!(
