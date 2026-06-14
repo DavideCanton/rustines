@@ -2,7 +2,7 @@ use log::info;
 
 use crate::{
     arch::{
-        instrs::instr_table::{get_fname_for_print, Instr, INSTR_TABLE},
+        instrs::instr_table::{INSTR_TABLE, Instr},
         memory::{FetchStore, Memory},
         registers::*,
     },
@@ -49,7 +49,7 @@ impl Cpu {
             info!(
                 "[{}] {: <20}A:{} X:{} Y:{} P:{} ({}) SP:{} {}",
                 hex!(self.registers.pc),
-                get_fname_for_print(instr, &data),
+                instr.get_fname_for_print(&data),
                 hex!(self.registers.a_reg),
                 hex!(self.registers.x_reg),
                 hex!(self.registers.y_reg),
@@ -83,7 +83,7 @@ impl Cpu {
             let instr = &INSTR_TABLE[opcode as usize];
 
             // execute
-            let (cycles, actual_ilen) = (*instr.fun)(self);
+            let (cycles, actual_ilen) = (instr.fun)(self);
 
             if cycles == 0xFF {
                 break;
@@ -258,9 +258,5 @@ impl Cpu {
 }
 
 fn overflow_page_boundary(low: u8, offset: u8) -> u8 {
-    if low.overflowing_add(offset).1 {
-        1
-    } else {
-        0
-    }
+    if low.overflowing_add(offset).1 { 1 } else { 0 }
 }
