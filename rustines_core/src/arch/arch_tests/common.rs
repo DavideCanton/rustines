@@ -6,6 +6,7 @@ pub mod tests {
 
     pub fn setup_tests() -> Cpu {
         let mut header = INesHeader::from_bytes(&[0; 16]);
+        header.header = *b"NES\x1A";
         header.prg_rom_size = 1;
         header.chr_rom_size = 1;
 
@@ -27,7 +28,7 @@ pub mod tests {
                 id: "bank0".to_string(),
                 data: vec![0; CHR_ROM_BANK_SIZE],
             }],
-            1,
+            16 + PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE,
         );
         let mem = Memory::new(rom);
         let mut cpu = Cpu::new(mem);
