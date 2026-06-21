@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::arch::arch_tests::common::tests::setup_tests;
+    use crate::arch::arch_tests::test_common::tests::setup_tests;
     use crate::arch::instrs::pushpop;
 
     #[test]

@@ -18,22 +18,18 @@ fn init_logger() {
 }
 
 fn disassemble_rom(rom: rom_structs::NesRom) {
-    for bank in rom.prg_rom_banks.iter() {
-        let mut cnt: usize = 0;
+    let data = rom.mapper.prg_rom();
+    let mut cnt: usize = 0;
 
-        println!("Bank {}", bank.id);
-        let data = &bank.data;
-
-        while cnt < data.len() {
-            let (string, cnt_2) = instr_table::disassemble_instr(data, cnt);
-            cnt = cnt_2;
-            println!("{}", string);
-        }
+    while cnt < data.len() {
+        let (string, cnt_2) = instr_table::disassemble_instr(data, cnt);
+        cnt = cnt_2;
+        println!("{}", string);
     }
 }
 
 fn execute_rom(rom: rom_structs::NesRom, verbose: bool) {
-    let mem = Memory::new(rom);
+    let mem = Memory::new(rom.mapper);
     let mut cpu = Cpu::new(mem);
     if verbose {
         cpu.execute_verbose();
@@ -61,7 +57,6 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
 
 fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
     use context::Commands;
-    info!("ROM size: {:#x}", buf.size);
 
     match &context.subcommand {
         Commands::Dis => {

@@ -1,5 +1,7 @@
 use std::mem;
 
+use crate::arch::mappers::mapper::MapperBox;
+
 #[repr(C, packed)]
 #[derive(Debug)]
 pub struct INesHeader {
@@ -26,6 +28,10 @@ macro_rules! extract_flag {
 
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
 pub const CHR_ROM_BANK_SIZE: usize = 1 << 13;
+
+pub const TRAINER_SIZE: usize = 1 << 9;
+
+pub const HEADER: &[u8; 4] = b"NES\x1A";
 
 impl INesHeader {
     pub fn from_bytes(buf: &[u8; 16]) -> Self {
@@ -75,35 +81,14 @@ impl INesHeader {
     }
 }
 
-pub struct Bank {
-    pub ram: bool,
-    pub enabled: bool,
-    pub writable: bool,
-    pub battery: bool,
-    pub id: String,
-    pub data: Vec<u8>,
-}
-
 pub struct NesRom {
-    pub prg_rom_banks: Vec<Bank>,
-    pub chr_rom_banks: Vec<Bank>,
     pub header: INesHeader,
-    pub size: usize,
+    pub mapper: MapperBox,
 }
 
 impl NesRom {
-    pub fn new(
-        header: INesHeader,
-        prg_rom_banks: Vec<Bank>,
-        chr_rom_banks: Vec<Bank>,
-        size: usize,
-    ) -> Self {
-        NesRom {
-            header,
-            prg_rom_banks,
-            chr_rom_banks,
-            size,
-        }
+    pub fn new(header: INesHeader, mapper: MapperBox) -> Self {
+        NesRom { header, mapper }
     }
 }
 

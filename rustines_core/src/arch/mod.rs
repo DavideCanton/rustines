@@ -18,3 +18,5 @@ pub mod rom_structs;
 
 #[cfg(test)]
 mod arch_tests;
+
+mod common;
