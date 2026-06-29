@@ -8,7 +8,7 @@ macro_rules! instr {
 }
 
 pub const INSTR_TABLE: [Instr; 256] = [
-    instr!(others::brk, "brk::implied", 0),       // 00
+    instr!(others::brk, "brk::implied", 1),       // 00
     instr!(ora::indirect_x, 2),                   // 01
     Instr::error(),                               // 02
     Instr::error(),                               // 03
@@ -266,7 +266,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(error_fn, 255),                        // ff
 ];
 
-pub type InstrFn = fn(&mut Cpu) -> (u8, u8);
+pub type InstrFn = fn(&mut Cpu) -> u8;
 
 pub struct Instr {
     pub fun: InstrFn,
@@ -315,9 +315,9 @@ impl Instr {
     }
 }
 
-pub fn error_fn(_cpu: &mut Cpu) -> (u8, u8) {
+pub fn error_fn(_cpu: &mut Cpu) -> u8 {
     // panic!("Invalid opcode!");
-    (0xFF, 0xFF)
+    0xFF
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
@@ -349,11 +349,11 @@ mod test {
 
     use super::{Instr, InstrFn};
 
-    fn instr_fn1(_cpu: &mut Cpu) -> (u8, u8) {
-        (0, 0)
+    fn instr_fn1(_cpu: &mut Cpu) -> u8 {
+        0
     }
-    fn instr_fn2(_cpu: &mut Cpu) -> (u8, u8) {
-        (0, 0)
+    fn instr_fn2(_cpu: &mut Cpu) -> u8 {
+        0
     }
 
     mod test_macro {

@@ -2,7 +2,7 @@ use log::info;
 
 use crate::{
     arch::{
-        instrs::instr_table::{INSTR_TABLE, Instr},
+        instrs::instr_table::INSTR_TABLE,
         memory::{FetchStore, Memory},
         registers::*,
     },
@@ -34,6 +34,19 @@ impl Cpu {
     pub fn execute_verbose(&mut self) {
         let mut cycles_tot = 0;
 
+        info!(
+            "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{} {}",
+            hex!(self.registers.pc),
+            "",
+            hex!(self.registers.a_reg),
+            hex!(self.registers.x_reg),
+            hex!(self.registers.y_reg),
+            0,
+            "NV_BDIZC",
+            hex!(self.registers.sp),
+            cycles_tot
+        );
+
         loop {
             self.handle_interrupts();
 
@@ -41,15 +54,14 @@ impl Cpu {
             let opcode = self.memory.fetch(self.registers.pc);
 
             let instr = &INSTR_TABLE[opcode as usize];
-            let Instr { fun, ilen, .. } = instr;
 
-            let mut data = vec![0; *ilen];
+            let mut data = vec![0; instr.ilen];
 
             self.memory.fetch_many(self.registers.pc, &mut data);
 
             let p = self.registers.get_p();
             info!(
-                "[{}] {: <20}A:{} X:{} Y:{} P:{} ({}) SP:{} {}",
+                "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{} {}",
                 hex!(self.registers.pc),
                 instr.get_fname_for_print(&data),
                 hex!(self.registers.a_reg),
@@ -61,37 +73,32 @@ impl Cpu {
                 cycles_tot
             );
 
+            self.registers.pc += instr.ilen as u16;
             // execute
-            let (cycles, actual_ilen) = fun(self);
-
+            let cycles = (instr.fun)(self);
             if cycles == 0xFF {
                 break;
             }
             cycles_tot += cycles;
-
-            self.registers.pc += actual_ilen as u16;
         }
     }
 
     pub fn execute(&mut self) {
         loop {
-            if self.rst {
-                self.perform_rst();
-            }
+            self.handle_interrupts();
 
             // fetch
             let opcode = self.memory.fetch(self.registers.pc);
 
             let instr = &INSTR_TABLE[opcode as usize];
+            self.registers.pc += instr.ilen as u16;
 
             // execute
-            let (cycles, actual_ilen) = (instr.fun)(self);
+            let cycles = (instr.fun)(self);
 
             if cycles == 0xFF {
                 break;
             }
-
-            self.registers.pc += actual_ilen as u16;
         }
     }
 
@@ -157,56 +164,54 @@ impl Cpu {
 
     // decode functions
 
-    pub fn decode_absolute(&self) -> (u16, u8) {
-        let low = self.memory.fetch(self.registers.pc + 1);
-        let high = self.memory.fetch(self.registers.pc + 2);
-        (to_u16(low, high), 3)
+    pub fn decode_absolute(&self) -> u16 {
+        let low = self.memory.fetch(self.registers.pc - 2);
+        let high = self.memory.fetch(self.registers.pc - 1);
+        to_u16(low, high)
     }
 
-    pub fn decode_immediate(&self) -> (u8, u8) {
-        (self.memory.fetch(self.registers.pc + 1), 2)
+    pub fn decode_immediate(&self) -> u8 {
+        self.memory.fetch(self.registers.pc - 1)
     }
 
-    pub fn decode_zeropage(&self) -> (u8, u8) {
-        (self.memory.fetch(self.registers.pc + 1), 2)
+    pub fn decode_zeropage(&self) -> u8 {
+        self.memory.fetch(self.registers.pc - 1)
     }
 
-    pub fn decode_absolute_indexed(&self, offset: u8) -> (u16, u8, u8) {
-        let low = self.memory.fetch(self.registers.pc + 1);
-        let high = self.memory.fetch(self.registers.pc + 2);
+    pub fn decode_absolute_indexed(&self, offset: u8) -> (u16, u8) {
+        let low = self.memory.fetch(self.registers.pc - 2);
+        let high = self.memory.fetch(self.registers.pc - 1);
         (
             to_u16(low, high).wrapping_add(offset as u16),
-            3,
             overflow_page_boundary(low, offset),
         )
     }
 
-    pub fn decode_zeropage_indexed(&self, offset: u8) -> (u8, u8) {
-        let addr = self.memory.fetch(self.registers.pc + 1);
-        (addr.wrapping_add(offset), 2)
+    pub fn decode_zeropage_indexed(&self, offset: u8) -> u8 {
+        let addr = self.memory.fetch(self.registers.pc - 1);
+        addr.wrapping_add(offset)
     }
 
-    pub fn decode_indexed_indirect(&self) -> (u16, u8) {
+    pub fn decode_indexed_indirect(&self) -> u16 {
         let op = (self
             .memory
-            .fetch(self.registers.pc + 1)
+            .fetch(self.registers.pc - 1)
             .wrapping_add(self.registers.x_reg)) as u16
             & 0xFF;
         let low = self.memory.fetch(op);
         let high = self.memory.fetch((op + 1) & 0xFF);
 
-        (to_u16(low, high), 2)
+        to_u16(low, high)
     }
 
-    pub fn decode_indirect_indexed(&self) -> (u16, u8, u8) {
-        let op = self.memory.fetch(self.registers.pc + 1) as u16;
+    pub fn decode_indirect_indexed(&self) -> (u16, u8) {
+        let op = self.memory.fetch(self.registers.pc - 1) as u16;
         let low = self.memory.fetch(op);
         let high = self.memory.fetch((op + 1) & 0xFF);
         let offset = self.registers.y_reg;
 
         (
             to_u16(low, high).wrapping_add(offset as u16),
-            2,
             overflow_page_boundary(low, offset),
         )
     }
@@ -241,6 +246,7 @@ impl Cpu {
         let high = self.memory.fetch(0xFFFD);
 
         self.registers.pc = to_u16(low, high);
+        self.rst = false;
     }
 
     fn handle_interrupts(&mut self) {

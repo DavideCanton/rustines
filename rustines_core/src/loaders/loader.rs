@@ -27,11 +27,13 @@ pub trait Loader: Named {
     }
 
     fn load_rom_struct(&self, file: &mut File) -> Result<NesRom, String> {
-        let buf = self
+        let mut buf = self
             .load_rom(file)
             .map_err(|e| format!("Error during load: {}", e))?;
 
         let header = self.load_header(&buf[0..16])?;
+
+        let _: Vec<u8> = buf.drain(0..16).collect();
 
         let mapper = instantiate_mapper(&header, buf)
             .ok_or_else(|| format!("Can't decode mapping number {}", header.mapping_number()))?;

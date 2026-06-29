@@ -1,10 +1,10 @@
 use crate::arch::cpu::Cpu;
 
-pub fn implied(cpu: &mut Cpu) -> (u8, u8) {
+pub fn implied(cpu: &mut Cpu) -> u8 {
     let mut val = cpu.registers.y_reg;
     val = val.wrapping_sub(1);
     cpu.registers.y_reg = val;
 
     cpu.registers.compute_nz_flags(val);
-    (2, 1)
+    2
 }

@@ -8,8 +8,6 @@ mod tests {
     fn test_bcc_ok() {
         let mut cpu = setup_tests();
 
-        let old_pc = cpu.registers.pc;
-
         {
             cpu.memory.store(cpu.registers.pc, 0x90);
             cpu.memory.store(cpu.registers.pc + 1, 0xFF);
@@ -17,10 +15,12 @@ mod tests {
             cpu.registers.clear_c();
         }
 
-        let (cycles, ilen) = branches::bcc(&mut cpu);
+        cpu.registers.pc += 2;
+        let old_pc = cpu.registers.pc;
+
+        let cycles = branches::bcc(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(0, ilen);
 
         let val = cpu.registers.pc;
         assert_eq!(val, old_pc - 1);
@@ -30,8 +30,6 @@ mod tests {
     fn test_bcc_no() {
         let mut cpu = setup_tests();
 
-        let old_pc = cpu.registers.pc;
-
         {
             cpu.memory.store(cpu.registers.pc, 0x90);
             cpu.memory.store(cpu.registers.pc + 1, 0xFF);
@@ -39,10 +37,12 @@ mod tests {
             cpu.registers.set_c();
         }
 
-        let (cycles, ilen) = branches::bcc(&mut cpu);
+        cpu.registers.pc += 2;
+        let old_pc = cpu.registers.pc;
+
+        let cycles = branches::bcc(&mut cpu);
 
         assert_eq!(2, cycles);
-        assert_eq!(2, ilen);
 
         let val = cpu.registers.pc;
         assert_eq!(val, old_pc);
@@ -52,8 +52,6 @@ mod tests {
     fn test_bcs_ok() {
         let mut cpu = setup_tests();
 
-        let old_pc = cpu.registers.pc;
-
         {
             cpu.memory.store(cpu.registers.pc, 0x90);
             cpu.memory.store(cpu.registers.pc + 1, 0xFF);
@@ -61,10 +59,12 @@ mod tests {
             cpu.registers.set_c();
         }
 
-        let (cycles, ilen) = branches::bcs(&mut cpu);
+        cpu.registers.pc += 2;
+        let old_pc = cpu.registers.pc;
+
+        let cycles = branches::bcs(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(0, ilen);
 
         let val = cpu.registers.pc;
         assert_eq!(val, old_pc - 1);
@@ -74,8 +74,6 @@ mod tests {
     fn test_bcs_no() {
         let mut cpu = setup_tests();
 
-        let old_pc = cpu.registers.pc;
-
         {
             cpu.memory.store(cpu.registers.pc, 0x90);
             cpu.memory.store(cpu.registers.pc + 1, 0xFF);
@@ -83,10 +81,12 @@ mod tests {
             cpu.registers.clear_c();
         }
 
-        let (cycles, ilen) = branches::bcs(&mut cpu);
+        cpu.registers.pc += 2;
+        let old_pc = cpu.registers.pc;
+
+        let cycles = branches::bcs(&mut cpu);
 
         assert_eq!(2, cycles);
-        assert_eq!(2, ilen);
 
         let val = cpu.registers.pc;
         assert_eq!(val, old_pc);

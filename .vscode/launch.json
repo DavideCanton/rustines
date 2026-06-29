@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "lldb",
             "request": "launch",
@@ -43,6 +44,27 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
-        }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rustines_dbg'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustines_dbg",
+                    "--package=rustines_debug_commands"
+                ],
+                "filter": {
+                    "name": "rustines_dbg",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "${workspaceFolder}/roms/prova2.rom",
+                "ex"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

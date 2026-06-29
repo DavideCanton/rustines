@@ -10,10 +10,9 @@ mod tests {
         cpu.registers.a_reg = 0xAB;
         let old_sp = cpu.registers.sp;
 
-        let (cycles, ilen) = pushpop::pha(&mut cpu);
+        let cycles = pushpop::pha(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(1, ilen);
 
         let val = cpu.peek8();
         assert_eq!(val, 0xAB);
@@ -35,10 +34,9 @@ mod tests {
         cpu.registers.set_d();
         cpu.registers.set_i();
 
-        let (cycles, ilen) = pushpop::php(&mut cpu);
+        let cycles = pushpop::php(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(1, ilen);
 
         let val = cpu.peek8();
         assert_eq!(val, 0xFF);
@@ -60,10 +58,9 @@ mod tests {
         cpu.registers.clear_d();
         cpu.registers.clear_i();
 
-        let (cycles, ilen) = pushpop::php(&mut cpu);
+        let cycles = pushpop::php(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(1, ilen);
 
         let val = cpu.peek8();
         assert_eq!(val, 0x20);
@@ -85,10 +82,9 @@ mod tests {
         cpu.registers.set_z();
         cpu.registers.clear_c();
 
-        let (cycles, ilen) = pushpop::php(&mut cpu);
+        let cycles = pushpop::php(&mut cpu);
 
         assert_eq!(3, cycles);
-        assert_eq!(1, ilen);
 
         let val = cpu.peek8();
         assert_eq!(val, 0xAA);
@@ -104,10 +100,9 @@ mod tests {
 
         cpu.push8(0xAB);
 
-        let (cycles, ilen) = pushpop::pla(&mut cpu);
+        let cycles = pushpop::pla(&mut cpu);
 
         assert_eq!(4, cycles);
-        assert_eq!(1, ilen);
 
         let val = cpu.registers.a_reg;
         assert_eq!(val, 0xAB);
@@ -123,10 +118,9 @@ mod tests {
 
         cpu.push8(0xFF);
 
-        let (cycles, ilen) = pushpop::plp(&mut cpu);
+        let cycles = pushpop::plp(&mut cpu);
 
         assert_eq!(4, cycles);
-        assert_eq!(1, ilen);
 
         assert!(cpu.registers.get_c());
         assert!(cpu.registers.get_n());
@@ -147,10 +141,9 @@ mod tests {
 
         cpu.push8(0x00);
 
-        let (cycles, ilen) = pushpop::plp(&mut cpu);
+        let cycles = pushpop::plp(&mut cpu);
 
         assert_eq!(4, cycles);
-        assert_eq!(1, ilen);
 
         assert!(!cpu.registers.get_c());
         assert!(!cpu.registers.get_n());
@@ -171,10 +164,9 @@ mod tests {
 
         cpu.push8(0xAA);
 
-        let (cycles, ilen) = pushpop::plp(&mut cpu);
+        let cycles = pushpop::plp(&mut cpu);
 
         assert_eq!(4, cycles);
-        assert_eq!(1, ilen);
 
         assert!(cpu.registers.get_n());
         assert!(!cpu.registers.get_v());

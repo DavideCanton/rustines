@@ -1,27 +1,27 @@
 use crate::arch::{cpu::Cpu, memory::FetchStore};
 
-pub fn immediate(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_immediate();
+pub fn immediate(cpu: &mut Cpu) -> u8 {
+    let addr = cpu.decode_immediate();
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.set_c_from_bool(res & 0x80 == 0);
-    (2, ilen)
+    2
 }
 
-pub fn zeropage(cpu: &mut Cpu) -> (u8, u8) {
-    let (mut addr, ilen) = cpu.decode_zeropage();
+pub fn zeropage(cpu: &mut Cpu) -> u8 {
+    let mut addr = cpu.decode_zeropage();
     addr = cpu.memory.fetch(addr as u16);
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.set_c_from_bool(res & 0x80 == 0);
-    (3, ilen)
+    3
 }
 
-pub fn absolute(cpu: &mut Cpu) -> (u8, u8) {
-    let (addr, ilen) = cpu.decode_absolute();
+pub fn absolute(cpu: &mut Cpu) -> u8 {
+    let addr = cpu.decode_absolute();
     let addr = cpu.memory.fetch(addr);
     let res = cpu.registers.y_reg.wrapping_sub(addr);
     cpu.registers.compute_nz_flags(res);
     cpu.registers.set_c_from_bool(res & 0x80 == 0);
-    (4, ilen)
+    4
 }
