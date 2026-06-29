@@ -31,10 +31,6 @@ pub trait Loader: Named {
             .load_rom(file)
             .map_err(|e| format!("Error during load: {}", e))?;
 
-        if cfg!(debug_assertions) {
-            std::fs::write("dump.hex", &buf).unwrap();
-        }
-
         let header = self.load_header(&buf[0..16])?;
 
         let mapper = instantiate_mapper(&header, buf)

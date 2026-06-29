@@ -8,8 +8,9 @@ use rustines_core::{
 use std::{fs, path};
 
 mod context;
+mod types;
 
-use crate::context::Args;
+use crate::{context::Args, types::RustinesDebugError};
 
 fn init_logger() {
     let mut builder = Builder::from_default_env();
@@ -38,24 +39,27 @@ fn execute_rom(rom: rom_structs::NesRom, verbose: bool) {
     }
 }
 
-fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
+fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, RustinesDebugError> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
     };
 
-    let mut file = fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut file = fs::File::open(file_path).map_err(RustinesDebugError::ReadFileError)?;
 
     let loader = decode_loader(ext);
 
     let rom = loader
         .load_rom_struct(&mut file)
-        .map_err(|e| format!("Failed to load ROM: {}", e))?;
+        .map_err(RustinesDebugError::FileFormatError)?;
 
     Ok(rom)
 }
 
-fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<(), String> {
+fn process_file(
+    buf: rom_structs::NesRom,
+    context: &context::Context,
+) -> Result<(), RustinesDebugError> {
     use context::Commands;
 
     match &context.subcommand {
@@ -69,7 +73,7 @@ fn process_file(buf: rom_structs::NesRom, context: &context::Context) -> Result<
     Ok(())
 }
 
-pub fn main() {
+pub fn main() -> anyhow::Result<()> {
     let matches = Args::parse();
     let context = context::Context::from_args(matches);
 
@@ -80,6 +84,7 @@ pub fn main() {
     info!("Subcommand: {:?}", &context.subcommand);
     info!("Using input file: {}", &context.rom_name);
 
-    let rom = read_file(&file_path).unwrap();
-    process_file(rom, &context).unwrap();
+    let rom = read_file(&file_path)?;
+    process_file(rom, &context)?;
+    Ok(())
 }

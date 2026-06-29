@@ -4,3 +4,5 @@ resolver = "2"
 
 [workspace.dependencies]
 clap = { version = "4.6", features = ["derive"] }
+anyhow = "1.0.103"
+thiserror = "2.0.18"

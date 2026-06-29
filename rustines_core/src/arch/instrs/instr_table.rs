@@ -4,7 +4,7 @@ use crate::hex;
 
 macro_rules! instr {
     ( $fn: expr, $name: expr, $op: expr ) => {{ Instr::new($fn, $name, $op) }};
-    ( $fn: expr, $op: expr ) => {{ Instr::new($fn, stringify!($name), $op) }};
+    ( $fn: expr, $op: expr ) => {{ Instr::new($fn, stringify!($fn), $op) }};
 }
 
 pub const INSTR_TABLE: [Instr; 256] = [
@@ -340,4 +340,66 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     };
 
     (msg, current + ilen)
+}
+
+#[cfg(test)]
+#[macro_use]
+mod test {
+    use crate::arch::cpu::Cpu;
+
+    use super::{Instr, InstrFn};
+
+    fn instr_fn1(_cpu: &mut Cpu) -> (u8, u8) {
+        (0, 0)
+    }
+    fn instr_fn2(_cpu: &mut Cpu) -> (u8, u8) {
+        (0, 0)
+    }
+
+    mod test_macro {
+        use super::Instr;
+        use super::{compare_instr_fun, instr_fn1, instr_fn2};
+
+        #[test]
+        fn test_instr_macro_2() {
+            let instr1 = instr!(instr_fn1, 2);
+            assert_eq!(instr1.fname, "instr_fn1");
+            compare_instr_fun(&instr1, instr_fn1);
+            assert_eq!(instr1.ilen, 2);
+        }
+
+        #[test]
+        fn test_instr_macro_3() {
+            let instr2 = instr!(instr_fn2, "fn2", 2);
+            assert_eq!(instr2.fname, "fn2");
+            compare_instr_fun(&instr2, instr_fn2);
+            assert_eq!(instr2.ilen, 2);
+        }
+    }
+
+    mod test_instr {
+        use super::super::error_fn;
+        use super::Instr;
+        use super::{compare_instr_fun, instr_fn1};
+
+        #[test]
+        fn test_new() {
+            let instr = Instr::new(instr_fn1, "foo", 42);
+            assert_eq!(instr.fname, "foo");
+            assert_eq!(instr.ilen, 42);
+            compare_instr_fun(&instr, instr_fn1);
+        }
+
+        #[test]
+        fn test_error() {
+            let instr = Instr::error();
+            assert_eq!(instr.fname, "err");
+            assert_eq!(instr.ilen, 255);
+            compare_instr_fun(&instr, error_fn);
+        }
+    }
+
+    fn compare_instr_fun(instr: &Instr, exp: InstrFn) {
+        assert_eq!(instr.fun as *const (), exp as *const ());
+    }
 }
