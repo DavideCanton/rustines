@@ -103,6 +103,7 @@ mod tests {
 
     const DEFAULT: [u8; 16] = [1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
+    #[test]
     fn test_header() {
         let header = INesHeader::from_bytes(&DEFAULT);
         assert_eq!(header.header, [1u8, 2, 3, 4]);

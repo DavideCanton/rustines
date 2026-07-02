@@ -1,3 +1,4 @@
+use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::instrs::*;
 use crate::hex;
@@ -266,7 +267,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(error_fn, 255),                        // ff
 ];
 
-pub type InstrFn = fn(&mut Cpu) -> u8;
+pub type InstrFn = fn(&mut Cpu, &mut Bus) -> u8;
 
 pub struct Instr {
     pub fun: InstrFn,
@@ -315,7 +316,7 @@ impl Instr {
     }
 }
 
-pub fn error_fn(_cpu: &mut Cpu) -> u8 {
+pub fn error_fn(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
     // panic!("Invalid opcode!");
     0xFF
 }
@@ -345,14 +346,14 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
 #[cfg(test)]
 #[macro_use]
 mod test {
-    use crate::arch::cpu::Cpu;
+    use crate::arch::{bus::Bus, cpu::Cpu};
 
     use super::{Instr, InstrFn};
 
-    fn instr_fn1(_cpu: &mut Cpu) -> u8 {
+    fn instr_fn1(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
         0
     }
-    fn instr_fn2(_cpu: &mut Cpu) -> u8 {
+    fn instr_fn2(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
         0
     }
 

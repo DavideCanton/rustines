@@ -43,6 +43,10 @@ impl Mapper for Mapper0 {
         &self.prg_rom
     }
 
+    fn chr_rom(&self) -> &[u8] {
+        &self.chr_rom
+    }
+
     fn fetch_prg_rom(&self, addr: u16) -> u8 {
         // TODO move outside?
         let mut addr = addr - 0x8000;

@@ -1,7 +1,7 @@
-use crate::arch::{cpu::Cpu, memory::FetchStore};
+use crate::arch::{bus::{Bus, FetchStore}, cpu::Cpu};
 
-pub fn immediate(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_immediate();
+pub fn immediate(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_immediate(bus);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -14,9 +14,9 @@ pub fn immediate(cpu: &mut Cpu) -> u8 {
     2
 }
 
-pub fn zeropage(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_zeropage();
-    let addr = cpu.memory.fetch(addr as u16);
+pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_zeropage(bus);
+    let addr = bus.fetch(addr as u16);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -29,9 +29,9 @@ pub fn zeropage(cpu: &mut Cpu) -> u8 {
     3
 }
 
-pub fn zeropage_x(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_zeropage_indexed(cpu.registers.x_reg);
-    let addr = cpu.memory.fetch(addr as u16);
+pub fn zeropage_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_zeropage_indexed(bus,cpu.registers.x_reg);
+    let addr = bus.fetch(addr as u16);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -44,9 +44,9 @@ pub fn zeropage_x(cpu: &mut Cpu) -> u8 {
     4
 }
 
-pub fn absolute(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_absolute();
-    let addr = cpu.memory.fetch(addr);
+pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_absolute(bus);
+    let addr = bus.fetch(addr);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -59,9 +59,9 @@ pub fn absolute(cpu: &mut Cpu) -> u8 {
     4
 }
 
-pub fn absolute_x(cpu: &mut Cpu) -> u8 {
-    let (addr, boundary) = cpu.decode_absolute_indexed(cpu.registers.x_reg);
-    let addr = cpu.memory.fetch(addr);
+pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let (addr, boundary) = cpu.decode_absolute_indexed(bus,cpu.registers.x_reg);
+    let addr = bus.fetch(addr);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -74,9 +74,9 @@ pub fn absolute_x(cpu: &mut Cpu) -> u8 {
     4 + boundary
 }
 
-pub fn absolute_y(cpu: &mut Cpu) -> u8 {
-    let (addr, boundary) = cpu.decode_absolute_indexed(cpu.registers.y_reg);
-    let addr = cpu.memory.fetch(addr);
+pub fn absolute_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let (addr, boundary) = cpu.decode_absolute_indexed(bus,cpu.registers.y_reg);
+    let addr = bus.fetch(addr);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -89,9 +89,9 @@ pub fn absolute_y(cpu: &mut Cpu) -> u8 {
     4 + boundary
 }
 
-pub fn indirect_x(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_indexed_indirect();
-    let addr = cpu.memory.fetch(addr);
+pub fn indirect_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_indexed_indirect(bus);
+    let addr = bus.fetch(addr);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
@@ -104,9 +104,9 @@ pub fn indirect_x(cpu: &mut Cpu) -> u8 {
     6
 }
 
-pub fn indirect_y(cpu: &mut Cpu) -> u8 {
-    let (addr, boundary) = cpu.decode_indirect_indexed();
-    let addr = cpu.memory.fetch(addr);
+pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let (addr, boundary) = cpu.decode_indirect_indexed(bus);
+    let addr = bus.fetch(addr);
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(addr as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);

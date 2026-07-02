@@ -1,13 +1,17 @@
 mod context;
+mod renderer;
 
 use clap::Parser;
 // use
 use env_logger::Builder;
 use log::{LevelFilter, info};
-use rustines_core::{arch::rom_structs, loaders::loaders_factory::decode_loader};
+use rustines_core::{
+    arch::{bus::Bus, cpu::Cpu, ppu::Ppu, rom_structs},
+    loaders::loaders_factory::decode_loader,
+};
 use std::{fs, path};
 
-use crate::context::RustinesArgs;
+use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 
 fn init_logger() {
     let mut builder = Builder::from_default_env();
@@ -42,6 +46,26 @@ pub fn main() {
 
     info!("Using input file: {}", &context.rom_name);
 
-    let _ = read_file(&file_path).unwrap();
-    todo!()
+    let rom = read_file(&file_path).unwrap();
+    let ppu = Ppu::new(Box::new(PixelsRenderer));
+    let mut bus = Bus::new(rom.mapper, ppu);
+    let mut cpu = Cpu::new();
+
+    loop {
+        let cycles = cpu.tick(&mut bus);
+
+        if cycles == 0xFF {
+            break;
+        }
+
+        let ppu_cycles = cycles * 3;
+
+        for _ in 0..ppu_cycles {
+            bus.ppu_tick();
+
+            if bus.ppu().nmi_requested() {
+                cpu.perform_nmi(&mut bus);
+            }
+        }
+    }
 }

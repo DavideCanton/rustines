@@ -1,8 +1,8 @@
-use crate::arch::{cpu::Cpu, memory::FetchStore};
+use crate::arch::{bus::{Bus, FetchStore}, cpu::Cpu};
 
-pub fn zeropage(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_zeropage();
-    let addr = cpu.memory.fetch(addr as u16);
+pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_zeropage(bus);
+    let addr = bus.fetch(addr as u16);
     let res = addr & cpu.registers.a_reg;
 
     cpu.registers.set_n_from_bool(res & 0x80 != 0);
@@ -12,9 +12,9 @@ pub fn zeropage(cpu: &mut Cpu) -> u8 {
     3
 }
 
-pub fn absolute(cpu: &mut Cpu) -> u8 {
-    let addr = cpu.decode_absolute();
-    let addr = cpu.memory.fetch(addr);
+pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let addr = cpu.decode_absolute(bus);
+    let addr = bus.fetch(addr);
     let res = addr & cpu.registers.a_reg;
 
     cpu.registers.set_n_from_bool(res & 0x80 != 0);

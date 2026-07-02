@@ -1,0 +1,259 @@
+use crate::{arch::mappers::mapper::Mapper, renderer::Renderer};
+
+pub struct Ppu {
+    pub nametables: [u8; 2048],
+    pub palette_table: [u8; 32],
+    pub oam_data: [u8; 256],
+
+    pub ctrl: u8,
+    pub mask: u8,
+    pub status: u8,
+
+    pub vram_address: u16,
+    pub temp_address: u16,
+    pub fine_x: u8,
+    pub address_latch: u8,
+    pub data_buffer: u8,
+
+    pub scanline: i16,
+    pub cycle: i16,
+
+    pub nmi_interrupt: bool,
+    pub frame_ready: bool,
+
+    renderer: Box<dyn Renderer>,
+}
+
+impl Ppu {
+    pub fn new(renderer: Box<dyn Renderer>) -> Self {
+        Self {
+            nametables: [0; 2048],
+            palette_table: [0; 32],
+            oam_data: [0; 256],
+
+            ctrl: 0,
+            mask: 0,
+            status: 0,
+
+            vram_address: 0,
+            temp_address: 0,
+            fine_x: 0,
+            address_latch: 0,
+            data_buffer: 0,
+
+            scanline: -1,
+            cycle: 0,
+
+            nmi_interrupt: false,
+            frame_ready: false,
+            renderer,
+        }
+    }
+
+    pub fn tick(&mut self, mapper: &mut dyn Mapper) {
+        self.cycle += 1;
+        if self.cycle >= 341 {
+            self.cycle = 0;
+            self.scanline += 1;
+
+            if self.scanline >= 261 {
+                self.scanline = -1;
+                self.frame_ready = true;
+            }
+        }
+
+        if self.scanline >= 0 && self.scanline <= 239 && self.cycle == 256 {
+            self.render_scanline(mapper);
+        }
+
+        if self.scanline == 241 && self.cycle == 1 {
+            self.status |= 0x80;
+            if (self.ctrl & 0x80) != 0 {
+                self.nmi_interrupt = true;
+            }
+        }
+
+        if self.scanline == -1 && self.cycle == 1 {
+            self.status &= 0x7F;
+            self.nmi_interrupt = false;
+        }
+    }
+
+    pub fn cpu_write(&mut self, reg_index: u16, value: u8) {
+        match reg_index {
+            0 => self.ctrl = value,
+            1 => self.mask = value,
+            2 => {}
+            3 => { /* Scrittura indirizzo OAM (0x2003) */ }
+            4 => {
+                self.oam_data[42] = value;
+            }
+            5 => {
+                if self.address_latch == 0 {
+                    self.fine_x = value & 0x07;
+                    self.temp_address = (self.temp_address & 0xFFE0) | ((value >> 3) as u16);
+                    self.address_latch = 1;
+                } else {
+                    self.temp_address = (self.temp_address & 0x8C1F)
+                        | (((value & 0x07) as u16) << 12)
+                        | (((value & 0xF8) as u16) << 2);
+                    self.address_latch = 0;
+                }
+            }
+            6 => {
+                if self.address_latch == 0 {
+                    self.temp_address =
+                        (self.temp_address & 0x00FF) | (((value & 0x3F) as u16) << 8);
+                    self.address_latch = 1;
+                } else {
+                    self.temp_address = (self.temp_address & 0xFF00) | (value as u16);
+                    self.vram_address = self.temp_address;
+                    self.address_latch = 0;
+                }
+            }
+            7 => {
+                self.vram_write(self.vram_address, value);
+
+                self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn cpu_read(&mut self, reg_index: u16) -> u8 {
+        match reg_index {
+            2 => {
+                let res = self.status;
+                self.status &= 0x7F;
+                self.address_latch = 0;
+                res
+            }
+            7 => {
+                let mut data = self.data_buffer;
+                self.data_buffer = self.vram_read(self.vram_address);
+
+                if self.vram_address >= 0x3F00 {
+                    data = self.data_buffer;
+                }
+                self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                data
+            }
+            _ => 0,
+        }
+    }
+
+    fn vram_read(&self, mut addr: u16) -> u8 {
+        addr &= 0x3FFF;
+
+        match addr {
+            0x0000..=0x1FFF => 0,
+            0x2000..=0x3EFF => {
+                let vram_index = (addr & 0x0FFF) as usize;
+                self.nametables[vram_index % 2048]
+            }
+            0x3F00..=0x3FFF => {
+                let mut palette_addr = (addr & 0x001F) as usize;
+                if palette_addr == 0x0010
+                    || palette_addr == 0x0014
+                    || palette_addr == 0x0018
+                    || palette_addr == 0x001C
+                {
+                    palette_addr -= 0x0010;
+                }
+                self.palette_table[palette_addr]
+            }
+            _ => 0,
+        }
+    }
+
+    fn vram_write(&mut self, mut addr: u16, value: u8) {
+        addr &= 0x3FFF;
+        match addr {
+            0x0000..=0x1FFF => {}
+            0x2000..=0x3EFF => {
+                let vram_index = (addr & 0x0FFF) as usize;
+                self.nametables[vram_index % 2048] = value;
+            }
+            0x3F00..=0x3FFF => {
+                let mut palette_addr = (addr & 0x001F) as usize;
+                if palette_addr == 0x0010
+                    || palette_addr == 0x0014
+                    || palette_addr == 0x0018
+                    || palette_addr == 0x001C
+                {
+                    palette_addr -= 0x0010;
+                }
+                self.palette_table[palette_addr] = value;
+            }
+            _ => {}
+        }
+    }
+
+    fn render_scanline(&mut self, mapper: &mut dyn Mapper) {
+        // TODO
+        // if chr_rom.is_empty() {
+        //     return;
+        // }
+
+        let y = self.scanline as usize;
+        let tile_y = (y / 8) as u16;
+        let pixel_y = (y % 8) as u16;
+
+        // Recupera la Name Table selezionata da PPUCTRL (bit 0 e 1)
+        let base_nametable_addr = 0x2000 + ((self.ctrl & 0x03) as u16 * 0x0400);
+
+        for x in 0..256 {
+            let tile_x = (x / 8) as u16;
+            let pixel_x = (x % 8) as u16;
+
+            // 1. Trova l'indice del tile nella Name Table
+            let nametable_index = tile_y * 32 + tile_x;
+            let tile_id = self.vram_read(base_nametable_addr + nametable_index) as u16;
+
+            // 2. Trova i byte del tile nella Pattern Table (Chr Rom)
+            // Sfondo usa la tavolozza 0 o 1 a seconda del bit 4 di PPUCTRL
+            let pattern_table_base = if (self.ctrl & 0x10) != 0 {
+                0x1000
+            } else {
+                0x0000
+            };
+            let tile_addr = pattern_table_base + (tile_id * 16) + pixel_y;
+
+            // Il NES unisce due byte distanti 8 posizioni per formare i 2 bit del colore
+            let byte1 = mapper.fetch_chr_rom(tile_addr);
+            let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
+
+            // Isola i bit per il pixel corrente (da sinistra a destra)
+            let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
+            let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
+            let color_index = (bit2 << 1) | bit1; // Valore da 0 a 3
+
+            // 3. Recupera il colore effettivo dalla Palette dello sfondo (Palette 0 per semplicità)
+            let palette_color_id = self.vram_read(0x3F00 + color_index as u16);
+
+            // Converti il Color ID del NES in un colore RGB a 32 bit reale
+            let rgb_color = nes_color_to_rgb(palette_color_id);
+
+            // Salva il pixel nel buffer dello schermo
+            self.renderer.render_pixel(x, y, rgb_color)
+        }
+    }
+
+    pub fn nmi_requested(&self) -> bool {
+        todo!()
+    }
+}
+
+// TODO fill
+fn nes_color_to_rgb(id: u8) -> u32 {
+    match id & 0x3F {
+        0x00 => 0x7C7C7CFF, // Grigio
+        0x01 => 0x0000FCFF, // Blu scuro
+        0x12 => 0x0000B8FF, // Blu primario
+        0x15 => 0xE40058FF, // Rosso / Magenta
+        0x19 => 0x94E000FF, // Verde limone
+        0x2A => 0x3CBCFCFF, // Celeste
+        // ... aggiungi i restanti 40+ colori della tavolozza NES standard
+        _ => 0x000000FF, // Nero di default
+    }
+}

@@ -2,8 +2,9 @@ use clap::Parser;
 use env_logger::Builder;
 use log::{LevelFilter, info};
 use rustines_core::{
-    arch::{cpu::Cpu, instrs::instr_table, memory::Memory, rom_structs},
+    arch::{bus::Bus, cpu::Cpu, instrs::instr_table, ppu::Ppu, rom_structs},
     loaders::loaders_factory::decode_loader,
+    renderer::NoopRenderer,
 };
 use std::{fs, path};
 
@@ -29,14 +30,12 @@ fn disassemble_rom(rom: rom_structs::NesRom) {
     }
 }
 
+#[allow(unused)]
 fn execute_rom(rom: rom_structs::NesRom, verbose: bool) {
-    let mem = Memory::new(rom.mapper);
-    let mut cpu = Cpu::new(mem);
-    if verbose {
-        cpu.execute_verbose();
-    } else {
-        cpu.execute();
-    }
+    let ppu = Ppu::new(Box::new(NoopRenderer));
+    let mem = Bus::new(rom.mapper, ppu);
+    let mut cpu = Cpu::new();
+    todo!()
 }
 
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, RustinesDebugError> {

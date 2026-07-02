@@ -1,16 +1,16 @@
 #[cfg(test)]
 mod tests {
     use crate::arch::arch_tests::test_common::tests::setup_tests;
+    use crate::arch::bus::FetchStore;
     use crate::arch::instrs::branches;
-    use crate::arch::memory::FetchStore;
 
     #[test]
     fn test_bcc_ok() {
-        let mut cpu = setup_tests();
+        let (mut cpu, mut bus) = setup_tests();
 
         {
-            cpu.memory.store(cpu.registers.pc, 0x90);
-            cpu.memory.store(cpu.registers.pc + 1, 0xFF);
+            bus.store(cpu.registers.pc, 0x90);
+            bus.store(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.clear_c();
         }
@@ -18,7 +18,7 @@ mod tests {
         cpu.registers.pc += 2;
         let old_pc = cpu.registers.pc;
 
-        let cycles = branches::bcc(&mut cpu);
+        let cycles = branches::bcc(&mut cpu, &mut bus);
 
         assert_eq!(3, cycles);
 
@@ -28,11 +28,11 @@ mod tests {
 
     #[test]
     fn test_bcc_no() {
-        let mut cpu = setup_tests();
+        let (mut cpu, mut bus) = setup_tests();
 
         {
-            cpu.memory.store(cpu.registers.pc, 0x90);
-            cpu.memory.store(cpu.registers.pc + 1, 0xFF);
+            bus.store(cpu.registers.pc, 0x90);
+            bus.store(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.set_c();
         }
@@ -40,7 +40,7 @@ mod tests {
         cpu.registers.pc += 2;
         let old_pc = cpu.registers.pc;
 
-        let cycles = branches::bcc(&mut cpu);
+        let cycles = branches::bcc(&mut cpu, &mut bus);
 
         assert_eq!(2, cycles);
 
@@ -50,11 +50,11 @@ mod tests {
 
     #[test]
     fn test_bcs_ok() {
-        let mut cpu = setup_tests();
+        let (mut cpu, mut bus) = setup_tests();
 
         {
-            cpu.memory.store(cpu.registers.pc, 0x90);
-            cpu.memory.store(cpu.registers.pc + 1, 0xFF);
+            bus.store(cpu.registers.pc, 0x90);
+            bus.store(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.set_c();
         }
@@ -62,7 +62,7 @@ mod tests {
         cpu.registers.pc += 2;
         let old_pc = cpu.registers.pc;
 
-        let cycles = branches::bcs(&mut cpu);
+        let cycles = branches::bcs(&mut cpu, &mut bus);
 
         assert_eq!(3, cycles);
 
@@ -72,11 +72,11 @@ mod tests {
 
     #[test]
     fn test_bcs_no() {
-        let mut cpu = setup_tests();
+        let (mut cpu, mut bus) = setup_tests();
 
         {
-            cpu.memory.store(cpu.registers.pc, 0x90);
-            cpu.memory.store(cpu.registers.pc + 1, 0xFF);
+            bus.store(cpu.registers.pc, 0x90);
+            bus.store(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.clear_c();
         }
@@ -84,7 +84,7 @@ mod tests {
         cpu.registers.pc += 2;
         let old_pc = cpu.registers.pc;
 
-        let cycles = branches::bcs(&mut cpu);
+        let cycles = branches::bcs(&mut cpu, &mut bus);
 
         assert_eq!(2, cycles);
 

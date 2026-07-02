@@ -2,12 +2,14 @@
 pub mod tests {
     use crate::arch::cpu::Cpu;
     use crate::arch::mappers::mapper_0::Mapper0;
-    use crate::arch::memory::Memory;
+    use crate::arch::bus::Bus;
+    use crate::arch::ppu::Ppu;
     use crate::arch::rom_structs::{
         CHR_ROM_BANK_SIZE, HEADER, INesHeader, NesRom, PRG_ROM_BANK_SIZE,
     };
+    use crate::renderer::NoopRenderer;
 
-    pub fn setup_tests() -> Cpu {
+    pub fn setup_tests() -> (Cpu, Bus) {
         let mut header = INesHeader::from_bytes(&[0; 16]);
         header.header = *HEADER;
         header.prg_rom_size = 1;
@@ -18,11 +20,11 @@ pub mod tests {
         );
 
         let rom = NesRom::new(header, mapper);
-        let mem = Memory::new(rom.mapper);
-        let mut cpu = Cpu::new(mem);
+        let bus = Bus::new(rom.mapper, Ppu::new(Box::new(NoopRenderer)));
+        let mut cpu = Cpu::new();
 
         cpu.registers.pc = 0x100;
 
-        cpu
+        (cpu, bus)
     }
 }
