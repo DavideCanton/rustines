@@ -51,7 +51,7 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, RustinesDebu
 
     let rom = loader
         .load_rom_struct(&mut file)
-        .map_err(RustinesDebugError::FileFormatError)?;
+        .map_err(|e| RustinesDebugError::FileFormatError(e.to_string()))?;
 
     Ok(rom)
 }

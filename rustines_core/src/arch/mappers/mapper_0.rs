@@ -1,3 +1,4 @@
+use anyhow::bail;
 use rustines_macro::Named;
 
 use crate::arch::mappers::mapper::Mapper;
@@ -12,15 +13,14 @@ pub struct Mapper0 {
 }
 
 impl Mapper0 {
-    pub fn new(header: &INesHeader, mut rom: Vec<u8>) -> Self {
+    pub fn new(header: &INesHeader, mut rom: Vec<u8>) -> anyhow::Result<Self> {
         if header.has_trainer() {
             let _ = rom.drain(0..TRAINER_SIZE).collect::<Vec<_>>();
         }
 
         let banks = header.prg_rom_banks();
         if banks != 1 && banks != 2 {
-            // TODO
-            panic!("invalid");
+            bail!("Invalid number of banks, expected 1 or 2, found {banks}")
         }
 
         let prg_rom = rom.drain(0..header.prg_rom_size()).collect();
@@ -30,11 +30,11 @@ impl Mapper0 {
             rom.drain(0..header.chr_rom_size()).collect()
         };
 
-        Mapper0 {
+        Ok(Mapper0 {
             prg_rom,
             chr_rom,
             banks,
-        }
+        })
     }
 }
 

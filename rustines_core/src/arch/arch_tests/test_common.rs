@@ -13,10 +13,9 @@ pub mod tests {
         header.prg_rom_size = 1;
         header.chr_rom_size = 1;
 
-        let mapper = Box::new(Mapper0::new(
-            &header,
-            vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE],
-        ));
+        let mapper = Box::new(
+            Mapper0::new(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap(),
+        );
 
         let rom = NesRom::new(header, mapper);
         let mem = Memory::new(rom.mapper);
