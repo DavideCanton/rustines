@@ -67,7 +67,7 @@ impl FetchStore for Bus {
             self.ppu.cpu_read(ind)
         } else if address <= 0x4017 {
             // TODO callback here probably
-            let ind = address;
+            let ind = address & 0xFF;
             self.apu_registers[ind as usize]
         } else if address <= 0x401F {
             // ignored
@@ -87,7 +87,7 @@ impl FetchStore for Bus {
             0
         } else if address <= 0x4017 {
             // TODO callback here probably
-            let ind = address;
+            let ind = address & 0xFF;
             replace(&mut self.apu_registers, ind as usize, val)
         } else if address <= 0x401F {
             // ignored

@@ -281,7 +281,7 @@ impl Instr {
     }
 
     const fn error() -> Self {
-        Instr::new(error_fn, "err", 255)
+        Instr::new(error_fn, "err", 0xFF)
     }
 
     pub fn get_fname_for_print(&self, data: &[u8]) -> String {

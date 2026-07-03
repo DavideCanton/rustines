@@ -1,9 +1,12 @@
+use log::info;
+
 use crate::{
     arch::{
         bus::{Bus, FetchStore},
         instrs::instr_table::INSTR_TABLE,
         registers::*,
     },
+    bin, hex,
     utils::bit_utils::*,
 };
 
@@ -27,20 +30,20 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self, bus: &mut Bus) -> u8 {
-        // if verbose {
-        //     info!(
-        //         "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
-        //         hex!(self.registers.pc),
-        //         "",
-        //         hex!(self.registers.a_reg),
-        //         hex!(self.registers.x_reg),
-        //         hex!(self.registers.y_reg),
-        //         0,
-        //         "NV_BDIZC",
-        //         hex!(self.registers.sp),
-        //     );
-        // }
+    pub fn tick(&mut self, bus: &mut Bus, verbose: bool) -> u8 {
+        if verbose {
+            info!(
+                "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
+                hex!(self.registers.pc),
+                "",
+                hex!(self.registers.a_reg),
+                hex!(self.registers.x_reg),
+                hex!(self.registers.y_reg),
+                0,
+                "NV_BDIZC",
+                hex!(self.registers.sp),
+            );
+        }
 
         self.handle_interrupts(bus);
 
@@ -48,22 +51,23 @@ impl Cpu {
 
         let instr = &INSTR_TABLE[opcode as usize];
 
-        // if verbose {
-        //     let mut data = vec![0; instr.ilen];
-        //     bus.fetch_many(self.registers.pc, &mut data);
-        //     let p = self.registers.get_p();
-        //     info!(
-        //         "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
-        //         hex!(self.registers.pc),
-        //         instr.get_fname_for_print(&data),
-        //         hex!(self.registers.a_reg),
-        //         hex!(self.registers.x_reg),
-        //         hex!(self.registers.y_reg),
-        //         hex!(p),
-        //         bin!(p),
-        //         hex!(self.registers.sp),
-        //     );
-        // }
+        if verbose {
+            let ilen = if instr.ilen == 0xFF { 1 } else { instr.ilen };
+            let mut data = vec![0; ilen];
+            bus.fetch_many(self.registers.pc, &mut data);
+            let p = self.registers.get_p();
+            info!(
+                "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
+                hex!(self.registers.pc),
+                instr.get_fname_for_print(&data),
+                hex!(self.registers.a_reg),
+                hex!(self.registers.x_reg),
+                hex!(self.registers.y_reg),
+                hex!(p),
+                bin!(p),
+                hex!(self.registers.sp),
+            );
+        }
 
         self.registers.pc += instr.ilen as u16;
 

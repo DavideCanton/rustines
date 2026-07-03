@@ -3,9 +3,13 @@ name = "rustines"
 version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
+default-run = "rustines"
 
 [dependencies]
 log = "0.4"
 env_logger = "0.11"
+winit = "0.30.13"
+pixels = "0.17.1"
+winit_input_helper = "0.17.0"
 clap = { version = "4.6", features = ["derive"] }
 rustines_core = { path = "../rustines_core" }

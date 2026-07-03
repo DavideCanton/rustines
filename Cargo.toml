@@ -1,5 +1,10 @@
 [workspace]
-members = ["rustines_core", "rustines", "rustines_macro", "rustines_debug_commands"]
+members = [
+    "rustines_core",
+    "rustines",
+    "rustines_macro",
+    "rustines_debug_commands"
+]
 resolver = "2"
 
 [workspace.dependencies]

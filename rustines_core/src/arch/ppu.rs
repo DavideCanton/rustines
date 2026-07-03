@@ -51,6 +51,10 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
+        if self.cycle == 0 {
+            self.renderer.clear();
+        }
+
         self.cycle += 1;
         if self.cycle >= 341 {
             self.cycle = 0;
@@ -59,6 +63,7 @@ impl Ppu {
             if self.scanline >= 261 {
                 self.scanline = -1;
                 self.frame_ready = true;
+                self.renderer.draw();
             }
         }
 
@@ -199,19 +204,15 @@ impl Ppu {
         let tile_y = (y / 8) as u16;
         let pixel_y = (y % 8) as u16;
 
-        // Recupera la Name Table selezionata da PPUCTRL (bit 0 e 1)
         let base_nametable_addr = 0x2000 + ((self.ctrl & 0x03) as u16 * 0x0400);
 
         for x in 0..256 {
             let tile_x = (x / 8) as u16;
             let pixel_x = (x % 8) as u16;
 
-            // 1. Trova l'indice del tile nella Name Table
             let nametable_index = tile_y * 32 + tile_x;
             let tile_id = self.vram_read(base_nametable_addr + nametable_index) as u16;
 
-            // 2. Trova i byte del tile nella Pattern Table (Chr Rom)
-            // Sfondo usa la tavolozza 0 o 1 a seconda del bit 4 di PPUCTRL
             let pattern_table_base = if (self.ctrl & 0x10) != 0 {
                 0x1000
             } else {
@@ -219,41 +220,36 @@ impl Ppu {
             };
             let tile_addr = pattern_table_base + (tile_id * 16) + pixel_y;
 
-            // Il NES unisce due byte distanti 8 posizioni per formare i 2 bit del colore
             let byte1 = mapper.fetch_chr_rom(tile_addr);
             let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
 
-            // Isola i bit per il pixel corrente (da sinistra a destra)
             let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
             let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
             let color_index = (bit2 << 1) | bit1; // Valore da 0 a 3
 
-            // 3. Recupera il colore effettivo dalla Palette dello sfondo (Palette 0 per semplicità)
             let palette_color_id = self.vram_read(0x3F00 + color_index as u16);
 
-            // Converti il Color ID del NES in un colore RGB a 32 bit reale
             let rgb_color = nes_color_to_rgb(palette_color_id);
 
-            // Salva il pixel nel buffer dello schermo
             self.renderer.render_pixel(x, y, rgb_color)
         }
     }
 
     pub fn nmi_requested(&self) -> bool {
-        todo!()
+        self.nmi_interrupt
     }
 }
 
 // TODO fill
 fn nes_color_to_rgb(id: u8) -> u32 {
     match id & 0x3F {
-        0x00 => 0x7C7C7CFF, // Grigio
-        0x01 => 0x0000FCFF, // Blu scuro
-        0x12 => 0x0000B8FF, // Blu primario
-        0x15 => 0xE40058FF, // Rosso / Magenta
-        0x19 => 0x94E000FF, // Verde limone
-        0x2A => 0x3CBCFCFF, // Celeste
-        // ... aggiungi i restanti 40+ colori della tavolozza NES standard
-        _ => 0x000000FF, // Nero di default
+        0x00 => 0x7C7C7CFF, //
+        0x01 => 0x0000FCFF,
+        0x12 => 0x0000B8FF,
+        0x15 => 0xE40058FF,
+        0x19 => 0x94E000FF,
+        0x2A => 0x3CBCFCFF,
+
+        _ => 0x000000FF,
     }
 }
