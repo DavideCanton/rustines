@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "rustines_core",
-    "rustines",
-    "rustines_macro",
-    "rustines_debug_commands"
+    "crates/rustines_core",
+    "crates/rustines",
+    "crates/rustines_macro",
+    "crates/rustines_debug_commands"
 ]
 resolver = "2"
 
