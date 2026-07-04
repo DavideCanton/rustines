@@ -5,11 +5,11 @@ authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
 
 [dependencies]
-log = "0.4"
-env_logger = "0.11"
 clap.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
+log.workspace = true
+env_logger.workspace = true
 rustines_core = { path = "../rustines_core" }
 
 [[bin]]
