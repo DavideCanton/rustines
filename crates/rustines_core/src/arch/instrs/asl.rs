@@ -1,4 +1,7 @@
-use crate::arch::{bus::{Bus, FetchStore}, cpu::Cpu};
+use crate::arch::{
+    bus::{Bus, FetchStore},
+    cpu::Cpu,
+};
 
 pub fn accumulator(cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
     let mut val = cpu.registers.a_reg;

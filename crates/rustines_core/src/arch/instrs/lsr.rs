@@ -1,4 +1,7 @@
-use crate::arch::{bus::{Bus, FetchStore}, cpu::Cpu};
+use crate::arch::{
+    bus::{Bus, FetchStore},
+    cpu::Cpu,
+};
 
 pub fn accumulator(cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
     let mut val = cpu.registers.a_reg;
@@ -23,7 +26,7 @@ pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn zeropage_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let addr = cpu.decode_zeropage_indexed(bus,cpu.registers.x_reg);
+    let addr = cpu.decode_zeropage_indexed(bus, cpu.registers.x_reg);
 
     let mut val = bus.fetch(addr as u16);
     cpu.registers.set_c_from_bool(val & 0x1 != 0);
@@ -47,7 +50,7 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_absolute_indexed(bus,cpu.registers.x_reg);
+    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg);
 
     let mut val = bus.fetch(addr);
     cpu.registers.set_c_from_bool(val & 0x1 != 0);

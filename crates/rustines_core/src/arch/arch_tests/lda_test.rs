@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::arch::arch_tests::test_common::tests::setup_tests;
-    use crate::arch::instrs::lda;
     use crate::arch::bus::FetchStore;
+    use crate::arch::instrs::lda;
 
     #[test]
     fn test_lda_immediate() {

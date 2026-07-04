@@ -1,5 +1,5 @@
-use crate::arch::cpu::Cpu;
 use crate::arch::bus::{Bus, FetchStore};
+use crate::arch::cpu::Cpu;
 use crate::utils::bit_utils::to_u16;
 
 pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {

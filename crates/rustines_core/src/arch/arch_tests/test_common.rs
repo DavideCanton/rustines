@@ -1,8 +1,8 @@
 #[cfg(test)]
 pub mod tests {
+    use crate::arch::bus::Bus;
     use crate::arch::cpu::Cpu;
     use crate::arch::mappers::mapper_0::Mapper0;
-    use crate::arch::bus::Bus;
     use crate::arch::ppu::Ppu;
     use crate::arch::rom_structs::{
         CHR_ROM_BANK_SIZE, HEADER, INesHeader, NesRom, PRG_ROM_BANK_SIZE,

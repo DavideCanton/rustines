@@ -1,4 +1,7 @@
-use crate::arch::{bus::{Bus, FetchStore}, cpu::Cpu};
+use crate::arch::{
+    bus::{Bus, FetchStore},
+    cpu::Cpu,
+};
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage(bus);
