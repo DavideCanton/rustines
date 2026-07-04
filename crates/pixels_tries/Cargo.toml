@@ -1,5 +1,5 @@
 [package]
-name = "pixels_tries"
+name = "pixels-tries"
 version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
@@ -10,3 +10,4 @@ pixels = "0.17.1"
 winit_input_helper = "0.16.0"
 log.workspace = true
 env_logger.workspace = true
+rustines-gui-utils = { path = "../rustines_gui_utils" }

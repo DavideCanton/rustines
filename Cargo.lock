@@ -1826,12 +1826,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "pixels_tries"
+name = "pixels-tries"
 version = "0.1.0"
 dependencies = [
  "env_logger",
  "log",
  "pixels",
+ "rustines-gui-utils",
  "winit 0.29.15",
  "winit_input_helper 0.16.0",
 ]
@@ -2090,13 +2091,13 @@ dependencies = [
  "env_logger",
  "log",
  "pixels",
- "rustines_core",
+ "rustines-core",
  "winit 0.30.13",
  "winit_input_helper 0.17.0",
 ]
 
 [[package]]
-name = "rustines_core"
+name = "rustines-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2104,25 +2105,29 @@ dependencies = [
  "log",
  "paste",
  "rand",
- "rustines_macro",
+ "rustines-macro",
  "test-case",
  "zip",
 ]
 
 [[package]]
-name = "rustines_debug_commands"
+name = "rustines-debug-commands"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
  "env_logger",
  "log",
- "rustines_core",
+ "rustines-core",
  "thiserror 2.0.18",
 ]
 
 [[package]]
-name = "rustines_macro"
+name = "rustines-gui-utils"
+version = "0.1.0"
+
+[[package]]
+name = "rustines-macro"
 version = "0.1.0"
 dependencies = [
  "quote",

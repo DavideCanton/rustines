@@ -12,9 +12,7 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-use crate::utils::{FpsCounter, FpsLimiter};
-
-mod utils;
+use rustines_gui_utils::{FpsCounter, FpsLimiter};
 
 fn init_logger() {
     let mut builder = Builder::from_default_env();

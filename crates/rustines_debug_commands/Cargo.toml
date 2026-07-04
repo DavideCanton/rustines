@@ -1,5 +1,5 @@
 [package]
-name = "rustines_debug_commands"
+name = "rustines-debug-commands"
 version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
@@ -10,7 +10,7 @@ anyhow.workspace = true
 thiserror.workspace = true
 log.workspace = true
 env_logger.workspace = true
-rustines_core = { path = "../rustines_core" }
+rustines-core = { path = "../rustines_core" }
 
 [[bin]]
 name = "rustines_dbg"

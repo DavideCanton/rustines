@@ -12,4 +12,4 @@ winit_input_helper = "0.17.0"
 log.workspace = true
 env_logger.workspace = true
 clap = { version = "4.6", features = ["derive"] }
-rustines_core = { path = "../rustines_core" }
+rustines-core = { path = "../rustines_core" }
