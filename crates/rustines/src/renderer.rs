@@ -19,21 +19,13 @@ impl<'a> PixelsRenderer<'a> {
 
 impl<'a> Renderer for PixelsRenderer<'a> {
     fn render_pixel(&mut self, x: usize, y: usize, rgba: u32) {
-        let i = y * self.width + x;
+        let i = (y * self.width + x) * 4;
         let buf = self.pixels.frame_mut();
-        buf[i..i + 4].copy_from_slice(&[
-            (rgba & 0xFF000000 >> 24) as u8,
-            (rgba & 0xFF0000 >> 16) as u8,
-            (rgba & 0xFF00 >> 8) as u8,
-            (rgba & 0xFF) as u8,
-        ]);
+        buf[i..i + 4].copy_from_slice(&rgba.to_be_bytes());
     }
 
     fn draw(&mut self) {
-        self.pixels.render().unwrap()
-    }
-
-    fn clear(&mut self) {
+        self.pixels.render().unwrap();
         self.pixels.frame_mut().fill(0);
     }
 }

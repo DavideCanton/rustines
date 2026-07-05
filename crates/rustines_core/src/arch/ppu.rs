@@ -50,11 +50,23 @@ impl Ppu {
         }
     }
 
-    pub fn tick(&mut self, mapper: &mut dyn Mapper) {
-        if self.cycle == 0 {
-            self.renderer.clear();
-        }
+    pub fn nmi_requested(&self) -> bool {
+        self.nmi_interrupt
+    }
 
+    pub fn frame_ready(&self) -> bool {
+        self.frame_ready
+    }
+
+    pub fn clear_frame_ready(&mut self) {
+        self.frame_ready = false;
+    }
+
+    pub fn renderer(&mut self) -> &mut dyn Renderer {
+        self.renderer.as_mut()
+    }
+
+    pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.cycle += 1;
         if self.cycle >= 341 {
             self.cycle = 0;
@@ -225,31 +237,25 @@ impl Ppu {
 
             let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
             let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
-            let color_index = (bit2 << 1) | bit1; // Valore da 0 a 3
+            let color_index = (bit2 << 1) | bit1;
 
             let palette_color_id = self.vram_read(0x3F00 + color_index as u16);
 
-            let rgb_color = nes_color_to_rgb(palette_color_id);
+            let rgb_color = NES_PALETTE[(palette_color_id & 0x3F) as usize];
 
             self.renderer.render_pixel(x, y, rgb_color)
         }
     }
-
-    pub fn nmi_requested(&self) -> bool {
-        self.nmi_interrupt
-    }
 }
 
-// TODO fill
-fn nes_color_to_rgb(id: u8) -> u32 {
-    match id & 0x3F {
-        0x00 => 0x7C7C7CFF, //
-        0x01 => 0x0000FCFF,
-        0x12 => 0x0000B8FF,
-        0x15 => 0xE40058FF,
-        0x19 => 0x94E000FF,
-        0x2A => 0x3CBCFCFF,
-
-        _ => 0x000000FF,
-    }
-}
+// 64 colori RGB precalcolati per la PPU del NES
+const NES_PALETTE: [u32; 64] = [
+    0x545454FF, 0x001E74FF, 0x081090FF, 0x300088FF, 0x440064FF, 0x5C0030FF, 0x540400FF, 0x3C1800FF,
+    0x202A00FF, 0x083A00FF, 0x004000FF, 0x003C24FF, 0x00325CFF, 0x000000FF, 0x000000FF, 0x000000FF,
+    0x989698FF, 0x084CC4FF, 0x303CE4FF, 0x5C1EDFFF, 0x8814B4FF, 0xA01478FF, 0x9C2028FF, 0x843C00FF,
+    0x605A00FF, 0x347200FF, 0x187C00FF, 0x047858FF, 0x0068ACFF, 0x000000FF, 0x000000FF, 0x000000FF,
+    0xECEEECFF, 0x4C9AF4FF, 0x788CF4FF, 0xB06CF4FF, 0xE45CE4FF, 0xF45CB4FF, 0xF46D64FF, 0xE48C24FF,
+    0xC4AA00FF, 0x90C200FF, 0x68D224FF, 0x4CD278FF, 0x4CC2D4FF, 0x3C3C3CFF, 0x000000FF, 0x000000FF,
+    0xECEEECFF, 0xA8CCF4FF, 0xBCC4F4FF, 0xD4B4F4FF, 0xECB0ECFF, 0xF4B0D4FF, 0xF4B8B4FF, 0xECC490FF,
+    0xE4D080FF, 0xCCDC80FF, 0xBCE290FF, 0xACE2B4FF, 0xACDAECFF, 0xA8A8A8FF, 0x000000FF, 0x000000FF,
+];

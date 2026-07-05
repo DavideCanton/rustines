@@ -47,8 +47,8 @@ impl Bus {
         self.fetch(sp)
     }
 
-    pub fn ppu(&self) -> &Ppu {
-        &self.ppu
+    pub fn ppu(&mut self) -> &mut Ppu {
+        &mut self.ppu
     }
 
     pub fn ppu_tick(&mut self) {
@@ -72,6 +72,8 @@ impl FetchStore for Bus {
         } else if address <= 0x401F {
             // ignored
             0
+        } else if address <= 0x7FFF {
+            self.mapper.fetch_prg_ram(address)
         } else {
             self.mapper.fetch_prg_rom(address)
         }
@@ -93,7 +95,7 @@ impl FetchStore for Bus {
             // ignored
             0
         } else {
-            self.mapper.store_chr_rom(address, val)
+            self.mapper.store_chr_ram(address, val)
         }
     }
 }

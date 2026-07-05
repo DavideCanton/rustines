@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use env_logger::Builder;
 use log::LevelFilter;
@@ -23,6 +26,9 @@ fn init_logger() {
 const WIDTH: u32 = 1024;
 const HEIGHT: u32 = 768;
 
+const INNER_WIDTH: u32 = 256;
+const INNER_HEIGHT: u32 = 192;
+
 pub fn main() {
     init_logger();
 
@@ -42,13 +48,9 @@ pub fn main() {
     let window_size = window.inner_size();
     let surface_texture =
         SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-    let mut pixels = Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap();
+    let mut pixels = Pixels::new(INNER_WIDTH, INNER_HEIGHT, surface_texture).unwrap();
 
-    let mut world = World {
-        box_size: 100,
-        box_x: 1,
-        box_y: 1,
-    };
+    let mut world = World::new(1, 1, 20, 3, INNER_WIDTH, INNER_HEIGHT);
 
     let mut limiter = FpsLimiter::new(60.0);
     let mut counter = FpsCounter::new();
@@ -87,26 +89,85 @@ struct World {
     box_x: i16,
     box_y: i16,
     box_size: i16,
+    speed: i16,
+    w: u32,
+    h: u32,
+    x_sp: bool,
+    y_sp: bool,
+    color: [u8; 4],
 }
 
 impl World {
+    fn new(box_x: i16, box_y: i16, box_size: i16, speed: i16, w: u32, h: u32) -> Self {
+        Self {
+            box_x,
+            box_y,
+            box_size,
+            speed,
+            w,
+            h,
+            x_sp: true,
+            y_sp: true,
+            color: [255, 0, 0, 255],
+        }
+    }
+
+    fn left_x(&self) -> i16 {
+        self.box_x
+    }
+
+    fn right_x(&self) -> i16 {
+        self.box_x + self.box_size
+    }
+
+    fn top_y(&self) -> i16 {
+        self.box_y
+    }
+
+    fn bottom_y(&self) -> i16 {
+        self.box_y + self.box_size
+    }
+
     fn update(&mut self) {
-        self.box_x += 1;
-        self.box_y += 1;
+        let mut hit = false;
+        if self.bottom_y() >= self.h as i16 || self.top_y() <= 0 {
+            self.y_sp = !self.y_sp;
+            hit = true;
+        } else if self.right_x() >= self.w as i16 || self.left_x() <= 0 {
+            self.x_sp = !self.x_sp;
+            hit = true;
+        }
+
+        if hit {
+            let inst = (SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                & 0xFFFFFF) as u32;
+            self.color = [
+                ((inst & 0xFF0000) >> 16) as u8,
+                ((inst & 0xFF00) >> 8) as u8,
+                (inst & 0xFF) as u8,
+                255,
+            ];
+        }
+
+        self.box_x += (if self.x_sp { 1 } else { -1 }) * self.speed;
+        self.box_y += (if self.y_sp { 1 } else { -1 }) * self.speed;
     }
 
     fn draw(&mut self, frame: &mut [u8]) {
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            let x = (i % WIDTH as usize) as i16;
-            let y = (i / WIDTH as usize) as i16;
+            let x = (i % self.w as usize) as i16;
+            let y = (i / self.w as usize) as i16;
 
-            let inside_the_box = x >= self.box_x
-                && x < self.box_x + self.box_size
-                && y >= self.box_y
-                && y < self.box_y + self.box_size;
+            let inside_the_box = x >= self.left_x()
+                && x < self.right_x()
+                && y >= self.top_y()
+                && y < self.bottom_y();
 
             let rgba = if inside_the_box {
-                [255, 0, 0, 255]
+                self.color
             } else {
                 [0, 0, 0, 0]
             };

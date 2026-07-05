@@ -58,11 +58,6 @@ impl Mapper for Mapper0 {
         self.prg_rom[addr as usize]
     }
 
-    fn store_prg_rom(&mut self, _addr: u16, _val: u8) -> u8 {
-        // Mapper 0 doesn't write
-        0
-    }
-
     fn fetch_chr_rom(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
             self.chr_rom[addr as usize]
@@ -71,7 +66,7 @@ impl Mapper for Mapper0 {
         }
     }
 
-    fn store_chr_rom(&mut self, _addr: u16, _val: u8) -> u8 {
+    fn store_chr_ram(&mut self, _addr: u16, _val: u8) -> u8 {
         // Mapper 0 doesn't write
         0
     }

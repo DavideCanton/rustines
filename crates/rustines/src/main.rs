@@ -10,13 +10,14 @@ use rustines_core::{
     arch::{bus::Bus, cpu::Cpu, ppu::Ppu, rom_structs},
     loaders::loaders_factory::decode_loader,
 };
+use rustines_gui_utils::{FpsCounter, FpsLimiter};
 use std::{fs, path, sync::Arc};
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     keyboard::KeyCode,
-    window::Window,
+    window::WindowBuilder,
 };
 use winit_input_helper::WinitInputHelper;
 
@@ -48,6 +49,9 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
 const WIDTH: u32 = 1024;
 const HEIGHT: u32 = 768;
 
+const INNER_W: u32 = 256;
+const INNER_H: u32 = 240;
+
 #[allow(deprecated)]
 pub fn main() {
     let matches = RustinesArgs::parse();
@@ -66,55 +70,62 @@ pub fn main() {
 
     let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
     let window = Arc::new(
-        event_loop
-            .create_window(
-                Window::default_attributes()
-                    .with_title("Rustines")
-                    .with_inner_size(size)
-                    .with_min_inner_size(size),
-            )
+        WindowBuilder::new()
+            .with_title("Rustines")
+            .with_inner_size(size)
+            .with_min_inner_size(size)
+            .build(&event_loop)
             .unwrap(),
     );
 
     let window_size = window.inner_size();
     let surface_texture =
         SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-    let pixels = Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap();
+    let pixels = Pixels::new(INNER_W, INNER_H, surface_texture).unwrap();
 
-    let renderer = PixelsRenderer::new(pixels, WIDTH as usize, HEIGHT as usize);
+    let renderer = PixelsRenderer::new(pixels, INNER_W as usize, INNER_H as usize);
     let render_box = Box::new(renderer);
     let ppu = Ppu::new(render_box);
     let mut bus = Bus::new(rom.mapper, ppu);
     let mut cpu = Cpu::new();
 
-    let _ = event_loop.run(|event, elwt| {
-        match event {
-            Event::Resumed => {}
-            Event::NewEvents(_) => input.step(),
-            Event::AboutToWait => input.end_step(),
-            Event::DeviceEvent { event, .. } => {
-                input.process_device_event(&event);
-            }
-            Event::WindowEvent { event, .. } => {
-                // Handle input events
-                if input.process_window_event(&event) {
-                    // Close events
-                    if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-                        elwt.exit();
-                        return;
-                    }
-                }
+    let mut limiter = FpsLimiter::new(60.0);
+    let mut counter = FpsCounter::new();
 
-                // Draw the current frame
-                if event == WindowEvent::RedrawRequested {
-                    if cpu_tick(&mut bus, &mut cpu) {
-                        elwt.exit();
-                        return;
-                    }
-                    window.request_redraw();
+    let _ = event_loop.run(|event, elwt| {
+        if input.update(&event) {
+            // Close events
+            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+                elwt.exit();
+                return;
+            }
+
+            // map input to nes controller registers
+
+            while !bus.ppu().frame_ready() {
+                if cpu_tick(&mut bus, &mut cpu) {
+                    // elwt.exit();
+                    // return;
                 }
             }
-            _ => {}
+            bus.ppu().clear_frame_ready();
+
+            limiter.update();
+
+            window.request_redraw();
+        }
+
+        // Draw the current frame
+        if let Event::WindowEvent {
+            event: WindowEvent::RedrawRequested,
+            ..
+        } = event
+        {
+            bus.ppu().renderer().draw();
+
+            if let Some(fps) = counter.drawn() {
+                window.set_title(&format!("Rustines | FPS: {:.1}", fps));
+            }
         }
     });
 }
