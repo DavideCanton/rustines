@@ -7,7 +7,7 @@ use env_logger::Builder;
 use log::{LevelFilter, info};
 use pixels::{Pixels, SurfaceTexture};
 use rustines_core::{
-    arch::{bus::Bus, cpu::Cpu, ppu::Ppu, rom_structs},
+    arch::{bus::Bus, cpu::Cpu, debug_utils::debug_dump_nametable, ppu::Ppu, rom_structs},
     loaders::loaders_factory::decode_loader,
 };
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
@@ -100,15 +100,20 @@ pub fn main() {
                 return;
             }
 
+            // uncomment to dump nametable
+            if input.key_pressed(KeyCode::KeyD) {
+                debug_dump_nametable(bus.ppu_mut());
+            }
+
             // map input to nes controller registers
 
-            while !bus.ppu().frame_ready() {
+            while !bus.ppu_mut().frame_ready() {
                 if cpu_tick(&mut bus, &mut cpu) {
                     // elwt.exit();
                     // return;
                 }
             }
-            bus.ppu().clear_frame_ready();
+            bus.ppu_mut().clear_frame_ready();
 
             limiter.update();
 
@@ -121,7 +126,7 @@ pub fn main() {
             ..
         } = event
         {
-            bus.ppu().renderer().draw();
+            bus.ppu_mut().renderer().draw();
 
             if let Some(fps) = counter.drawn() {
                 window.set_title(&format!("Rustines | FPS: {:.1}", fps));
@@ -140,7 +145,8 @@ fn cpu_tick(bus: &mut Bus, cpu: &mut Cpu) -> bool {
     for _ in 0..ppu_cycles {
         bus.ppu_tick();
 
-        if bus.ppu().nmi_requested() {
+        if bus.ppu_mut().nmi_requested() {
+            bus.ppu_mut().clear_nmi();
             cpu.perform_nmi(bus);
         }
     }

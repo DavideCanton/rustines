@@ -5,11 +5,14 @@ use crate::arch::mappers::mapper::Mapper;
 use crate::arch::rom_structs::{INesHeader, TRAINER_SIZE};
 use crate::utils::named::Named;
 
+const CHR_RAM_SIZE: usize = 8192;
+
 #[derive(Named, Default)]
 pub struct Mapper0 {
     prg_rom: Vec<u8>,
     chr_rom: Vec<u8>,
     banks: usize,
+    chr_ram: Option<[u8; CHR_RAM_SIZE]>,
 }
 
 impl Mapper0 {
@@ -30,10 +33,17 @@ impl Mapper0 {
             rom.drain(0..header.chr_rom_size()).collect()
         };
 
+        let chr_ram = if header.uses_chr_ram() {
+            Some([0; CHR_RAM_SIZE])
+        } else {
+            None
+        };
+
         Ok(Mapper0 {
             prg_rom,
             chr_rom,
             banks,
+            chr_ram,
         })
     }
 }
@@ -48,7 +58,6 @@ impl Mapper for Mapper0 {
     }
 
     fn fetch_prg_rom(&self, addr: u16) -> u8 {
-        // TODO move outside?
         let mut addr = addr - 0x8000;
 
         if self.banks == 1 {
@@ -60,14 +69,38 @@ impl Mapper for Mapper0 {
 
     fn fetch_chr_rom(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
-            self.chr_rom[addr as usize]
+            if let Some(chr_ram) = self.chr_ram {
+                chr_ram[addr as usize]
+            } else {
+                self.chr_rom[addr as usize]
+            }
         } else {
             0
         }
     }
 
-    fn store_chr_ram(&mut self, _addr: u16, _val: u8) -> u8 {
-        // Mapper 0 doesn't write
+    fn store_chr_rom(&mut self, addr: u16, val: u8) -> u8 {
+        if addr <= 0x1FFF
+            && let Some(chr_ram) = self.chr_ram.as_mut()
+        {
+            let addr = addr as usize;
+            let old = chr_ram[addr];
+            chr_ram[addr] = val;
+            old
+        } else {
+            0
+        }
+    }
+
+    fn fetch_prg_ram(&self, _addr: u16) -> u8 {
+        0
+    }
+
+    fn store_prg_ram(&mut self, _addr: u16, _val: u8) -> u8 {
+        0
+    }
+
+    fn store_prg_rom(&mut self, _addr: u16, _val: u8) -> u8 {
         0
     }
 }

@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::{arch::mappers::mapper::Mapper, renderer::Renderer};
 
 pub struct Ppu {
@@ -52,6 +54,10 @@ impl Ppu {
 
     pub fn nmi_requested(&self) -> bool {
         self.nmi_interrupt
+    }
+
+    pub fn clear_nmi(&mut self) {
+        self.nmi_interrupt = false;
     }
 
     pub fn frame_ready(&self) -> bool {
@@ -129,9 +135,11 @@ impl Ppu {
                 }
             }
             7 => {
+                // info!("VRAM write: {:#X}, {:#X}", self.vram_address, value);
                 self.vram_write(self.vram_address, value);
 
-                self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                let increment = if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                self.vram_address = self.vram_address.wrapping_add(increment);
             }
             _ => unreachable!(),
         }
@@ -140,6 +148,7 @@ impl Ppu {
     pub fn cpu_read(&mut self, reg_index: u16) -> u8 {
         match reg_index {
             2 => {
+                info!("CPU reads PPUSTATUS. Status: {:#X}", self.status);
                 let res = self.status;
                 self.status &= 0x7F;
                 self.address_latch = 0;
@@ -159,7 +168,7 @@ impl Ppu {
         }
     }
 
-    fn vram_read(&self, mut addr: u16) -> u8 {
+    pub fn vram_read(&self, mut addr: u16) -> u8 {
         addr &= 0x3FFF;
 
         match addr {

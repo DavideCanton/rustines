@@ -47,7 +47,7 @@ impl Bus {
         self.fetch(sp)
     }
 
-    pub fn ppu(&mut self) -> &mut Ppu {
+    pub fn ppu_mut(&mut self) -> &mut Ppu {
         &mut self.ppu
     }
 
@@ -66,11 +66,9 @@ impl FetchStore for Bus {
             let ind = address & 0x0007;
             self.ppu.cpu_read(ind)
         } else if address <= 0x4017 {
-            // TODO callback here probably
             let ind = address & 0xFF;
             self.apu_registers[ind as usize]
         } else if address <= 0x401F {
-            // ignored
             0
         } else if address <= 0x7FFF {
             self.mapper.fetch_prg_ram(address)
@@ -88,14 +86,14 @@ impl FetchStore for Bus {
             self.ppu.cpu_write(ind, val);
             0
         } else if address <= 0x4017 {
-            // TODO callback here probably
             let ind = address & 0xFF;
             replace(&mut self.apu_registers, ind as usize, val)
         } else if address <= 0x401F {
-            // ignored
             0
+        } else if address <= 0x7FFF {
+            self.mapper.store_prg_ram(address, val)
         } else {
-            self.mapper.store_chr_ram(address, val)
+            self.mapper.store_prg_rom(address, val)
         }
     }
 }

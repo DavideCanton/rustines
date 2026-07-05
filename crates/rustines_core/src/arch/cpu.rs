@@ -209,7 +209,10 @@ impl Cpu {
         let low = bus.fetch(0xFFFA);
         let high = bus.fetch(0xFFFB);
 
-        self.registers.pc = to_u16(low, high);
+        let nmi_address = to_u16(low, high);
+        info!("NMI triggered! CPU jumps to: {:#X}", nmi_address);
+
+        self.registers.pc = nmi_address;
     }
 
     fn perform_rst(&mut self, bus: &mut Bus) {
