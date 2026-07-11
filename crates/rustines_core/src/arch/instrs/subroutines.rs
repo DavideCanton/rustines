@@ -2,7 +2,7 @@ use crate::arch::{bus::Bus, cpu::Cpu};
 
 pub fn jsr(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_absolute(bus);
-    let t = cpu.registers.pc; // next instr address
+    let t = cpu.registers.pc - 1; // next instr address
     cpu.push16(bus, t);
     cpu.registers.pc = addr;
 
