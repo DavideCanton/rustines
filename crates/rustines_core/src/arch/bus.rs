@@ -6,7 +6,7 @@ use crate::arch::ppu::Ppu;
 
 pub trait FetchStore {
     fn fetch(&mut self, addr: u16) -> u8;
-    fn store(&mut self, addr: u16, val: u8) -> u8;
+    fn store(&mut self, addr: u16, val: u8);
 
     fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {
         for (addr, (_, v)) in (addr..).zip(destination.iter_mut().enumerate()) {
@@ -102,31 +102,30 @@ impl FetchStore for Bus {
         }
     }
 
-    fn store(&mut self, address: u16, val: u8) -> u8 {
+    fn store(&mut self, address: u16, val: u8) {
         if address <= 0x1FFF {
             let ind = address & 0x07FF;
-            replace(&mut self.nes_ram, ind as usize, val)
+            replace(&mut self.nes_ram, ind as usize, val);
         } else if address <= 0x3FFF {
             let ind = address & 0x0007;
-            self.ppu.cpu_write(ind, val, self.mapper.as_ref());
-            0
+            self.ppu.cpu_write(ind as u8, val, self.mapper.as_ref());
         } else if address <= 0x4017 {
             if address == 0x4016 {
                 self.controller1.write(val);
-                0
             } else if address == 0x4017 {
                 self.controller2.write(val);
-                0
             } else {
-                // TODO APU
-                0
+                // TODO stall?
+                let mut buf = vec![0; 256];
+                let start = (val as u16) << 8;
+                self.fetch_many(start, &mut buf);
+                self.ppu_mut().dma_copy(&buf);
             }
         } else if address <= 0x401F {
-            0
         } else if address <= 0x7FFF {
-            self.mapper.store_prg_ram(address, val)
+            self.mapper.store_prg_ram(address, val);
         } else {
-            self.mapper.store_prg_rom(address, val)
+            self.mapper.store_prg_rom(address, val);
         }
     }
 }

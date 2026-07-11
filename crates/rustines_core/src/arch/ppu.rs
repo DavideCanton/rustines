@@ -3,6 +3,14 @@ use crate::{
     renderer::Renderer,
 };
 
+#[derive(Debug)]
+struct Sprite {
+    x: u8,
+    y: u8,
+    tile: u8,
+    attr: u8,
+}
+
 pub struct Ppu {
     pub nametables: [u8; 2048],
     pub palette_table: [u8; 32],
@@ -14,6 +22,7 @@ pub struct Ppu {
 
     pub vram_address: u16,
     pub temp_address: u16,
+    pub oam_addr: u8,
     pub fine_x: u8,
     pub address_latch: u8,
     pub data_buffer: u8,
@@ -40,6 +49,7 @@ impl Ppu {
 
             vram_address: 0,
             temp_address: 0,
+            oam_addr: 0,
             fine_x: 0,
             address_latch: 0,
             data_buffer: 0,
@@ -103,14 +113,17 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_write(&mut self, reg_index: u16, value: u8, mapper: &dyn Mapper) {
+    pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &dyn Mapper) {
         match reg_index {
             0 => self.ctrl = value,
             1 => self.mask = value,
             2 => {}
-            3 => { /* Scrittura indirizzo OAM (0x2003) */ }
+            3 => {
+                self.oam_addr = value;
+            }
             4 => {
-                self.oam_data[42] = value;
+                self.oam_data[self.oam_addr as usize] = value;
+                self.oam_addr = self.oam_addr.wrapping_add(1);
             }
             5 => {
                 if self.address_latch == 0 {
@@ -232,7 +245,9 @@ impl Ppu {
 
         let base_nametable_addr = 0x2000 + ((self.ctrl & 0x03) as u16 * 0x0400);
 
-        for x in 0..256 {
+        let visible_sprites = self.get_sprites_on_scanline();
+
+        for x in 0..=255 {
             let tile_x = (x / 8) as u16;
             let pixel_x = (x % 8) as u16;
 
@@ -255,9 +270,51 @@ impl Ppu {
 
             let palette_color_id = self.vram_read(0x3F00 + color_index as u16, mapper);
 
-            let rgb_color = NES_PALETTE[(palette_color_id & 0x3F) as usize];
+            let background_rgb = NES_PALETTE[(palette_color_id & 0x3F) as usize];
 
-            self.renderer.render_pixel(x, y, rgb_color)
+            // --- Logica Sprite ---
+            let mut pixel_color = background_rgb;
+
+            for sprite in &visible_sprites {
+                if x >= sprite.x && x < sprite.x + 8 {
+                    let mut pixel_x = (x - sprite.x) as u16;
+                    let mut pixel_y = (y as u8 - sprite.y) as u16;
+
+                    if (sprite.attr & 0x40) != 0 {
+                        pixel_x = 7 - pixel_x;
+                    }
+                    if (sprite.attr & 0x80) != 0 {
+                        pixel_y = 7 - pixel_y;
+                    }
+
+                    let pattern_table_base = if (self.ctrl & 0x08) != 0 {
+                        0x1000
+                    } else {
+                        0x0000
+                    };
+                    let tile_addr = pattern_table_base + (sprite.tile as u16 * 16) + pixel_y;
+
+                    let byte1 = mapper.fetch_chr_rom(tile_addr);
+                    let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
+
+                    let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
+                    let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
+                    let sprite_pixel_bits = (bit2 << 1) | bit1;
+
+                    if sprite_pixel_bits != 0 {
+                        let palette_num = (sprite.attr & 0x03) as u16;
+                        let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
+                        let color_id = self.vram_read(palette_addr, mapper);
+                        let is_behind = (sprite.attr & 0x20) != 0;
+                        if !is_behind || color_index == 0 {
+                            pixel_color = NES_PALETTE[(color_id & 0x3F) as usize];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            self.renderer.render_pixel(x as usize, y, pixel_color)
         }
     }
 
@@ -275,6 +332,33 @@ impl Ppu {
             MirroringType::Vertical => vram_index % 2048,
             // _ => vram_index % 2048,
         }
+    }
+
+    fn get_sprites_on_scanline(&self) -> Vec<Sprite> {
+        let scanline = self.scanline as u16;
+
+        let mut visible = Vec::new();
+        let sprite_height = if (self.ctrl & 0x20) != 0 { 16 } else { 8 };
+
+        for i in 0..64 {
+            let y = self.oam_data[i * 4] as u16;
+            if y <= scanline && scanline < (y + sprite_height) {
+                visible.push(Sprite {
+                    y: self.oam_data[i * 4],
+                    tile: self.oam_data[i * 4 + 1],
+                    attr: self.oam_data[i * 4 + 2],
+                    x: self.oam_data[i * 4 + 3],
+                });
+            }
+            if visible.len() >= 8 {
+                break;
+            }
+        }
+        visible
+    }
+
+    pub(crate) fn dma_copy(&mut self, buf: &[u8]) {
+        self.oam_data.copy_from_slice(buf);
     }
 }
 

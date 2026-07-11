@@ -63,7 +63,6 @@ impl Cpu {
     pub fn push32(&mut self, bus: &mut Bus, v: u32) {
         let (low, high) = to_u16_lh(v);
 
-        // TODO is the order right?
         self.push16(bus, high);
         self.push16(bus, low);
     }
@@ -71,7 +70,6 @@ impl Cpu {
     pub fn push16(&mut self, bus: &mut Bus, v: u16) {
         let (low, high) = to_u8_lh(v);
 
-        // TODO is the order right?
         self.push8(bus, high);
         self.push8(bus, low);
     }

@@ -81,16 +81,11 @@ impl Mapper for Mapper0 {
         }
     }
 
-    fn store_chr_rom(&mut self, addr: u16, val: u8) -> u8 {
+    fn store_chr_rom(&mut self, addr: u16, val: u8) {
         if addr <= 0x1FFF
             && let Some(chr_ram) = self.chr_ram.as_mut()
         {
-            let addr = addr as usize;
-            let old = chr_ram[addr];
-            chr_ram[addr] = val;
-            old
-        } else {
-            0
+            chr_ram[addr as usize] = val;
         }
     }
 
@@ -98,13 +93,9 @@ impl Mapper for Mapper0 {
         0
     }
 
-    fn store_prg_ram(&mut self, _addr: u16, _val: u8) -> u8 {
-        0
-    }
+    fn store_prg_ram(&mut self, _addr: u16, _val: u8) {}
 
-    fn store_prg_rom(&mut self, _addr: u16, _val: u8) -> u8 {
-        0
-    }
+    fn store_prg_rom(&mut self, _addr: u16, _val: u8) {}
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type
