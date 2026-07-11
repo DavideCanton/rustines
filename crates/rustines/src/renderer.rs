@@ -1,9 +1,10 @@
 use std::{fs::File, io::Write};
 
+use pixels::Pixels;
 use rustines_core::renderer::Renderer;
 
 pub struct PixelsRenderer<'a> {
-    pixels: pixels::Pixels<'a>,
+    pixels: Pixels<'a>,
     width: usize,
     #[allow(unused)]
     height: usize,
@@ -12,7 +13,7 @@ pub struct PixelsRenderer<'a> {
 }
 
 impl<'a> PixelsRenderer<'a> {
-    pub(crate) fn new(pixels: pixels::Pixels<'a>, width: usize, height: usize) -> Self {
+    pub(crate) fn new(pixels: Pixels<'a>, width: usize, height: usize) -> Self {
         Self {
             pixels,
             width,

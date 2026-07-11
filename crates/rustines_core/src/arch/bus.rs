@@ -70,6 +70,10 @@ impl Bus {
     pub fn controller1_mut(&mut self) -> &mut NesController {
         &mut self.controller1
     }
+
+    pub fn controller2_mut(&mut self) -> &mut NesController {
+        &mut self.controller2
+    }
 }
 
 impl FetchStore for Bus {

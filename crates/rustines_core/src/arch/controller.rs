@@ -1,7 +1,19 @@
 pub struct NesController {
-    pub buttons: [bool; 8],
-    pub shift_register: u8,
-    pub strobe: bool,
+    buttons: [bool; 8],
+    shift_register: u8,
+    strobe: bool,
+}
+
+#[derive(Clone, Copy)]
+pub enum NesKey {
+    A = 0,
+    B,
+    Select,
+    Start,
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 impl NesController {
@@ -14,7 +26,7 @@ impl NesController {
     }
 
     pub fn write(&mut self, value: u8) {
-        self.strobe = (value & 1) == 1;
+        self.strobe = !value.is_multiple_of(2);
 
         if self.strobe {
             let mut temp = 0u8;
@@ -36,6 +48,14 @@ impl NesController {
         }
 
         value
+    }
+
+    pub fn pressed(&mut self, key: NesKey) {
+        self.buttons[key as usize] = true;
+    }
+
+    pub fn released(&mut self, key: NesKey) {
+        self.buttons[key as usize] = false;
     }
 }
 

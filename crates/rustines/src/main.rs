@@ -1,20 +1,14 @@
 mod context;
 mod renderer;
 
+use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 use clap::Parser;
-// use
 use env_logger::Builder;
 use log::{LevelFilter, info};
 use pixels::{Pixels, SurfaceTexture};
-use rustines_core::{
-    arch::{
-        bus::Bus, cpu::Cpu, debug_utils::debug_dump_nametable, debug_utils::debug_dump_palette,
-        ppu::Ppu, rom_structs,
-    },
-    loaders::loaders_factory::decode_loader,
-};
+use rustines_core as core;
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
-use std::{fs, path, sync::Arc};
+use std::{collections::HashMap, fs, path, sync::Arc};
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
@@ -23,8 +17,6 @@ use winit::{
     window::WindowBuilder,
 };
 use winit_input_helper::WinitInputHelper;
-
-use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 
 fn init_logger() {
     let mut builder = Builder::from_default_env();
@@ -37,7 +29,7 @@ fn init_logger() {
         .init();
 }
 
-fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
+fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
@@ -45,7 +37,7 @@ fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
 
     let mut file = fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
 
-    let loader = decode_loader(ext);
+    let loader = core::decode_loader(ext);
 
     let rom = loader
         .load_rom_struct(&mut file)
@@ -60,7 +52,6 @@ const HEIGHT: u32 = 768;
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
 
-#[allow(deprecated)]
 pub fn main() {
     let matches = RustinesArgs::parse();
     let context = context::Context::from_args(matches);
@@ -92,13 +83,16 @@ pub fn main() {
     let pixels = Pixels::new(INNER_W, INNER_H, surface_texture).unwrap();
 
     let renderer = PixelsRenderer::new(pixels, INNER_W as usize, INNER_H as usize);
-    let render_box = Box::new(renderer);
-    let ppu = Ppu::new(render_box);
-    let mut bus = Bus::new(rom.mapper, ppu);
-    let mut cpu = Cpu::new();
+
+    let ppu = core::Ppu::new(Box::new(renderer));
+    let mut bus = core::Bus::new(rom.mapper, ppu);
+    let mut cpu = core::Cpu::new();
 
     let mut limiter = FpsLimiter::new(60.0);
     let mut counter = FpsCounter::new();
+
+    let key_map1 = build_keymap_c1();
+    let key_map2 = build_keymap_c2();
 
     let _ = event_loop.run(|event, elwt| {
         if input.update(&event) {
@@ -108,17 +102,10 @@ pub fn main() {
                 return;
             }
 
-            // uncomment to dump nametable
-            if input.key_pressed(KeyCode::KeyD) {
-                debug_dump_nametable(&mut bus);
-            }
+            debug_keys(&input, &mut bus);
 
-            // uncomment to dump palette
-            if input.key_pressed(KeyCode::KeyP) {
-                debug_dump_palette(&mut bus);
-            }
-
-            map_inputs(&input, &mut bus);
+            map_inputs(&input, bus.controller1_mut(), &key_map1);
+            map_inputs(&input, bus.controller2_mut(), &key_map2);
 
             while !bus.ppu_mut().frame_ready() {
                 if cpu_tick(&mut bus, &mut cpu) {
@@ -147,40 +134,62 @@ pub fn main() {
         }
     });
 }
+fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus) {
+    if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
+        core::debug_dump_nametable(bus);
+    }
 
-fn map_inputs(input: &WinitInputHelper, bus: &mut Bus) {
-    // 0: A
-    // 1: B
-    // 2: Select
-    // 3: Start
-    // 4: Up
-    // 5: Down
-    // 6: Left
-    // 7: Right
+    if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
+        core::debug_dump_palette(bus);
+    }
+}
 
-    for (i, k) in [
-        KeyCode::KeyZ,  // A
-        KeyCode::KeyX,  // B
-        KeyCode::Space, // Select
-        KeyCode::Enter, // Start
-        KeyCode::ArrowUp,
-        KeyCode::ArrowDown,
-        KeyCode::ArrowLeft,
-        KeyCode::ArrowRight,
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        if input.key_pressed(k) {
-            bus.controller1_mut().buttons[i] = true;
+fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
+    use core::NesKey;
+
+    let mut key_map = HashMap::new();
+    key_map.insert(KeyCode::KeyZ, NesKey::A);
+    key_map.insert(KeyCode::KeyX, NesKey::B);
+    key_map.insert(KeyCode::Space, NesKey::Select);
+    key_map.insert(KeyCode::Enter, NesKey::Start);
+    key_map.insert(KeyCode::ArrowUp, NesKey::Up);
+    key_map.insert(KeyCode::ArrowDown, NesKey::Down);
+    key_map.insert(KeyCode::ArrowLeft, NesKey::Left);
+    key_map.insert(KeyCode::ArrowRight, NesKey::Right);
+    key_map
+}
+
+fn build_keymap_c2() -> HashMap<KeyCode, core::NesKey> {
+    use core::NesKey;
+
+    let mut key_map = HashMap::new();
+    key_map.insert(KeyCode::KeyC, NesKey::A);
+    key_map.insert(KeyCode::KeyV, NesKey::B);
+    key_map.insert(KeyCode::KeyB, NesKey::Select);
+    key_map.insert(KeyCode::KeyN, NesKey::Start);
+    key_map.insert(KeyCode::KeyW, NesKey::Up);
+    key_map.insert(KeyCode::KeyS, NesKey::Down);
+    key_map.insert(KeyCode::KeyA, NesKey::Left);
+    key_map.insert(KeyCode::KeyD, NesKey::Right);
+    key_map
+}
+
+fn map_inputs(
+    input: &WinitInputHelper,
+    ctrl: &mut core::NesController,
+    key_map: &HashMap<KeyCode, core::NesKey>,
+) {
+    for k in key_map.keys() {
+        if input.key_pressed(*k) {
+            ctrl.pressed(*key_map.get(k).unwrap());
         }
-        if input.key_released(k) {
-            bus.controller1_mut().buttons[i] = false;
+        if input.key_released(*k) {
+            ctrl.released(*key_map.get(k).unwrap());
         }
     }
 }
 
-fn cpu_tick(bus: &mut Bus, cpu: &mut Cpu) -> bool {
+fn cpu_tick(bus: &mut core::Bus, cpu: &mut core::Cpu) -> bool {
     let cycles = cpu.tick(bus);
     if cycles == 0xFF {
         return true;
