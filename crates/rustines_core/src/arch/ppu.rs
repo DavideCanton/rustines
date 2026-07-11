@@ -1,6 +1,7 @@
-use log::info;
-
-use crate::{arch::mappers::mapper::Mapper, renderer::Renderer};
+use crate::{
+    arch::{mappers::mapper::Mapper, rom_structs::MirroringType},
+    renderer::Renderer,
+};
 
 pub struct Ppu {
     pub nametables: [u8; 2048],
@@ -102,7 +103,7 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_write(&mut self, reg_index: u16, value: u8) {
+    pub fn cpu_write(&mut self, reg_index: u16, value: u8, mapper: &dyn Mapper) {
         match reg_index {
             0 => self.ctrl = value,
             1 => self.mask = value,
@@ -135,8 +136,7 @@ impl Ppu {
                 }
             }
             7 => {
-                // info!("VRAM write: {:#X}, {:#X}", self.vram_address, value);
-                self.vram_write(self.vram_address, value);
+                self.vram_write(self.vram_address, value, mapper);
 
                 let increment = if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
                 self.vram_address = self.vram_address.wrapping_add(increment);
@@ -145,10 +145,9 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_read(&mut self, reg_index: u16) -> u8 {
+    pub fn cpu_read(&mut self, reg_index: u16, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
-                info!("CPU reads PPUSTATUS. Status: {:#X}", self.status);
                 let res = self.status;
                 self.status &= 0x7F;
                 self.address_latch = 0;
@@ -156,7 +155,7 @@ impl Ppu {
             }
             7 => {
                 let mut data = self.data_buffer;
-                self.data_buffer = self.vram_read(self.vram_address);
+                self.data_buffer = self.vram_read(self.vram_address, mapper);
 
                 if self.vram_address >= 0x3F00 {
                     data = self.data_buffer;
@@ -168,14 +167,14 @@ impl Ppu {
         }
     }
 
-    pub fn vram_read(&self, mut addr: u16) -> u8 {
+    pub fn vram_read(&self, mut addr: u16, mapper: &dyn Mapper) -> u8 {
         addr &= 0x3FFF;
 
         match addr {
             0x0000..=0x1FFF => 0,
             0x2000..=0x3EFF => {
-                let vram_index = (addr & 0x0FFF) as usize;
-                self.nametables[vram_index % 2048]
+                let idx = self.mirror_nametable_addr(addr, mapper.mirroring_mode());
+                self.nametables[idx]
             }
             0x3F00..=0x3FFF => {
                 let mut palette_addr = (addr & 0x001F) as usize;
@@ -192,13 +191,19 @@ impl Ppu {
         }
     }
 
-    fn vram_write(&mut self, mut addr: u16, value: u8) {
+    fn vram_write(&mut self, mut addr: u16, value: u8, mapper: &dyn Mapper) {
         addr &= 0x3FFF;
         match addr {
-            0x0000..=0x1FFF => {}
+            0x0000..=0x1FFF => {
+                // TODO
+                // if mapper.has_chr_ram() {
+                //     chr_memory[address as usize] = data;
+                // } else {
+                // }
+            }
             0x2000..=0x3EFF => {
-                let vram_index = (addr & 0x0FFF) as usize;
-                self.nametables[vram_index % 2048] = value;
+                let idx = self.mirror_nametable_addr(addr, mapper.mirroring_mode());
+                self.nametables[idx] = value;
             }
             0x3F00..=0x3FFF => {
                 let mut palette_addr = (addr & 0x001F) as usize;
@@ -215,7 +220,7 @@ impl Ppu {
         }
     }
 
-    fn render_scanline(&mut self, mapper: &mut dyn Mapper) {
+    fn render_scanline(&mut self, mapper: &dyn Mapper) {
         // TODO
         // if chr_rom.is_empty() {
         //     return;
@@ -232,7 +237,7 @@ impl Ppu {
             let pixel_x = (x % 8) as u16;
 
             let nametable_index = tile_y * 32 + tile_x;
-            let tile_id = self.vram_read(base_nametable_addr + nametable_index) as u16;
+            let tile_id = self.vram_read(base_nametable_addr + nametable_index, mapper) as u16;
 
             let pattern_table_base = if (self.ctrl & 0x10) != 0 {
                 0x1000
@@ -248,11 +253,27 @@ impl Ppu {
             let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
             let color_index = (bit2 << 1) | bit1;
 
-            let palette_color_id = self.vram_read(0x3F00 + color_index as u16);
+            let palette_color_id = self.vram_read(0x3F00 + color_index as u16, mapper);
 
             let rgb_color = NES_PALETTE[(palette_color_id & 0x3F) as usize];
 
             self.renderer.render_pixel(x, y, rgb_color)
+        }
+    }
+
+    fn mirror_nametable_addr(&self, addr: u16, mode: MirroringType) -> usize {
+        let vram_index = ((addr & 0x2FFF) - 0x2000) as usize;
+
+        match mode {
+            MirroringType::Horizontal => {
+                if vram_index < 2048 {
+                    vram_index % 1024
+                } else {
+                    (vram_index % 1024) + 1024
+                }
+            }
+            MirroringType::Vertical => vram_index % 2048,
+            // _ => vram_index % 2048,
         }
     }
 }

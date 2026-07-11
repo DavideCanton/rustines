@@ -39,7 +39,6 @@ impl<'a> Renderer for PixelsRenderer<'a> {
         }
 
         self.pixels.render().unwrap();
-        self.pixels.frame_mut().fill(0);
         self.frame_cnt += 1;
     }
 }

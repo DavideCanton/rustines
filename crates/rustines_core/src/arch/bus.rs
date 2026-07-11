@@ -1,4 +1,5 @@
-use crate::arch::mappers::mapper::MapperBox;
+use crate::arch::controller::NesController;
+use crate::arch::mappers::mapper::{Mapper, MapperBox};
 
 use crate::arch::common::replace;
 use crate::arch::ppu::Ppu;
@@ -23,8 +24,9 @@ pub trait FetchStore {
 pub struct Bus {
     nes_ram: [u8; 2048],
     ppu: Ppu,
-    apu_registers: [u8; 24],
     mapper: MapperBox,
+    controller1: NesController,
+    controller2: NesController,
 }
 
 impl Bus {
@@ -32,8 +34,9 @@ impl Bus {
         Self {
             nes_ram: [0; 2048],
             ppu,
-            apu_registers: [0; 24],
             mapper,
+            controller1: NesController::new(),
+            controller2: NesController::new(),
         }
     }
 
@@ -47,13 +50,25 @@ impl Bus {
         self.fetch(sp)
     }
 
+    pub fn ppu(&self) -> &Ppu {
+        &self.ppu
+    }
+
     pub fn ppu_mut(&mut self) -> &mut Ppu {
         &mut self.ppu
+    }
+
+    pub fn mapper(&self) -> &dyn Mapper {
+        self.mapper.as_ref()
     }
 
     pub fn ppu_tick(&mut self) {
         let mapper = self.mapper.as_mut();
         self.ppu.tick(mapper);
+    }
+
+    pub fn controller1_mut(&mut self) -> &mut NesController {
+        &mut self.controller1
     }
 }
 
@@ -64,10 +79,16 @@ impl FetchStore for Bus {
             self.nes_ram[ind as usize]
         } else if address <= 0x3FFF {
             let ind = address & 0x0007;
-            self.ppu.cpu_read(ind)
+            self.ppu.cpu_read(ind, self.mapper.as_ref())
         } else if address <= 0x4017 {
-            let ind = address & 0xFF;
-            self.apu_registers[ind as usize]
+            if address == 0x4016 {
+                self.controller1.read()
+            } else if address == 0x4017 {
+                self.controller2.read()
+            } else {
+                // TODO APU
+                0
+            }
         } else if address <= 0x401F {
             0
         } else if address <= 0x7FFF {
@@ -83,11 +104,19 @@ impl FetchStore for Bus {
             replace(&mut self.nes_ram, ind as usize, val)
         } else if address <= 0x3FFF {
             let ind = address & 0x0007;
-            self.ppu.cpu_write(ind, val);
+            self.ppu.cpu_write(ind, val, self.mapper.as_ref());
             0
         } else if address <= 0x4017 {
-            let ind = address & 0xFF;
-            replace(&mut self.apu_registers, ind as usize, val)
+            if address == 0x4016 {
+                self.controller1.write(val);
+                0
+            } else if address == 0x4017 {
+                self.controller2.write(val);
+                0
+            } else {
+                // TODO APU
+                0
+            }
         } else if address <= 0x401F {
             0
         } else if address <= 0x7FFF {

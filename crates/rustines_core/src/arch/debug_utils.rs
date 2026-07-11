@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 
+use crate::arch::bus::Bus;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::Ppu;
 
@@ -56,7 +57,7 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> io::Result<()> {
     Ok(())
 }
 
-pub fn debug_dump_nametable(ppu: &Ppu) {
+pub fn debug_dump_nametable(bus: &mut Bus) {
     println!("\n=== DUMP NAMETABLE 0 (0x2000) ===");
 
     print!("    ");
@@ -72,7 +73,7 @@ pub fn debug_dump_nametable(ppu: &Ppu) {
             let rel_addr = row * 32 + col;
             let ppu_address = 0x2000 + rel_addr;
 
-            let tile_index = debug_read_nametable_byte(ppu, ppu_address);
+            let tile_index = debug_read_nametable_byte(bus.ppu(), bus.mapper(), ppu_address);
 
             if tile_index == 0x00 || tile_index == 0x20 {
                 print!(".. ");
@@ -85,8 +86,19 @@ pub fn debug_dump_nametable(ppu: &Ppu) {
     println!("=================================\n");
 }
 
-fn debug_read_nametable_byte(ppu: &Ppu, address: u16) -> u8 {
+fn debug_read_nametable_byte(ppu: &Ppu, mapper: &dyn Mapper, address: u16) -> u8 {
     let cleared_addr = (address - 0x2000) & 0x0FFF;
     let vram_index = cleared_addr & 0x07FF;
-    ppu.vram_read(vram_index)
+    ppu.vram_read(vram_index, mapper)
+}
+
+pub fn debug_dump_palette(bus: &mut Bus) {
+    println!("=== DUMP PALETTE ===");
+    for (i, color) in bus.ppu_mut().palette_table.iter().enumerate() {
+        print!("{:02X} ", color);
+        if (i + 1) % 4 == 0 {
+            print!("| ");
+        }
+    }
+    println!("\n====================\n");
 }

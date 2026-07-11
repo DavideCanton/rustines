@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "type": "lldb",
             "request": "launch",
@@ -21,8 +20,7 @@
                 }
             },
             "args": [
-                "${workspaceFolder}/roms/prova.rom",
-                "ex"
+                "${workspaceFolder}/roms/${input:rom}"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -66,5 +64,20 @@
             ],
             "cwd": "${workspaceFolder}"
         },
+    ],
+    "inputs": [
+        {
+            "id": "rom",
+            "type": "pickString",
+            "description": "ROM file?",
+            "options": [
+                "color_test.nes",
+                "full_nes_palette.nes",
+                "nestest.nes",
+                "prova.rom",
+                "prova2.rom"
+            ],
+            "default": "color_test.nes"
+        }
     ]
 }

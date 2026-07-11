@@ -2,17 +2,18 @@ use anyhow::bail;
 use rustines_macro::Named;
 
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::rom_structs::{INesHeader, TRAINER_SIZE};
+use crate::arch::rom_structs::{INesHeader, MirroringType, TRAINER_SIZE};
 use crate::utils::named::Named;
 
 const CHR_RAM_SIZE: usize = 8192;
 
-#[derive(Named, Default)]
+#[derive(Named)]
 pub struct Mapper0 {
     prg_rom: Vec<u8>,
     chr_rom: Vec<u8>,
     banks: usize,
     chr_ram: Option<[u8; CHR_RAM_SIZE]>,
+    mirroring_type: MirroringType,
 }
 
 impl Mapper0 {
@@ -44,6 +45,7 @@ impl Mapper0 {
             chr_rom,
             banks,
             chr_ram,
+            mirroring_type: header.mirroring_type(),
         })
     }
 }
@@ -103,17 +105,8 @@ impl Mapper for Mapper0 {
     fn store_prg_rom(&mut self, _addr: u16, _val: u8) -> u8 {
         0
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::Mapper0;
-    use super::Named;
-
-    // testing the procedural macro here since it's easier
-    #[test]
-    fn test_named() {
-        let m = Mapper0::default();
-        assert_eq!(m.name(), "Mapper0");
+    fn mirroring_mode(&self) -> MirroringType {
+        self.mirroring_type
     }
 }

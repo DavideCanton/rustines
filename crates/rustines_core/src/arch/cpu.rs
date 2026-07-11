@@ -1,4 +1,4 @@
-use log::info;
+use log::{Level, log_enabled, trace};
 
 use crate::{
     arch::{
@@ -6,7 +6,6 @@ use crate::{
         instrs::instr_table::INSTR_TABLE,
         registers::*,
     },
-    bin, hex,
     utils::bit_utils::*,
 };
 
@@ -30,44 +29,31 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self, bus: &mut Bus, verbose: bool) -> u8 {
-        if verbose {
-            info!(
-                "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
-                hex!(self.registers.pc),
-                "",
-                hex!(self.registers.a_reg),
-                hex!(self.registers.x_reg),
-                hex!(self.registers.y_reg),
-                0,
-                "NV_BDIZC",
-                hex!(self.registers.sp),
+    pub fn tick(&mut self, bus: &mut Bus) -> u8 {
+        self.handle_interrupts(bus);
+
+        if log_enabled!(Level::Trace) {
+            let opcode = bus.fetch(self.registers.pc);
+            let instr = &INSTR_TABLE[opcode as usize];
+            let ilen = instr.ilen;
+            let mut buf = vec![0; ilen];
+            bus.fetch_many(self.registers.pc, &mut buf);
+            let instr_str = instr.get_fname_for_print(&buf);
+
+            trace!(
+                "DEBUG CPU -> PC: {:#X} | Instr: {} | A: {:#X} | X: {:#X} | Y: {:#X} | SP: {:#X}",
+                self.registers.pc,
+                instr_str,
+                self.registers.a_reg,
+                self.registers.x_reg,
+                self.registers.y_reg,
+                self.registers.sp
             );
         }
-
-        self.handle_interrupts(bus);
 
         let opcode = bus.fetch(self.registers.pc);
 
         let instr = &INSTR_TABLE[opcode as usize];
-
-        if verbose {
-            let ilen = if instr.ilen == 0xFF { 1 } else { instr.ilen };
-            let mut data = vec![0; ilen];
-            bus.fetch_many(self.registers.pc, &mut data);
-            let p = self.registers.get_p();
-            info!(
-                "[{: <4}] {: <20}A:{} X:{} Y:{} P:{: <2} ({}) SP:{}",
-                hex!(self.registers.pc),
-                instr.get_fname_for_print(&data),
-                hex!(self.registers.a_reg),
-                hex!(self.registers.x_reg),
-                hex!(self.registers.y_reg),
-                hex!(p),
-                bin!(p),
-                hex!(self.registers.sp),
-            );
-        }
 
         self.registers.pc += instr.ilen as u16;
 
@@ -190,8 +176,10 @@ impl Cpu {
     fn save_state_before_interrupt(&mut self, bus: &mut Bus) {
         let pc = self.registers.pc;
         self.push16(bus, pc);
+
         let p = self.registers.get_p();
-        self.push8(bus, p);
+        let p_to_push = (p & !0x10) | 0x20;
+        self.push8(bus, p_to_push);
     }
 
     fn perform_irq(&mut self, bus: &mut Bus) {
@@ -210,8 +198,6 @@ impl Cpu {
         let high = bus.fetch(0xFFFB);
 
         let nmi_address = to_u16(low, high);
-        info!("NMI triggered! CPU jumps to: {:#X}", nmi_address);
-
         self.registers.pc = nmi_address;
     }
 

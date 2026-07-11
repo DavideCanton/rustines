@@ -1,4 +1,5 @@
 pub mod bus;
+pub mod controller;
 pub mod cpu;
 pub mod instrs;
 pub mod mappers;

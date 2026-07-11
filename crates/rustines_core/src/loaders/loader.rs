@@ -23,6 +23,7 @@ pub trait Loader: Named {
 
         info!("Mapper: {}", header.mapping_number());
         debug!("Found header: {:?}", header);
+        debug!("Mirroring: {:?}", header.mirroring_type());
 
         Ok(header)
     }

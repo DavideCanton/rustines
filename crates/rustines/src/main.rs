@@ -7,7 +7,10 @@ use env_logger::Builder;
 use log::{LevelFilter, info};
 use pixels::{Pixels, SurfaceTexture};
 use rustines_core::{
-    arch::{bus::Bus, cpu::Cpu, debug_utils::debug_dump_nametable, ppu::Ppu, rom_structs},
+    arch::{
+        bus::Bus, cpu::Cpu, debug_utils::debug_dump_nametable, debug_utils::debug_dump_palette,
+        ppu::Ppu, rom_structs,
+    },
     loaders::loaders_factory::decode_loader,
 };
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
@@ -26,7 +29,12 @@ use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 fn init_logger() {
     let mut builder = Builder::from_default_env();
 
-    builder.filter(None, LevelFilter::Info).init();
+    builder
+        .filter(None, LevelFilter::Debug)
+        .filter(Some("wgpu"), LevelFilter::Warn)
+        .filter(Some("naga"), LevelFilter::Warn)
+        // .filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace)
+        .init();
 }
 
 fn read_file(file_path: &path::Path) -> Result<rom_structs::NesRom, String> {
@@ -102,10 +110,15 @@ pub fn main() {
 
             // uncomment to dump nametable
             if input.key_pressed(KeyCode::KeyD) {
-                debug_dump_nametable(bus.ppu_mut());
+                debug_dump_nametable(&mut bus);
             }
 
-            // map input to nes controller registers
+            // uncomment to dump palette
+            if input.key_pressed(KeyCode::KeyP) {
+                debug_dump_palette(&mut bus);
+            }
+
+            map_inputs(&input, &mut bus);
 
             while !bus.ppu_mut().frame_ready() {
                 if cpu_tick(&mut bus, &mut cpu) {
@@ -135,8 +148,40 @@ pub fn main() {
     });
 }
 
+fn map_inputs(input: &WinitInputHelper, bus: &mut Bus) {
+    // 0: A
+    // 1: B
+    // 2: Select
+    // 3: Start
+    // 4: Up
+    // 5: Down
+    // 6: Left
+    // 7: Right
+
+    for (i, k) in [
+        KeyCode::KeyZ,  // A
+        KeyCode::KeyX,  // B
+        KeyCode::Space, // Select
+        KeyCode::Enter, // Start
+        KeyCode::ArrowUp,
+        KeyCode::ArrowDown,
+        KeyCode::ArrowLeft,
+        KeyCode::ArrowRight,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        if input.key_pressed(k) {
+            bus.controller1_mut().buttons[i] = true;
+        }
+        if input.key_released(k) {
+            bus.controller1_mut().buttons[i] = false;
+        }
+    }
+}
+
 fn cpu_tick(bus: &mut Bus, cpu: &mut Cpu) -> bool {
-    let cycles = cpu.tick(bus, false);
+    let cycles = cpu.tick(bus);
     if cycles == 0xFF {
         return true;
     }
@@ -144,11 +189,12 @@ fn cpu_tick(bus: &mut Bus, cpu: &mut Cpu) -> bool {
 
     for _ in 0..ppu_cycles {
         bus.ppu_tick();
-
-        if bus.ppu_mut().nmi_requested() {
-            bus.ppu_mut().clear_nmi();
-            cpu.perform_nmi(bus);
-        }
     }
+
+    if bus.ppu_mut().nmi_requested() {
+        bus.ppu_mut().clear_nmi();
+        cpu.perform_nmi(bus);
+    }
+
     false
 }

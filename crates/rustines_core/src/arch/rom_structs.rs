@@ -16,7 +16,7 @@ pub struct INesHeader {
     pub padding: [u8; 5],
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum MirroringType {
     Horizontal,
     Vertical,

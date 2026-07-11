@@ -53,6 +53,10 @@ impl FpsCounter {
             None
         }
     }
+
+    pub fn frame_count(&self) -> u64 {
+        self.frame_count
+    }
 }
 
 impl Default for FpsCounter {
