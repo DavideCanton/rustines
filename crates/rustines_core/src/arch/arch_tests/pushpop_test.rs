@@ -63,7 +63,7 @@ mod tests {
         assert_eq!(3, cycles);
 
         let val = cpu.peek8(&mut bus);
-        assert_eq!(val, 0x20);
+        assert_eq!(val, 0x30);
 
         let sp = cpu.registers.sp;
         assert_eq!(sp, old_sp - 1);
@@ -87,7 +87,7 @@ mod tests {
         assert_eq!(3, cycles);
 
         let val = cpu.peek8(&mut bus);
-        assert_eq!(val, 0xAA);
+        assert_eq!(val, 0xBA);
 
         let sp = cpu.registers.sp;
         assert_eq!(sp, old_sp - 1);
@@ -126,7 +126,7 @@ mod tests {
         assert!(cpu.registers.get_n());
         assert!(cpu.registers.get_z());
         assert!(cpu.registers.get_v());
-        assert!(cpu.registers.get_b());
+        assert!(!cpu.registers.get_b());
         assert!(cpu.registers.get_d());
         assert!(cpu.registers.get_i());
 

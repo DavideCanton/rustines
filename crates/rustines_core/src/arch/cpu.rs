@@ -10,18 +10,16 @@ use crate::{
 };
 
 pub struct Cpu {
-    pub clock: u8,
     pub registers: Registers,
-    pub irq: bool,
-    pub nmi: bool,
-    pub rst: bool,
+    irq: bool,
+    nmi: bool,
+    rst: bool,
 }
 
 impl Cpu {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Cpu {
-            clock: 0,
             registers: Registers::default(),
             irq: false,
             nmi: false,
@@ -33,22 +31,7 @@ impl Cpu {
         self.handle_interrupts(bus);
 
         if log_enabled!(Level::Trace) {
-            let opcode = bus.fetch(self.registers.pc);
-            let instr = &INSTR_TABLE[opcode as usize];
-            let ilen = instr.ilen;
-            let mut buf = vec![0; ilen];
-            bus.fetch_many(self.registers.pc, &mut buf);
-            let instr_str = instr.get_fname_for_print(&buf);
-
-            trace!(
-                "DEBUG CPU -> PC: {:#X} | Instr: {} | A: {:#X} | X: {:#X} | Y: {:#X} | SP: {:#X}",
-                self.registers.pc,
-                instr_str,
-                self.registers.a_reg,
-                self.registers.x_reg,
-                self.registers.y_reg,
-                self.registers.sp
-            );
+            self.trace_instr(bus);
         }
 
         let opcode = bus.fetch(self.registers.pc);
@@ -58,6 +41,28 @@ impl Cpu {
         self.registers.pc += instr.ilen as u16;
 
         (instr.fun)(self, bus)
+    }
+
+    fn trace_instr(&mut self, bus: &mut Bus) {
+        let opcode = bus.fetch(self.registers.pc);
+        let instr = &INSTR_TABLE[opcode as usize];
+        let ilen = instr.ilen;
+        let mut buf = vec![0; ilen];
+        bus.fetch_many(self.registers.pc, &mut buf);
+
+        let instr_str = instr.get_fname_for_print(&buf);
+
+        trace!(
+            "TRACE CPU -> PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X})",
+            self.registers.pc,
+            instr_str,
+            self.registers.a_reg,
+            self.registers.x_reg,
+            self.registers.y_reg,
+            self.registers.sp,
+            self.registers.p_str(),
+            self.registers.get_p(false),
+        );
     }
 
     pub fn push32(&mut self, bus: &mut Bus, v: u32) {
@@ -175,9 +180,10 @@ impl Cpu {
         let pc = self.registers.pc;
         self.push16(bus, pc);
 
-        let p = self.registers.get_p();
+        let p = self.registers.get_p(false);
         let p_to_push = (p & !0x10) | 0x20;
         self.push8(bus, p_to_push);
+        self.registers.set_i();
     }
 
     fn perform_irq(&mut self, bus: &mut Bus) {

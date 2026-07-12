@@ -7,7 +7,7 @@ pub fn pha(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn php(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let p = cpu.registers.get_p();
+    let p = cpu.registers.get_p(true);
     cpu.push8(bus, p);
     3
 }
@@ -21,6 +21,6 @@ pub fn pla(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn plp(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let p = cpu.pop8(bus);
-    cpu.registers.set_p(p);
+    cpu.registers.set_p(p, true);
     4
 }

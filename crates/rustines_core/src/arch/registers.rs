@@ -57,7 +57,6 @@ impl Registers {
         let mut nz_table = [0; 1 << 8];
         for i in 0u8..=255 {
             nz_table[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
-            // println!("{} => nz:{:?}", i, nz_table[i as usize]);
         }
 
         Registers {
@@ -71,7 +70,6 @@ impl Registers {
             bdi: 0,
             nz_table,
         }
-        // reg.P |= 1 << 5; // the unused flag is always 1?
     }
 
     pub fn compute_nz_flags(&mut self, a: u8) {
@@ -86,17 +84,67 @@ impl Registers {
         self.vc = (self.vc & 0x10) | (c as u8);
     }
 
-    pub fn get_p(&self) -> u8 {
+    pub fn get_p(&self, force_b: bool) -> u8 {
+        // NZ
+        // NZ & 2 -> N0, N0 >> 1 -> N
+        // NZ & 1 -> Z
         let (n, z) = (((self.nz & 2) >> 1), self.nz & 1);
+        // VC
+        // VC & 2 -> V0, V0 >> 1 -> V
+        // VC & 1 -> C
         let (v, c) = (((self.vc & 2) >> 1), self.vc & 1);
-
-        (n << 7) | (v << 6) | (1 << 5) | (self.bdi << 2) | (z << 1) | c
+        // P = N | V | 1 | B | D | I | Z | C
+        let mut ret = (n << 7) | (v << 6) | (1 << 5) | (self.bdi << 2) | (z << 1) | c;
+        // force B to 1
+        if force_b {
+            ret |= 1 << 4;
+        }
+        ret
     }
 
-    pub fn set_p(&mut self, p: u8) {
+    pub fn set_p(&mut self, p: u8, ignore_b: bool) {
+        // P = N | V | 1 | B | D | I | Z | C
+        // V0 = NV1BDIZC & (01000000) -> 0V000000 >> 5 -> 000000V0
+        // C = NV1BDIZC & (0000001) -> 0000000C
+        // VC = V0 | C
         self.vc = ((p & 0x40) >> 5) | (p & 0x1);
+        // N0 = NV1BDIZC & (10000000) -> N0000000 >> 6 -> 000000N0
+        // Z = NV1BDIZC & (00000010) -> 000000Z0 >> 1 -> 0000000Z
+        // NZ = N0 | Z
         self.nz = ((p & 0x80) >> 6) | ((p & 0x2) >> 1);
-        self.bdi = (p >> 2) & 0x7;
+        if ignore_b {
+            // ignore B
+            // T = (NV1BDIZC) >> 2 -> 00NV1BDI & (11) -> 000000DI
+            // BDI = (BDI & (100)) | 000000DI
+            self.bdi = (self.bdi & 0x4) | (p >> 2) & 0x3;
+        } else {
+            // T = (NV1BDIZC) >> 2 -> 00NV1BDI & (111) -> 00000BDI
+            // BDI = 00000BDI
+            self.bdi = (p >> 2) & 0x7;
+        }
+    }
+
+    pub fn p_str(&self) -> String {
+        let mut s = String::with_capacity(8);
+
+        for (letter, value) in "NV1BDIZC".chars().zip([
+            self.get_n(),
+            self.get_v(),
+            true,
+            self.get_b(),
+            self.get_d(),
+            self.get_i(),
+            self.get_z(),
+            self.get_c(),
+        ]) {
+            if value {
+                s.push(letter);
+            } else {
+                s.push(letter.to_lowercase().next().unwrap());
+            }
+        }
+
+        s
     }
 
     gen_methods!(z, nz, 0x1);

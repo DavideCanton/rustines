@@ -9,8 +9,7 @@ pub fn nop(_: &mut Cpu, _: &mut Bus) -> u8 {
 pub fn brk(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let pc = cpu.registers.pc;
     cpu.push16(bus, pc + 2);
-    cpu.registers.set_b();
-    let p = cpu.registers.get_p();
+    let p = cpu.registers.get_p(true);
     cpu.push8(bus, p);
     let l = bus.fetch(0xFFFE);
     let h = bus.fetch(0xFFFF);

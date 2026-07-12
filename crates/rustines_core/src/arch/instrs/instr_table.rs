@@ -289,8 +289,9 @@ impl Instr {
             .iter()
             .skip(1)
             .map(|v| hex!(v))
+            .rev()
             .collect::<Vec<_>>()
-            .join(" ");
+            .join("");
 
         let pieces: Vec<&str> = self.fname.split("::").collect();
 
@@ -312,7 +313,7 @@ impl Instr {
                 _ => format!("{} {}", instr_name, codes),
             },
         };
-        format!("({}) {}", hex!(data[0]), ret)
+        format!("({:#04X}) {}", data[0], ret)
     }
 }
 

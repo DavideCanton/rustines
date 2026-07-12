@@ -17,7 +17,7 @@ pub fn rts(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn rti(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let p = cpu.pop8(bus);
-    cpu.registers.set_p(p);
+    cpu.registers.set_p(p, true);
     let pc = cpu.pop16(bus);
     cpu.registers.pc = pc;
     6

@@ -3,7 +3,7 @@ mod renderer;
 
 use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 use clap::Parser;
-use env_logger::Builder;
+use env_logger::{Builder, Target};
 use log::{LevelFilter, info};
 use pixels::{Pixels, SurfaceTexture};
 use rustines_core as core;
@@ -18,15 +18,20 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-fn init_logger() {
+fn init_logger(file: Option<fs::File>) {
     let mut builder = Builder::from_default_env();
 
-    builder
+    let mut builder = builder
         .filter(None, LevelFilter::Debug)
         .filter(Some("wgpu"), LevelFilter::Warn)
-        .filter(Some("naga"), LevelFilter::Warn)
         // .filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace)
-        .init();
+        .filter(Some("naga"), LevelFilter::Warn);
+
+    if let Some(file) = file {
+        builder = builder.target(Target::Pipe(Box::new(file)));
+    }
+
+    builder.init();
 }
 
 fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
@@ -56,7 +61,10 @@ pub fn main() {
     let matches = RustinesArgs::parse();
     let context = context::Context::from_args(matches);
 
-    init_logger();
+    init_logger(None);
+
+    // let log_file = fs::File::create("log.log").expect("Cannot create log file");
+    // init_logger(Some(log_file));
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
@@ -134,6 +142,9 @@ pub fn main() {
         }
     });
 }
+
+static mut LOGPOINT: usize = 1;
+
 fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus) {
     if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
         core::debug_dump_nametable(bus);
@@ -141,6 +152,14 @@ fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus) {
 
     if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
         core::debug_dump_palette(bus);
+    }
+
+    if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
+        unsafe {
+            let t = LOGPOINT;
+            info!("LOGPOINT {}", t);
+            LOGPOINT += 1;
+        }
     }
 }
 
