@@ -2,10 +2,7 @@ use crate::arch::{bus::Bus, cpu::Cpu};
 
 pub fn bcc(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if !cpu.registers.get_c() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -15,10 +12,7 @@ pub fn bcc(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bcs(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if cpu.registers.get_c() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -28,10 +22,7 @@ pub fn bcs(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn beq(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if cpu.registers.get_z() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -41,9 +32,7 @@ pub fn beq(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bne(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if !cpu.registers.get_z() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
+        do_branch(cpu, bus);
 
         3
         // TODO add 1 if destination address on different page
@@ -54,10 +43,7 @@ pub fn bne(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bmi(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if cpu.registers.get_n() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -67,10 +53,7 @@ pub fn bmi(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bpl(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if !cpu.registers.get_n() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -80,10 +63,7 @@ pub fn bpl(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bvs(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if cpu.registers.get_v() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
@@ -93,13 +73,16 @@ pub fn bvs(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn bvc(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     if !cpu.registers.get_v() {
-        let addr = cpu.decode_zeropage(bus) as i8;
-        let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
-        cpu.registers.pc = new_pc;
-
+        do_branch(cpu, bus);
         3
         // TODO add 1 if destination address on different page
     } else {
         2
     }
+}
+
+fn do_branch(cpu: &mut Cpu, bus: &mut Bus) {
+    let addr = cpu.decode_zeropage(bus) as i8;
+    let new_pc = cpu.registers.pc.wrapping_add(addr as u16);
+    cpu.registers.pc = new_pc;
 }
