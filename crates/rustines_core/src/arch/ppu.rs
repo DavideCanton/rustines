@@ -12,26 +12,26 @@ struct Sprite {
 }
 
 pub struct Ppu {
-    pub nametables: [u8; 2048],
-    pub palette_table: [u8; 32],
-    pub oam_data: [u8; 256],
+    nametables: [u8; 2048],
+    palette_table: [u8; 32],
+    oam_data: [u8; 256],
 
-    pub ctrl: u8,
-    pub mask: u8,
-    pub status: u8,
+    ctrl: u8,
+    mask: u8,
+    status: u8,
 
-    pub vram_address: u16,
-    pub temp_address: u16,
-    pub oam_addr: u8,
-    pub fine_x: u8,
-    pub address_latch: u8,
-    pub data_buffer: u8,
+    vram_address: u16,
+    temp_address: u16,
+    oam_addr: u8,
+    fine_x: u8,
+    address_latch: u8,
+    data_buffer: u8,
 
-    pub scanline: i16,
-    pub cycle: i16,
+    scanline: i16,
+    cycle: i16,
 
-    pub nmi_interrupt: bool,
-    pub frame_ready: bool,
+    nmi_interrupt: bool,
+    frame_ready: bool,
 
     renderer: Box<dyn Renderer>,
 }
@@ -81,6 +81,10 @@ impl Ppu {
 
     pub fn renderer(&mut self) -> &mut dyn Renderer {
         self.renderer.as_mut()
+    }
+
+    pub fn palette_table(&self) -> &[u8; 32] {
+        &self.palette_table
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {

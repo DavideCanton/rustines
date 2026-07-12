@@ -52,12 +52,12 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> io::Result<()> {
                 writeln!(writer)?;
             }
         }
-        println!("Dump completato: {}", file_name);
+        println!("Dump completed: {}", file_name);
     }
     Ok(())
 }
 
-pub fn debug_dump_nametable(bus: &mut Bus) {
+pub fn debug_dump_nametable(bus: &Bus) {
     println!("\n=== DUMP NAMETABLE 0 (0x2000) ===");
 
     print!("    ");
@@ -66,6 +66,9 @@ pub fn debug_dump_nametable(bus: &mut Bus) {
     }
     println!("\n----{}", "---".repeat(32));
 
+    let ppu = bus.ppu();
+    let mapper: &dyn Mapper = bus.mapper();
+
     for row in 0..30 {
         print!("{:02X} | ", row);
 
@@ -73,7 +76,9 @@ pub fn debug_dump_nametable(bus: &mut Bus) {
             let rel_addr = row * 32 + col;
             let ppu_address = 0x2000 + rel_addr;
 
-            let tile_index = debug_read_nametable_byte(bus.ppu(), bus.mapper(), ppu_address);
+            let cleared_addr = (ppu_address - 0x2000) & 0x0FFF;
+            let vram_index = cleared_addr & 0x07FF;
+            let tile_index = ppu.vram_read(vram_index, mapper);
 
             if tile_index == 0x00 || tile_index == 0x20 {
                 print!(".. ");
@@ -86,15 +91,9 @@ pub fn debug_dump_nametable(bus: &mut Bus) {
     println!("=================================\n");
 }
 
-fn debug_read_nametable_byte(ppu: &Ppu, mapper: &dyn Mapper, address: u16) -> u8 {
-    let cleared_addr = (address - 0x2000) & 0x0FFF;
-    let vram_index = cleared_addr & 0x07FF;
-    ppu.vram_read(vram_index, mapper)
-}
-
-pub fn debug_dump_palette(bus: &mut Bus) {
+pub fn debug_dump_palette(bus: &Bus) {
     println!("=== DUMP PALETTE ===");
-    for (i, color) in bus.ppu_mut().palette_table.iter().enumerate() {
+    for (i, color) in bus.ppu().palette_table().iter().enumerate() {
         print!("{:02X} ", color);
         if (i + 1) % 4 == 0 {
             print!("| ");
