@@ -9,6 +9,8 @@ Stuff implemented:
 - [ ] audio
 - [x] input handling (not the zapper)
 
+The code is poorly documented at the moment.
+
 The emulator has just a simple CLI at the moment.
 
 Uses [pixels](https://docs.rs/pixels/latest/pixels/) and [winit](https://docs.rs/winit/latest/winit/).

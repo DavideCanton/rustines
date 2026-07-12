@@ -212,6 +212,7 @@ impl Cpu {
         if self.nmi {
             self.perform_nmi(bus);
         } else if self.irq {
+            // TODO check flag, since irq should not be performed in all cases
             self.perform_irq(bus);
         } else if self.rst {
             self.perform_rst(bus);
