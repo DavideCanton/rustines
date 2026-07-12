@@ -1,5 +1,7 @@
 {
     "recommendations": [
-        "ms-vscode.hexeditor"
+        "ms-vscode.hexeditor",
+        "tamasfe.even-better-toml",
+        "rust-lang.rust-analyzer"
     ]
 }

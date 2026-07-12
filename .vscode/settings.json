@@ -2,5 +2,11 @@
     "cSpell.words": [
         "ilen",
         "rustines"
-    ]
+    ],
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    },
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.checkOnSave": true
 }

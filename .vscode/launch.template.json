@@ -1,0 +1,52 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rustines'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustines",
+                    "--package=rustines"
+                ],
+                "filter": {
+                    "name": "rustines",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "${workspaceFolder}/roms/${input:rom}"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rustines'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rustines",
+                    "--package=rustines"
+                ],
+                "filter": {
+                    "name": "rustines",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "rom",
+            "type": "pickString",
+            "description": "ROM file?",
+            "options": []
+        }
+    ]
+}

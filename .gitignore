@@ -17,3 +17,5 @@ launcher.bat
 data/
 /utils/
 /roms/
+
+.vscode/launch.json
