@@ -72,8 +72,8 @@ pub fn main() -> anyhow::Result<()> {
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
-    info!("Subcommand: {:?}", &context.subcommand);
-    info!("Using input file: {}", &context.rom_name);
+    info!("Subcommand: {:?}", context.subcommand);
+    info!("Using input file: {}", context.rom_name);
 
     let rom = read_file(&file_path)?;
     process_file(rom, &context)?;

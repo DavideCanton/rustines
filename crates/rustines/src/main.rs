@@ -68,7 +68,7 @@ pub fn main() {
 
     let file_path = path::PathBuf::from(&context.rom_name);
 
-    info!("Using input file: {}", &context.rom_name);
+    info!("Using input file: {}", context.rom_name);
 
     let rom = read_file(&file_path).unwrap();
 
