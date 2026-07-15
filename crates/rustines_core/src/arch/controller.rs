@@ -1,10 +1,13 @@
+use log::trace;
+
 pub struct NesController {
+    number: u8,
     buttons: [bool; 8],
     shift_register: u8,
     strobe: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum NesKey {
     A = 0,
     B,
@@ -17,8 +20,9 @@ pub enum NesKey {
 }
 
 impl NesController {
-    pub fn new() -> Self {
+    pub fn new(number: u8) -> Self {
         Self {
+            number,
             buttons: [false; 8],
             shift_register: 0,
             strobe: false,
@@ -51,16 +55,12 @@ impl NesController {
     }
 
     pub fn pressed(&mut self, key: NesKey) {
+        trace!("Controller {}, pressed {key:?}", self.number);
         self.buttons[key as usize] = true;
     }
 
     pub fn released(&mut self, key: NesKey) {
+        trace!("Controller {}, released {key:?}", self.number);
         self.buttons[key as usize] = false;
-    }
-}
-
-impl Default for NesController {
-    fn default() -> Self {
-        Self::new()
     }
 }

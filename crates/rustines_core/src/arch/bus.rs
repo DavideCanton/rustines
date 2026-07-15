@@ -35,8 +35,8 @@ impl Bus {
             nes_ram: [0; 2048],
             ppu,
             mapper,
-            controller1: NesController::new(),
-            controller2: NesController::new(),
+            controller1: NesController::new(1),
+            controller2: NesController::new(2),
         }
     }
 

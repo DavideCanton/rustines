@@ -1,17 +1,5 @@
 use clap::Parser;
 
-pub struct Context {
-    pub rom_name: String,
-}
-
-impl Context {
-    pub fn from_args(matches: RustinesArgs) -> Context {
-        Context {
-            rom_name: matches.file_path,
-        }
-    }
-}
-
 #[derive(Parser, Debug)]
 #[clap(
     author="Davide C. <davide.canton5@gmail.com>", 
@@ -21,5 +9,9 @@ impl Context {
 )]
 pub struct RustinesArgs {
     #[clap(help = "Sets the input rom file to use")]
-    file_path: String,
+    pub file_path: String,
+    #[clap(short = 'f', long = "log_file", help = "Log to file")]
+    pub log_file: bool,
+    #[clap(short = 't', long = "trace_cpu", help = "Trace cpu")]
+    pub trace_cpu: bool,
 }

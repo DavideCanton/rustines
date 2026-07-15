@@ -14,6 +14,7 @@ pub struct Cpu {
     irq: bool,
     nmi: bool,
     rst: bool,
+    clock: u64,
 }
 
 impl Cpu {
@@ -24,6 +25,7 @@ impl Cpu {
             irq: false,
             nmi: false,
             rst: true,
+            clock: 0,
         }
     }
 
@@ -40,7 +42,9 @@ impl Cpu {
 
         self.registers.pc += instr.ilen as u16;
 
-        (instr.fun)(self, bus)
+        let cycles = (instr.fun)(self, bus);
+        self.clock += cycles as u64;
+        cycles
     }
 
     fn trace_instr(&mut self, bus: &mut Bus) {
@@ -53,7 +57,7 @@ impl Cpu {
         let instr_str = instr.get_fname_for_print(&buf);
 
         trace!(
-            "TRACE CPU -> PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X})",
+            "TRACE CPU -> PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:010}]",
             self.registers.pc,
             instr_str,
             self.registers.a_reg,
@@ -62,6 +66,7 @@ impl Cpu {
             self.registers.sp,
             self.registers.p_str(),
             self.registers.get_p(false),
+            self.clock
         );
     }
 

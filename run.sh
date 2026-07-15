@@ -1,2 +1,2 @@
 #! /bin/bash
-cargo run -r "$1"
+cargo run -r -- "$@"

@@ -18,14 +18,17 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-fn init_logger(file: Option<fs::File>) {
+fn init_logger(file: Option<fs::File>, trace_cpu: bool) {
     let mut builder = Builder::from_default_env();
 
     let mut builder = builder
         .filter(None, LevelFilter::Debug)
         .filter(Some("wgpu"), LevelFilter::Warn)
-        // .filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace)
         .filter(Some("naga"), LevelFilter::Warn);
+
+    if trace_cpu {
+        builder = builder.filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace)
+    }
 
     if let Some(file) = file {
         builder = builder.target(Target::Pipe(Box::new(file)));
@@ -58,17 +61,18 @@ const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
 
 pub fn main() {
-    let matches = RustinesArgs::parse();
-    let context = context::Context::from_args(matches);
+    let args = RustinesArgs::parse();
 
-    init_logger(None);
+    if args.log_file {
+        let log_file = fs::File::create("log.log").expect("Cannot create log file");
+        init_logger(Some(log_file), args.trace_cpu);
+    } else {
+        init_logger(None, args.trace_cpu);
+    }
 
-    // let log_file = fs::File::create("log.log").expect("Cannot create log file");
-    // init_logger(Some(log_file));
+    let file_path = path::PathBuf::from(&args.file_path);
 
-    let file_path = path::PathBuf::from(&context.rom_name);
-
-    info!("Using input file: {}", context.rom_name);
+    info!("Using input file: {}", args.file_path);
 
     let rom = read_file(&file_path).unwrap();
 
