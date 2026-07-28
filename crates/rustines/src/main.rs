@@ -102,6 +102,7 @@ pub fn main() {
 
     let mut limiter = FpsLimiter::new(60.0);
     let mut counter = FpsCounter::new();
+    let mut logpoint = 1;
 
     let key_map1 = build_keymap_c1();
     let key_map2 = build_keymap_c2();
@@ -114,7 +115,7 @@ pub fn main() {
                 return;
             }
 
-            debug_keys(&input, &mut bus);
+            debug_keys(&input, &mut bus, &mut logpoint);
 
             map_inputs(&input, bus.controller1_mut(), &key_map1);
             map_inputs(&input, bus.controller2_mut(), &key_map2);
@@ -147,9 +148,7 @@ pub fn main() {
     });
 }
 
-static mut LOGPOINT: usize = 1;
-
-fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus) {
+fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus, logpoint: &mut u8) {
     if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
         core::debug_dump_nametable(bus);
     }
@@ -159,11 +158,8 @@ fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus) {
     }
 
     if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
-        unsafe {
-            let t = LOGPOINT;
-            info!("LOGPOINT {}", t);
-            LOGPOINT += 1;
-        }
+        info!("LOGPOINT {}", logpoint);
+        *logpoint += 1;
     }
 }
 
