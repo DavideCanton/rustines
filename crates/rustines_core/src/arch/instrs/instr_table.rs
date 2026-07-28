@@ -396,7 +396,7 @@ mod test {
         fn test_error() {
             let instr = Instr::error();
             assert_eq!(instr.fname, "err");
-            assert_eq!(instr.ilen, 255);
+            assert_eq!(instr.ilen, 1);
             compare_instr_fun(&instr, error_fn);
         }
     }
