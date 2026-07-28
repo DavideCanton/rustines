@@ -114,13 +114,15 @@ impl FetchStore for Bus {
                 self.controller1.write(val);
             } else if address == 0x4017 {
                 self.controller2.write(val);
-            } else {
+            } else if address == 0x4014 {
                 // DMA implementation
                 // TODO stall?
                 let mut buf = vec![0; 256];
                 let start = (val as u16) << 8;
                 self.fetch_many(start, &mut buf);
                 self.ppu_mut().dma_copy(&buf);
+            } else {
+                // do nothing here
             }
         } else if address <= 0x401F {
             // do nothing here
