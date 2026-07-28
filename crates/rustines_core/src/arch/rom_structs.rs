@@ -20,6 +20,7 @@ pub struct INesHeader {
 pub enum MirroringType {
     Horizontal,
     Vertical,
+    // TODO add other types of mirroring
 }
 
 macro_rules! extract_flag {

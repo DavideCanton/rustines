@@ -276,7 +276,6 @@ impl Ppu {
 
             let background_rgb = NES_PALETTE[(palette_color_id & 0x3F) as usize];
 
-            // --- Logica Sprite ---
             let mut pixel_color = background_rgb;
 
             for sprite in &visible_sprites {
@@ -334,6 +333,7 @@ impl Ppu {
                 }
             }
             MirroringType::Vertical => vram_index % 2048,
+            // TODO add other types of mirroring
             // _ => vram_index % 2048,
         }
     }
@@ -366,7 +366,6 @@ impl Ppu {
     }
 }
 
-// 64 colori RGB precalcolati per la PPU del NES
 const NES_PALETTE: [u32; 64] = [
     0x545454FF, 0x001E74FF, 0x081090FF, 0x300088FF, 0x440064FF, 0x5C0030FF, 0x540400FF, 0x3C1800FF,
     0x202A00FF, 0x083A00FF, 0x004000FF, 0x003C24FF, 0x00325CFF, 0x000000FF, 0x000000FF, 0x000000FF,
