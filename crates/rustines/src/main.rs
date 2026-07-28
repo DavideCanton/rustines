@@ -157,6 +157,10 @@ fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus, logpoint: &mut u8) 
         core::debug_dump_palette(bus);
     }
 
+    if input.key_pressed(KeyCode::KeyO) && input.held_shift() {
+        core::debug_dump_oam(bus);
+    }
+
     if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;

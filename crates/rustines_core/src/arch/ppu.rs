@@ -4,11 +4,22 @@ use crate::{
 };
 
 #[derive(Debug)]
-struct Sprite {
+pub struct Sprite {
     x: u8,
     y: u8,
     tile: u8,
     attr: u8,
+}
+
+impl Sprite {
+    pub fn from_oam_index(oam_data: &[u8], i: usize) -> Self {
+        Self {
+            y: oam_data[i * 4],
+            tile: oam_data[i * 4 + 1],
+            attr: oam_data[i * 4 + 2],
+            x: oam_data[i * 4 + 3],
+        }
+    }
 }
 
 pub struct Ppu {
@@ -345,14 +356,10 @@ impl Ppu {
         let sprite_height = if (self.ctrl & 0x20) != 0 { 16 } else { 8 };
 
         for i in 0..64 {
-            let y = self.oam_data[i * 4] as u16;
+            let sprite = Sprite::from_oam_index(&self.oam_data, i);
+            let y = sprite.y as u16;
             if y <= scanline && scanline < (y + sprite_height) {
-                visible.push(Sprite {
-                    y: self.oam_data[i * 4],
-                    tile: self.oam_data[i * 4 + 1],
-                    attr: self.oam_data[i * 4 + 2],
-                    x: self.oam_data[i * 4 + 3],
-                });
+                visible.push(sprite);
             }
             if visible.len() >= 8 {
                 break;
@@ -363,6 +370,10 @@ impl Ppu {
 
     pub(crate) fn dma_copy(&mut self, buf: &[u8]) {
         self.oam_data.copy_from_slice(buf);
+    }
+
+    pub(crate) fn oam_data(&self) -> &[u8] {
+        &self.oam_data
     }
 }
 

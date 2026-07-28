@@ -3,7 +3,7 @@ use std::io::{self, BufWriter, Write};
 
 use crate::arch::bus::Bus;
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::ppu::Ppu;
+use crate::arch::ppu::{Ppu, Sprite};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper) -> io::Result<()> {
     for table_index in 0..2 {
@@ -100,4 +100,14 @@ pub fn debug_dump_palette(bus: &Bus) {
         }
     }
     println!("\n====================\n");
+}
+
+pub fn debug_dump_oam(bus: &Bus) {
+    println!("=== DUMP OAM ===");
+    let oam = bus.ppu().oam_data();
+    for i in 0..64 {
+        let sprite = Sprite::from_oam_index(oam, i);
+        println!("Sprite {} = {:?}", i, sprite);
+    }
+    println!("\n===============\n");
 }
