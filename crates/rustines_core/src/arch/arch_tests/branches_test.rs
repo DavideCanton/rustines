@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use crate::arch::arch_tests::test_common::tests::setup_tests;
-    use crate::arch::bus::FetchStore;
     use crate::arch::instrs::branches;
 
     #[test]

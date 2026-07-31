@@ -8,6 +8,7 @@ pub mod registers;
 pub mod rom_structs;
 
 #[allow(unused)]
+#[macro_use]
 pub mod debug_utils;
 
 #[cfg(test)]

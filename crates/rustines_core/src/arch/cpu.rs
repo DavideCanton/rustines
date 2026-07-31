@@ -1,11 +1,7 @@
 use log::{Level, log_enabled, trace};
 
 use crate::{
-    arch::{
-        bus::{Bus, FetchStore},
-        instrs::instr_table::INSTR_TABLE,
-        registers::*,
-    },
+    arch::{bus::Bus, instrs::instr_table::INSTR_TABLE, registers::*},
     utils::bit_utils::*,
 };
 
@@ -14,6 +10,7 @@ pub struct Cpu {
     irq: bool,
     nmi: bool,
     rst: bool,
+    trace: bool,
     clock: u64,
 }
 
@@ -25,6 +22,7 @@ impl Cpu {
             irq: false,
             nmi: false,
             rst: true,
+            trace: false,
             clock: 0,
         }
     }
@@ -32,7 +30,7 @@ impl Cpu {
     pub fn tick(&mut self, bus: &mut Bus) -> u8 {
         self.handle_interrupts(bus);
 
-        if log_enabled!(Level::Trace) {
+        if log_enabled!(Level::Trace) && self.trace {
             self.trace_instr(bus);
         }
 
@@ -43,6 +41,11 @@ impl Cpu {
         self.registers.pc += instr.ilen as u16;
 
         let cycles = (instr.fun)(self, bus);
+
+        if self.trace {
+            trace!("open bus value = {:#04X}", bus.open_bus_value());
+        }
+
         self.clock += cycles as u64;
         cycles
     }
@@ -179,6 +182,10 @@ impl Cpu {
             to_u16(low, high).wrapping_add(offset as u16),
             overflow_page_boundary(low, offset),
         )
+    }
+
+    pub fn set_trace(&mut self, value: bool) {
+        self.trace = value;
     }
 
     fn save_state_before_interrupt(&mut self, bus: &mut Bus) {

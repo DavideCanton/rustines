@@ -14,6 +14,9 @@ pub trait Mapper: Named {
     fn store_prg_ram(&mut self, addr: u16, val: u8);
 
     fn mirroring_mode(&self) -> MirroringType;
+    fn has_prg_ram(&self) -> bool {
+        false
+    }
 }
 
 pub type MapperBox = Box<dyn Mapper>;

@@ -1,4 +1,4 @@
-use crate::arch::bus::{Bus, FetchStore};
+use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::utils::bit_utils::to_u16;
 

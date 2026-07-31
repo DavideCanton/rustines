@@ -99,6 +99,9 @@ pub fn main() {
     let ppu = core::Ppu::new(Box::new(renderer));
     let mut bus = core::Bus::new(rom.mapper, ppu);
     let mut cpu = core::Cpu::new();
+    if args.trace_boot {
+        cpu.set_trace(true);
+    }
 
     let mut limiter = FpsLimiter::new(60.0);
     let mut counter = FpsCounter::new();
@@ -115,7 +118,7 @@ pub fn main() {
                 return;
             }
 
-            debug_keys(&input, &mut bus, &mut logpoint);
+            debug_keys(&input, &mut bus, &mut cpu, &mut logpoint);
 
             map_inputs(&input, bus.controller1_mut(), &key_map1);
             map_inputs(&input, bus.controller2_mut(), &key_map2);
@@ -148,7 +151,12 @@ pub fn main() {
     });
 }
 
-fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus, logpoint: &mut u8) {
+fn debug_keys(
+    input: &WinitInputHelper,
+    bus: &mut core::Bus,
+    cpu: &mut core::Cpu,
+    logpoint: &mut u8,
+) {
     if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
         core::debug_dump_nametable(bus);
     }
@@ -164,6 +172,7 @@ fn debug_keys(input: &WinitInputHelper, bus: &mut core::Bus, logpoint: &mut u8) 
     if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;
+        cpu.set_trace(true);
     }
 }
 

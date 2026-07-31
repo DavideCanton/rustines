@@ -4,29 +4,13 @@ use crate::arch::mappers::mapper::{Mapper, MapperBox};
 use crate::arch::common::replace;
 use crate::arch::ppu::Ppu;
 
-pub trait FetchStore {
-    fn fetch(&mut self, addr: u16) -> u8;
-    fn store(&mut self, addr: u16, val: u8);
-
-    fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {
-        for (addr, v) in (addr..).zip(destination.iter_mut()) {
-            *v = self.fetch(addr);
-        }
-    }
-
-    fn store_many(&mut self, addr: u16, values: &[u8]) {
-        for (addr, v) in (addr..).zip(values.iter()) {
-            self.store(addr, *v);
-        }
-    }
-}
-
 pub struct Bus {
     nes_ram: [u8; 2048],
     ppu: Ppu,
     mapper: MapperBox,
     controller1: NesController,
     controller2: NesController,
+    open_bus_value: u8,
 }
 
 impl Bus {
@@ -37,6 +21,7 @@ impl Bus {
             mapper,
             controller1: NesController::new(1),
             controller2: NesController::new(2),
+            open_bus_value: 0,
         }
     }
 
@@ -74,35 +59,53 @@ impl Bus {
     pub fn controller2_mut(&mut self) -> &mut NesController {
         &mut self.controller2
     }
-}
 
-impl FetchStore for Bus {
-    fn fetch(&mut self, address: u16) -> u8 {
-        if address <= 0x1FFF {
-            let ind = address & 0x07FF;
-            self.nes_ram[ind as usize]
-        } else if address <= 0x3FFF {
-            let ind = address & 0x0007;
-            self.ppu.cpu_read(ind, self.mapper.as_ref())
-        } else if address <= 0x4017 {
-            if address == 0x4016 {
-                self.controller1.read()
-            } else if address == 0x4017 {
-                self.controller2.read()
-            } else {
-                // TODO APU
-                0
-            }
-        } else if address <= 0x401F {
-            0
-        } else if address <= 0x7FFF {
-            self.mapper.fetch_prg_ram(address)
-        } else {
-            self.mapper.fetch_prg_rom(address)
-        }
+    pub fn open_bus_value(&self) -> u8 {
+        self.open_bus_value
     }
 
-    fn store(&mut self, address: u16, val: u8) {
+    pub fn fetch(&mut self, address: u16) -> u8 {
+        let mut update_open_bus = true;
+        let value = {
+            if address <= 0x1FFF {
+                update_open_bus = false;
+                let ind = address & 0x07FF;
+                self.nes_ram[ind as usize]
+            } else if address <= 0x3FFF {
+                let ind = address & 0x0007;
+
+                self.ppu
+                    .cpu_read(ind, self.open_bus_value, self.mapper.as_ref())
+            } else if address <= 0x4017 {
+                if address == 0x4016 {
+                    self.controller1.read()
+                } else if address == 0x4017 {
+                    self.controller2.read()
+                } else {
+                    // TODO APU
+                    update_open_bus = false;
+                    0
+                }
+            } else if address <= 0x5FFF {
+                update_open_bus = false;
+                self.open_bus_value
+            } else if address <= 0x7FFF {
+                if self.mapper.has_prg_ram() {
+                    self.mapper.fetch_prg_ram(address)
+                } else {
+                    self.open_bus_value
+                }
+            } else {
+                self.mapper.fetch_prg_rom(address)
+            }
+        };
+        if update_open_bus {
+            self.open_bus_value = value;
+        }
+        value
+    }
+
+    pub fn store(&mut self, address: u16, val: u8) {
         if address <= 0x1FFF {
             let ind = address & 0x07FF;
             replace(&mut self.nes_ram, ind as usize, val);
@@ -130,6 +133,18 @@ impl FetchStore for Bus {
             self.mapper.store_prg_ram(address, val);
         } else {
             self.mapper.store_prg_rom(address, val);
+        }
+    }
+
+    pub fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {
+        for (addr, v) in (addr..).zip(destination.iter_mut()) {
+            *v = self.fetch(addr);
+        }
+    }
+
+    pub fn store_many(&mut self, addr: u16, values: &[u8]) {
+        for (addr, v) in (addr..).zip(values.iter()) {
+            self.store(addr, *v);
         }
     }
 }

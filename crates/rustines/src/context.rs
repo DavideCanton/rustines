@@ -14,4 +14,6 @@ pub struct RustinesArgs {
     pub log_file: bool,
     #[clap(short = 't', long = "trace_cpu", help = "Trace cpu")]
     pub trace_cpu: bool,
+    #[clap(short = 'b', long = "trace_boot", help = "Trace boot")]
+    pub trace_boot: bool,
 }

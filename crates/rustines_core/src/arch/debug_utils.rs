@@ -111,3 +111,13 @@ pub fn debug_dump_oam(bus: &Bus) {
     }
     println!("\n===============\n");
 }
+
+#[macro_export]
+macro_rules! trace_ret {
+    ( $expr: expr ) => {{
+        let s = stringify!($expr);
+        let v = $expr;
+        log::trace!("{} = {}", s, v);
+        v
+    }};
+}

@@ -173,13 +173,13 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_read(&mut self, reg_index: u16, mapper: &dyn Mapper) -> u8 {
+    pub fn cpu_read(&mut self, reg_index: u16, open_bus_value: u8, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
                 let res = self.status;
                 self.status &= 0x7F;
                 self.address_latch = 0;
-                res
+                (res & 0xE0) | (open_bus_value & 0x1F)
             }
             7 => {
                 let mut data = self.data_buffer;
@@ -191,7 +191,7 @@ impl Ppu {
                 self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
                 data
             }
-            _ => 0,
+            _ => open_bus_value,
         }
     }
 
