@@ -9,13 +9,13 @@ pub trait FetchStore {
     fn store(&mut self, addr: u16, val: u8);
 
     fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {
-        for (addr, (_, v)) in (addr..).zip(destination.iter_mut().enumerate()) {
+        for (addr, v) in (addr..).zip(destination.iter_mut()) {
             *v = self.fetch(addr);
         }
     }
 
     fn store_many(&mut self, addr: u16, values: &[u8]) {
-        for (addr, (_, v)) in (addr..).zip(values.iter().enumerate()) {
+        for (addr, v) in (addr..).zip(values.iter()) {
             self.store(addr, *v);
         }
     }
