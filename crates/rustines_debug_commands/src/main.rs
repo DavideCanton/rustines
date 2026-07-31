@@ -28,7 +28,8 @@ fn disassemble_rom(rom: core::NesRom) {
 #[allow(unused)]
 fn execute_rom(rom: core::NesRom, verbose: bool) {
     let ppu = core::Ppu::new(Box::new(core::NoopRenderer));
-    let mem = core::Bus::new(rom.mapper, ppu);
+    let apu = core::Apu::default();
+    let mem = core::Bus::new(rom.mapper, ppu, apu);
     let mut cpu = core::Cpu::new();
     todo!()
 }

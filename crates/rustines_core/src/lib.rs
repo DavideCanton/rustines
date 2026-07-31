@@ -3,6 +3,7 @@ pub mod loaders;
 pub mod renderer;
 pub mod utils;
 
+pub use arch::apu::Apu;
 pub use arch::bus::Bus;
 pub use arch::controller::{NesController, NesKey};
 pub use arch::cpu::Cpu;

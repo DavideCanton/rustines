@@ -1,3 +1,4 @@
+use crate::arch::apu::Apu;
 use crate::arch::controller::NesController;
 use crate::arch::mappers::mapper::{Mapper, MapperBox};
 
@@ -7,6 +8,7 @@ use crate::arch::ppu::Ppu;
 pub struct Bus {
     nes_ram: [u8; 2048],
     ppu: Ppu,
+    apu: Apu,
     mapper: MapperBox,
     controller1: NesController,
     controller2: NesController,
@@ -14,10 +16,11 @@ pub struct Bus {
 }
 
 impl Bus {
-    pub fn new(mapper: MapperBox, ppu: Ppu) -> Self {
+    pub fn new(mapper: MapperBox, ppu: Ppu, apu: Apu) -> Self {
         Self {
             nes_ram: [0; 2048],
             ppu,
+            apu,
             mapper,
             controller1: NesController::new(1),
             controller2: NesController::new(2),
@@ -41,6 +44,14 @@ impl Bus {
 
     pub fn ppu_mut(&mut self) -> &mut Ppu {
         &mut self.ppu
+    }
+
+    pub fn apu(&self) -> &Apu {
+        &self.apu
+    }
+
+    pub fn apu_mut(&mut self) -> &mut Apu {
+        &mut self.apu
     }
 
     pub fn mapper(&self) -> &dyn Mapper {
@@ -73,7 +84,6 @@ impl Bus {
                 self.nes_ram[ind as usize]
             } else if address <= 0x3FFF {
                 let ind = address & 0x0007;
-
                 self.ppu
                     .cpu_read(ind, self.open_bus_value, self.mapper.as_ref())
             } else if address <= 0x4017 {
@@ -81,8 +91,10 @@ impl Bus {
                     self.controller1.read()
                 } else if address == 0x4017 {
                     self.controller2.read()
+                } else if address <= 0x4015 {
+                    let ind = address & 0xFF;
+                    self.apu.cpu_read(ind, self.open_bus_value)
                 } else {
-                    // TODO APU
                     update_open_bus = false;
                     0
                 }
@@ -115,7 +127,6 @@ impl Bus {
         } else if address <= 0x4017 {
             if address == 0x4016 {
                 self.controller1.write(val);
-            } else if address == 0x4017 {
                 self.controller2.write(val);
             } else if address == 0x4014 {
                 // DMA implementation
@@ -125,7 +136,8 @@ impl Bus {
                 self.fetch_many(start, &mut buf);
                 self.ppu_mut().dma_copy(&buf);
             } else {
-                // do nothing here
+                let ind = address & 0xFF;
+                self.apu.cpu_write(ind as u8, val);
             }
         } else if address <= 0x401F {
             // do nothing here

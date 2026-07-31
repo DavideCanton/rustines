@@ -1,5 +1,6 @@
 #[cfg(test)]
 pub mod tests {
+    use crate::arch::apu::Apu;
     use crate::arch::bus::Bus;
     use crate::arch::cpu::Cpu;
     use crate::arch::mappers::mapper_0::Mapper0;
@@ -20,7 +21,7 @@ pub mod tests {
         );
 
         let rom = NesRom::new(header, mapper);
-        let bus = Bus::new(rom.mapper, Ppu::new(Box::new(NoopRenderer)));
+        let bus = Bus::new(rom.mapper, Ppu::new(Box::new(NoopRenderer)), Apu::default());
         let mut cpu = Cpu::new();
 
         cpu.registers.pc = 0x100;

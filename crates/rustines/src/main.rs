@@ -97,7 +97,8 @@ pub fn main() {
     let renderer = PixelsRenderer::new(pixels, INNER_W as usize, INNER_H as usize);
 
     let ppu = core::Ppu::new(Box::new(renderer));
-    let mut bus = core::Bus::new(rom.mapper, ppu);
+    let apu = core::Apu::default();
+    let mut bus = core::Bus::new(rom.mapper, ppu, apu);
     let mut cpu = core::Cpu::new();
     if args.trace_boot {
         cpu.set_trace(true);

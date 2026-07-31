@@ -1,6 +1,9 @@
 use std::mem;
 
-use crate::arch::mappers::mapper::MapperBox;
+use crate::{
+    arch::mappers::mapper::MapperBox,
+    utils::bit_utils::{extract_bits_mask_msb, extract_bits_shift, extract_flag},
+};
 
 #[repr(C, packed)]
 #[derive(Debug)]
@@ -21,10 +24,6 @@ pub enum MirroringType {
     Horizontal,
     Vertical,
     // TODO add other types of mirroring
-}
-
-macro_rules! extract_flag {
-    ( $val:expr, $offset:expr ) => {{ ($val & (1 << $offset)) > 0 }};
 }
 
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
@@ -56,7 +55,7 @@ impl INesHeader {
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
-        if extract_flag!(self.flags_6, 0) {
+        if extract_flag(self.flags_6, 0) {
             MirroringType::Vertical
         } else {
             MirroringType::Horizontal
@@ -64,20 +63,20 @@ impl INesHeader {
     }
 
     pub fn has_other_memory(&self) -> bool {
-        extract_flag!(self.flags_6, 1)
+        extract_flag(self.flags_6, 1)
     }
 
     pub fn has_trainer(&self) -> bool {
-        extract_flag!(self.flags_6, 2)
+        extract_flag(self.flags_6, 2)
     }
 
     pub fn ignore_mirroring(&self) -> bool {
-        extract_flag!(self.flags_6, 3)
+        extract_flag(self.flags_6, 3)
     }
 
     pub fn mapping_number(&self) -> u8 {
-        let low = self.flags_6 >> 4;
-        let high = self.flags_7 & 0xF0;
+        let low = extract_bits_shift(self.flags_6, 4, 4);
+        let high = extract_bits_mask_msb(self.flags_7, 4);
         high | low
     }
 }
