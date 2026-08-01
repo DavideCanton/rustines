@@ -285,7 +285,7 @@ impl Instr {
     }
 
     pub fn get_fname_for_print(&self, data: &[u8]) -> String {
-        let codes = data
+        let mut codes = data
             .iter()
             .skip(1)
             .map(|v| hex!(v))
@@ -293,27 +293,33 @@ impl Instr {
             .collect::<Vec<_>>()
             .join("");
 
+        if !codes.is_empty() {
+            codes = format!("${}", codes);
+        }
+
         let pieces: Vec<&str> = self.fname.split("::").collect();
 
-        let instr_name = pieces.first().unwrap();
+        let instr_name = pieces.first().unwrap().to_uppercase();
         let address = pieces.get(1);
 
         let ret = match address {
-            Some(&"implied") => instr_name.to_string(),
-            Some(&"zeropage_x") => format!("{} {}+x", instr_name, codes),
+            Some(&"implied") => instr_name,
             Some(&"zeropage") => format!("{} {}", instr_name, codes),
+            Some(&"zeropage_x") => format!("{} {}, X", instr_name, codes),
+            Some(&"zeropage_y") => format!("{} {}, Y", instr_name, codes),
             Some(&"immediate") => format!("{} #{}", instr_name, codes),
-            Some(&"absolute_x") => format!("{} [{}+x]", instr_name, codes),
-            Some(&"absolute_y") => format!("{} [{}+y]", instr_name, codes),
-            Some(&"absolute") => format!("{} [{}]", instr_name, codes),
-            Some(&"indirect_x") => format!("{} x({})", instr_name, codes),
-            Some(&"indirect_y") => format!("{} y({})", instr_name, codes),
+            Some(&"absolute") => format!("{} {}", instr_name, codes),
+            Some(&"absolute_x") => format!("{} {}, X", instr_name, codes),
+            Some(&"absolute_y") => format!("{} {}, Y", instr_name, codes),
+            Some(&"indirect_x") => format!("{} ({}, X)", instr_name, codes),
+            Some(&"indirect_y") => format!("{} ({}), Y", instr_name, codes),
+            Some(&"indirect") => format!("{} ({})", instr_name, codes),
             _ => match self.ilen {
-                1 => instr_name.to_string(),
+                1 => instr_name,
                 _ => format!("{} {}", instr_name, codes),
             },
         };
-        format!("({:#04X}) {}", data[0], ret)
+        format!("({:#04X}) {}", data[0], ret.trim())
     }
 }
 
