@@ -40,6 +40,11 @@ macro_rules! hex {
 }
 
 #[macro_export]
+macro_rules! hex16 {
+    ( $val:expr ) => {{ format!("{:04X}", $val) }};
+}
+
+#[macro_export]
 macro_rules! bin {
     ( $val:expr ) => {{ format!("{:08b}", $val) }};
 }

@@ -2,6 +2,7 @@ use log::{Level, log_enabled, trace};
 
 use crate::{
     arch::{bus::Bus, instrs::instr_table::INSTR_TABLE, registers::*},
+    hex16,
     utils::bit_utils::*,
 };
 
@@ -42,9 +43,9 @@ impl Cpu {
 
         let cycles = (instr.fun)(self, bus);
 
-        if self.trace {
-            trace!("open bus value = {:#04X}", bus.open_bus_value());
-        }
+        // if self.trace {
+        //     trace!("open bus value = {:#04X}", bus.open_bus_value());
+        // }
 
         self.clock += cycles as u64;
         cycles
@@ -204,7 +205,11 @@ impl Cpu {
         let low = bus.fetch(0xFFFE);
         let high = bus.fetch(0xFFFF);
 
-        self.registers.pc = to_u16(low, high);
+        let pc = to_u16(low, high);
+        self.registers.pc = pc;
+        if self.trace {
+            trace!("An IRQ has occurred, jumping to {}", hex16!(pc));
+        }
     }
 
     pub fn perform_nmi(&mut self, bus: &mut Bus) {
@@ -215,14 +220,24 @@ impl Cpu {
 
         let nmi_address = to_u16(low, high);
         self.registers.pc = nmi_address;
+        if self.trace {
+            trace!(
+                "A NMI interrupt has occurred, jumping to {}",
+                hex16!(nmi_address)
+            );
+        }
     }
 
     fn perform_rst(&mut self, bus: &mut Bus) {
         let low = bus.fetch(0xFFFC);
         let high = bus.fetch(0xFFFD);
 
-        self.registers.pc = to_u16(low, high);
+        let pc = to_u16(low, high);
+        self.registers.pc = pc;
         self.rst = false;
+        if self.trace {
+            trace!("A RST has occurred, jumping to {}", hex16!(pc));
+        }
     }
 
     fn handle_interrupts(&mut self, bus: &mut Bus) {
