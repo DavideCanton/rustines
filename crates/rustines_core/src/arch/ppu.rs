@@ -3,6 +3,8 @@ use crate::{
     renderer::Renderer,
 };
 
+const OPEN_BUS_DECAY_FRAMES: u8 = 25;
+
 #[derive(Debug)]
 pub struct Sprite {
     x: u8,
@@ -30,6 +32,8 @@ pub struct Ppu {
     ctrl: u8,
     mask: u8,
     status: u8,
+    open_bus_value: u8,
+    open_bus_decay_timer: u8,
 
     vram_address: u16,
     temp_address: u16,
@@ -57,6 +61,8 @@ impl Ppu {
             ctrl: 0,
             mask: 0,
             status: 0,
+            open_bus_value: 0,
+            open_bus_decay_timer: 0,
 
             vram_address: 0,
             temp_address: 0,
@@ -99,6 +105,14 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
+        // update open bus
+        if self.open_bus_decay_timer > 0 {
+            self.open_bus_decay_timer -= 1;
+            if self.open_bus_decay_timer == 0 {
+                self.open_bus_value = 0;
+            }
+        }
+
         self.cycle += 1;
         if self.cycle >= 341 {
             self.cycle = 0;
@@ -129,6 +143,7 @@ impl Ppu {
     }
 
     pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &dyn Mapper) {
+        self.write_open_bus(value);
         match reg_index {
             0 => self.ctrl = value,
             1 => self.mask = value,
@@ -173,13 +188,20 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_read(&mut self, reg_index: u16, open_bus_value: u8, mapper: &dyn Mapper) -> u8 {
+    fn write_open_bus(&mut self, value: u8) {
+        self.open_bus_value = value;
+        self.open_bus_decay_timer = OPEN_BUS_DECAY_FRAMES;
+    }
+
+    pub fn cpu_read(&mut self, reg_index: u16, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
                 let res = self.status;
                 self.status &= 0x7F;
                 self.address_latch = 0;
-                (res & 0xE0) | (open_bus_value & 0x1F)
+                let data = (res & 0xE0) | (self.open_bus_value & 0x1F);
+                self.write_open_bus(data);
+                data
             }
             7 => {
                 let mut data = self.data_buffer;
@@ -189,9 +211,10 @@ impl Ppu {
                     data = self.data_buffer;
                 }
                 self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                self.write_open_bus(data);
                 data
             }
-            _ => open_bus_value,
+            _ => self.open_bus_value,
         }
     }
 

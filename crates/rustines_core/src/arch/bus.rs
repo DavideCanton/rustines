@@ -84,8 +84,7 @@ impl Bus {
                 self.nes_ram[ind as usize]
             } else if address <= 0x3FFF {
                 let ind = address & 0x0007;
-                self.ppu
-                    .cpu_read(ind, self.open_bus_value, self.mapper.as_ref())
+                self.ppu.cpu_read(ind, self.mapper.as_ref())
             } else if address <= 0x4017 {
                 if address == 0x4016 {
                     self.controller1.read()
