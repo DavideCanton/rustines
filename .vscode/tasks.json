@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run AccuracyCoin",
+            "command": "./run.sh",
+            "type": "shell",
+            "args": [
+                "-f","-t","roms/AccuracyCoin.nes"
+            ],
+            "problemMatcher": [
+                "$codelldb-rustc"
+            ],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        }
+    ]
+}
