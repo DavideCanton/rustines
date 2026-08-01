@@ -19,13 +19,13 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg);
+    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, true);
     bus.store(addr, cpu.registers.a_reg);
     5
 }
 
 pub fn absolute_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.y_reg);
+    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.y_reg, true);
     bus.store(addr, cpu.registers.a_reg);
     5
 }
@@ -37,7 +37,7 @@ pub fn indirect_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_indirect_indexed(bus);
+    let (addr, _) = cpu.decode_indirect_indexed(bus, true);
     bus.store(addr, cpu.registers.a_reg);
     6
 }

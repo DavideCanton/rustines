@@ -28,7 +28,7 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg);
+    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, false);
     let val = bus.fetch(addr);
     do_ldy(cpu, val);
     4 + boundary

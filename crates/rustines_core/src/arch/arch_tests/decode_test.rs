@@ -47,7 +47,7 @@ mod tests {
         bus.store(cpu.registers.pc + 2, 0xab);
         cpu.registers.pc += 3;
 
-        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10);
+        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
         assert_eq!(addr, 0xabdd);
     }
@@ -60,7 +60,7 @@ mod tests {
         bus.store(cpu.registers.pc + 2, 0xff);
         cpu.registers.pc += 3;
 
-        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10);
+        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
         assert_eq!(addr, 0x000e);
     }
@@ -135,7 +135,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, _) = cpu.decode_indirect_indexed(&mut bus);
+        let (addr, _) = cpu.decode_indirect_indexed(&mut bus, false);
 
         assert_eq!(addr, 0xabdd);
     }
@@ -152,7 +152,7 @@ mod tests {
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, _) = cpu.decode_indirect_indexed(&mut bus);
+        let (addr, _) = cpu.decode_indirect_indexed(&mut bus, false);
 
         assert_eq!(addr, 0x000e);
     }

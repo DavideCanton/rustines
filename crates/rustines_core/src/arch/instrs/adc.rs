@@ -28,14 +28,14 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg);
+    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, false);
     let val = bus.fetch(addr);
     do_adc(cpu, val);
     4 + boundary
 }
 
 pub fn absolute_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.y_reg);
+    let (addr, boundary) = cpu.decode_absolute_indexed(bus, cpu.registers.y_reg, false);
     let val = bus.fetch(addr);
     do_adc(cpu, val);
     4 + boundary
@@ -49,7 +49,7 @@ pub fn indirect_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, boundary) = cpu.decode_indirect_indexed(bus);
+    let (addr, boundary) = cpu.decode_indirect_indexed(bus, false);
     let val = bus.fetch(addr);
     do_adc(cpu, val);
     5 + boundary
