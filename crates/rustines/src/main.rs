@@ -92,7 +92,8 @@ pub fn main() {
     let window_size = window.inner_size();
     let surface_texture =
         SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-    let pixels = Pixels::new(INNER_W, INNER_H, surface_texture).unwrap();
+    let pixels =
+        Pixels::new(INNER_W, INNER_H, surface_texture).expect("Cannot create pixels buffer");
 
     let renderer = PixelsRenderer::new(pixels, INNER_W as usize, INNER_H as usize);
 
