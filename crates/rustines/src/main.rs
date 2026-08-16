@@ -24,6 +24,7 @@ fn init_logger(file: Option<fs::File>, trace_cpu: bool) {
     let mut builder = builder
         .filter(None, LevelFilter::Debug)
         .filter(Some("wgpu"), LevelFilter::Warn)
+        .filter(Some("winit"), LevelFilter::Warn)
         .filter(Some("naga"), LevelFilter::Warn);
 
     if trace_cpu {
