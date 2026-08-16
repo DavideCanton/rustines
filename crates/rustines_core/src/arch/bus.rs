@@ -75,17 +75,34 @@ impl Bus {
         self.open_bus_value
     }
 
+    pub fn peek(&self, address: u16) -> u8 {
+        match address {
+            0x0000..=0x1FFF => self.nes_ram[(address & 0x07FF) as usize],
+            0x8000..=0xFFFF => self.mapper.fetch_prg_rom(address),
+
+            0x2002 => self.ppu.status_bits_shadow(),
+            0x2007 => self.ppu.vram_buffer_shadow(self.mapper.as_ref()),
+            0x4016 => self.controller1.peek_state(),
+            0x4017 => self.controller2.peek_state(),
+
+            // Per qualsiasi altro registro I/O restituiamo 0 o un valore sicuro
+            _ => 0,
+        }
+    }
+
     pub fn fetch(&mut self, address: u16) -> u8 {
         let mut update_open_bus = true;
-        let value = {
-            if address <= 0x1FFF {
+        let value = match address {
+            0x0000..=0x1FFF => {
                 update_open_bus = false;
                 let ind = address & 0x07FF;
                 self.nes_ram[ind as usize]
-            } else if address <= 0x3FFF {
+            }
+            0x2000..=0x3FFF => {
                 let ind = address & 0x0007;
                 self.ppu.cpu_read(ind, self.mapper.as_ref())
-            } else if address <= 0x4017 {
+            }
+            0x4000..=0x4017 => {
                 if address == 0x4016 {
                     self.controller1.read()
                 } else if address == 0x4017 {
@@ -97,18 +114,19 @@ impl Bus {
                     update_open_bus = false;
                     0
                 }
-            } else if address <= 0x5FFF {
+            }
+            0x4018..=0x5FFF => {
                 update_open_bus = false;
                 self.open_bus_value
-            } else if address <= 0x7FFF {
+            }
+            0x6000..=0x7FFF => {
                 if self.mapper.has_prg_ram() {
                     self.mapper.fetch_prg_ram(address)
                 } else {
                     self.open_bus_value
                 }
-            } else {
-                self.mapper.fetch_prg_rom(address)
             }
+            _ => self.mapper.fetch_prg_rom(address),
         };
         if update_open_bus {
             self.open_bus_value = value;
@@ -117,34 +135,41 @@ impl Bus {
     }
 
     pub fn store(&mut self, address: u16, val: u8) {
-        if address <= 0x1FFF {
-            let ind = address & 0x07FF;
-            replace(&mut self.nes_ram, ind as usize, val);
-        } else if address <= 0x3FFF {
-            let ind = address & 0x0007;
-            self.ppu.cpu_write(ind as u8, val, self.mapper.as_ref());
-        } else if address <= 0x4017 {
-            if address == 0x4016 {
-                self.controller1.write(val);
-                self.controller2.write(val);
-            } else if address == 0x4014 {
-                // DMA implementation
-                // TODO stall?
-                let mut buf = vec![0; 256];
-                let start = (val as u16) << 8;
-                self.fetch_many(start, &mut buf);
-                self.ppu_mut().dma_copy(&buf);
-            } else {
-                let ind = address & 0xFF;
-                self.apu.cpu_write(ind as u8, val);
+        match address {
+            0x0000..=0x1FFF => {
+                let ind = address & 0x07FF;
+                replace(&mut self.nes_ram, ind as usize, val);
             }
-        } else if address <= 0x401F {
-            // do nothing here
-        } else if address <= 0x7FFF {
-            self.mapper.store_prg_ram(address, val);
-        } else {
-            self.mapper.store_prg_rom(address, val);
-        }
+            0x2000..=0x3FFF => {
+                let ind = address & 0x0007;
+                self.ppu.cpu_write(ind as u8, val, self.mapper.as_ref());
+            }
+            0x4000..=0x4017 => {
+                if address == 0x4016 {
+                    self.controller1.write(val);
+                    self.controller2.write(val);
+                } else if address == 0x4014 {
+                    // DMA implementation
+                    // TODO stall?
+                    let mut buf = vec![0; 256];
+                    let start = (val as u16) << 8;
+                    self.fetch_many(start, &mut buf);
+                    self.ppu_mut().dma_copy(&buf);
+                } else {
+                    let ind = address & 0xFF;
+                    self.apu.cpu_write(ind as u8, val);
+                }
+            }
+            0x4018..=0x401F => {
+                // do nothing here
+            }
+            0x4020..=0x7FFF => {
+                self.mapper.store_prg_ram(address, val);
+            }
+            _ => {
+                self.mapper.store_prg_rom(address, val);
+            }
+        };
     }
 
     pub fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {

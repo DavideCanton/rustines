@@ -44,7 +44,7 @@ impl NesController {
     }
 
     pub fn read(&mut self) -> u8 {
-        let value = (self.shift_register & 1) | 0x40;
+        let value = self.peek_state();
 
         if !self.strobe {
             self.shift_register >>= 1;
@@ -62,5 +62,9 @@ impl NesController {
     pub fn released(&mut self, key: NesKey) {
         trace!("Controller {}, released {key:?}", self.number);
         self.buttons[key as usize] = false;
+    }
+
+    pub fn peek_state(&self) -> u8 {
+        (self.shift_register & 1) | 0x40
     }
 }

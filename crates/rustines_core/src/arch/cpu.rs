@@ -52,11 +52,11 @@ impl Cpu {
     }
 
     fn trace_instr(&mut self, bus: &mut Bus) {
-        let opcode = bus.fetch(self.registers.pc);
+        let pc = self.registers.pc;
+        let opcode = bus.peek(pc);
         let instr = &INSTR_TABLE[opcode as usize];
-        let ilen = instr.ilen;
-        let mut buf = vec![0; ilen];
-        bus.fetch_many(self.registers.pc, &mut buf);
+        let ilen = instr.ilen as u16;
+        let buf: Vec<u8> = (pc..pc + ilen).map(|addr| bus.peek(addr)).collect();
 
         let instr_str = instr.get_fname_for_print(&buf);
 

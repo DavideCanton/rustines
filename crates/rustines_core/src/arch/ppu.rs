@@ -196,20 +196,15 @@ impl Ppu {
     pub fn cpu_read(&mut self, reg_index: u16, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
-                let res = self.status;
+                let data = self.status_bits_shadow();
                 self.status &= 0x7F;
                 self.address_latch = 0;
-                let data = (res & 0xE0) | (self.open_bus_value & 0x1F);
                 self.write_open_bus(data);
                 data
             }
             7 => {
-                let mut data = self.data_buffer;
+                let data = self.vram_buffer_shadow(mapper);
                 self.data_buffer = self.vram_read(self.vram_address, mapper);
-
-                if self.vram_address >= 0x3F00 {
-                    data = self.data_buffer;
-                }
                 self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
                 self.write_open_bus(data);
                 data
@@ -397,6 +392,18 @@ impl Ppu {
 
     pub(crate) fn oam_data(&self) -> &[u8] {
         &self.oam_data
+    }
+
+    pub(crate) fn status_bits_shadow(&self) -> u8 {
+        (self.status & 0xE0) | (self.open_bus_value & 0x1F)
+    }
+
+    pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
+        if self.vram_address >= 0x3F00 {
+            self.vram_read(self.vram_address, mapper)
+        } else {
+            self.data_buffer
+        }
     }
 }
 
