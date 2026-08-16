@@ -47,6 +47,7 @@ pub struct Ppu {
 
     nmi_interrupt: bool,
     frame_ready: bool,
+    is_odd_frame: bool,
 
     renderer: Box<dyn Renderer>,
 }
@@ -76,6 +77,7 @@ impl Ppu {
 
             nmi_interrupt: false,
             frame_ready: false,
+            is_odd_frame: false,
             renderer,
         }
     }
@@ -114,13 +116,22 @@ impl Ppu {
         }
 
         self.cycle += 1;
+
+        let rendering_enabled = (self.mask & 0x18) != 0; // Controlla se BG o Sprite sono attivi
+        if self.scanline == -1 && self.cycle == 339 && rendering_enabled && self.is_odd_frame {
+            self.cycle = 0;
+            self.scanline = 0;
+            self.is_odd_frame = !self.is_odd_frame;
+        }
+
         if self.cycle >= 341 {
             self.cycle = 0;
             self.scanline += 1;
 
-            if self.scanline >= 261 {
+            if self.scanline > 260 {
                 self.scanline = -1;
                 self.frame_ready = true;
+                self.is_odd_frame = !self.is_odd_frame;
                 self.renderer.draw();
             }
         }
@@ -129,7 +140,7 @@ impl Ppu {
             self.render_scanline(mapper);
         }
 
-        if self.scanline == 241 && self.cycle == 1 {
+        if self.scanline == 241 && self.cycle == 0 {
             self.status |= 0x80;
             if (self.ctrl & 0x80) != 0 {
                 self.nmi_interrupt = true;

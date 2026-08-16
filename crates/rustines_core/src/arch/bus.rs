@@ -13,6 +13,7 @@ pub struct Bus {
     controller1: NesController,
     controller2: NesController,
     open_bus_value: u8,
+    cnt: u8,
 }
 
 impl Bus {
@@ -25,6 +26,22 @@ impl Bus {
             controller1: NesController::new(1),
             controller2: NesController::new(2),
             open_bus_value: 0,
+            cnt: 0,
+        }
+    }
+
+    pub fn start_tick(&mut self) {
+        self.cnt = 0;
+    }
+
+    pub fn check(&self, exp: u8) -> Option<u8> {
+        if exp == 0xFF {
+            // invalid opcodes
+            None
+        } else if self.cnt != exp {
+            Some(self.cnt)
+        } else {
+            None
         }
     }
 
@@ -61,6 +78,14 @@ impl Bus {
     pub fn ppu_tick(&mut self) {
         let mapper = self.mapper.as_mut();
         self.ppu.tick(mapper);
+    }
+
+    pub fn ppu_ticks(&mut self) {
+        self.cnt += 1;
+        let mapper = self.mapper.as_mut();
+        for _ in 0..3 {
+            self.ppu.tick(mapper);
+        }
     }
 
     pub fn controller1_mut(&mut self) -> &mut NesController {
@@ -131,10 +156,13 @@ impl Bus {
         if update_open_bus {
             self.open_bus_value = value;
         }
+        self.ppu_ticks();
         value
     }
 
     pub fn store(&mut self, address: u16, val: u8) {
+        self.ppu_ticks();
+
         match address {
             0x0000..=0x1FFF => {
                 let ind = address & 0x07FF;

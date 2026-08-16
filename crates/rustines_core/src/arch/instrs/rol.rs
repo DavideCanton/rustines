@@ -1,6 +1,7 @@
 use crate::arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write};
 
-pub fn accumulator(cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
+pub fn accumulator(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    cpu.burn_internal_cycle(bus);
     let val = cpu.registers.a_reg;
     let res = do_rol(cpu, val);
     cpu.registers.a_reg = res;
@@ -32,7 +33,7 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, false);
+    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, true);
     let val = bus.fetch(addr);
     let res = do_rol(cpu, val);
     store_with_dummy_write(bus, addr, val, res);

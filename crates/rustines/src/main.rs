@@ -229,11 +229,6 @@ fn cpu_tick(bus: &mut core::Bus, cpu: &mut core::Cpu) -> bool {
     if cycles == 0xFF {
         return true;
     }
-    let ppu_cycles = cycles * 3;
-
-    for _ in 0..ppu_cycles {
-        bus.ppu_tick();
-    }
 
     if bus.ppu_mut().nmi_requested() {
         bus.ppu_mut().clear_nmi();
