@@ -130,7 +130,6 @@ impl Bus {
             0x4016 => self.controller1.peek_state(),
             0x4017 => self.controller2.peek_state(),
 
-            // Per qualsiasi altro registro I/O restituiamo 0 o un valore sicuro
             _ => 0,
         }
     }
@@ -139,7 +138,6 @@ impl Bus {
         let mut update_open_bus = true;
         let value = match address {
             0x0000..=0x1FFF => {
-                update_open_bus = false;
                 let ind = address & 0x07FF;
                 self.nes_ram[ind as usize]
             }
@@ -157,7 +155,7 @@ impl Bus {
                     self.apu.cpu_read(ind, self.open_bus_value)
                 } else {
                     update_open_bus = false;
-                    0
+                    self.open_bus_value
                 }
             }
             0x4018..=0x5FFF => {
@@ -194,6 +192,8 @@ impl Bus {
             );
         }
 
+        self.open_bus_value = val;
+
         self.ppu_ticks();
 
         match address {
@@ -215,6 +215,9 @@ impl Bus {
                     let mut buf = vec![0; 256];
                     let start = (val as u16) << 8;
                     self.fetch_many(start, &mut buf);
+                    if let Some(&last_dma_byte) = buf.last() {
+                        self.open_bus_value = last_dma_byte;
+                    }
                     self.ppu_mut().dma_copy(&buf);
                 } else {
                     let ind = address & 0xFF;
