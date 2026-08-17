@@ -18,7 +18,7 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-fn init_logger(file: Option<fs::File>, trace_cpu: bool) {
+fn init_logger(file: Option<fs::File>, trace: u8) {
     let mut builder = Builder::from_default_env();
 
     let mut builder = builder
@@ -27,8 +27,11 @@ fn init_logger(file: Option<fs::File>, trace_cpu: bool) {
         .filter(Some("winit"), LevelFilter::Warn)
         .filter(Some("naga"), LevelFilter::Warn);
 
-    if trace_cpu {
-        builder = builder.filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace)
+    if trace > 0 {
+        builder = builder.filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace);
+    }
+    if trace > 1 {
+        builder = builder.filter(Some("rustines_core::arch::bus"), LevelFilter::Trace);
     }
 
     if let Some(file) = file {
@@ -66,9 +69,9 @@ pub fn main() {
 
     if args.log_file {
         let log_file = fs::File::create("log.log").expect("Cannot create log file");
-        init_logger(Some(log_file), args.trace_cpu);
+        init_logger(Some(log_file), args.trace_level);
     } else {
-        init_logger(None, args.trace_cpu);
+        init_logger(None, args.trace_level);
     }
 
     let file_path = path::PathBuf::from(&args.file_path);
@@ -104,6 +107,7 @@ pub fn main() {
     let mut cpu = core::Cpu::new();
     if args.trace_boot {
         cpu.set_trace(true);
+        bus.set_trace(true);
     }
 
     let mut limiter = FpsLimiter::new(60.0);
@@ -176,6 +180,7 @@ fn debug_keys(
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;
         cpu.set_trace(true);
+        bus.set_trace(true);
     }
 }
 

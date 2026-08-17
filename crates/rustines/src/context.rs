@@ -12,8 +12,13 @@ pub struct RustinesArgs {
     pub file_path: String,
     #[clap(short = 'f', long = "log_file", help = "Log to file")]
     pub log_file: bool,
-    #[clap(short = 't', long = "trace_cpu", help = "Trace cpu")]
-    pub trace_cpu: bool,
+    #[clap(
+        short = 't',
+        long = "trace_level",
+        help = "Trace level (1=CPU, 2=CPU+BUS)",
+        default_value = "0"
+    )]
+    pub trace_level: u8,
     #[clap(short = 'b', long = "trace_boot", help = "Trace boot")]
     pub trace_boot: bool,
 }

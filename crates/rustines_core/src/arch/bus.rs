@@ -1,3 +1,5 @@
+use log::trace;
+
 use crate::arch::apu::Apu;
 use crate::arch::controller::NesController;
 use crate::arch::mappers::mapper::{Mapper, MapperBox};
@@ -13,7 +15,8 @@ pub struct Bus {
     controller1: NesController,
     controller2: NesController,
     open_bus_value: u8,
-    cnt: u8,
+    cycles_cnt: u8,
+    trace: bool,
 }
 
 impl Bus {
@@ -26,20 +29,25 @@ impl Bus {
             controller1: NesController::new(1),
             controller2: NesController::new(2),
             open_bus_value: 0,
-            cnt: 0,
+            cycles_cnt: 0,
+            trace: false,
         }
     }
 
+    pub fn set_trace(&mut self, trace: bool) {
+        self.trace = trace;
+    }
+
     pub fn start_tick(&mut self) {
-        self.cnt = 0;
+        self.cycles_cnt = 0;
     }
 
     pub fn check(&self, exp: u8) -> Option<u8> {
         if exp == 0xFF {
             // invalid opcodes
             None
-        } else if self.cnt != exp {
-            Some(self.cnt)
+        } else if self.cycles_cnt != exp {
+            Some(self.cycles_cnt)
         } else {
             None
         }
@@ -75,13 +83,25 @@ impl Bus {
         self.mapper.as_ref()
     }
 
-    pub fn ppu_tick(&mut self) {
-        let mapper = self.mapper.as_mut();
-        self.ppu.tick(mapper);
+    pub fn burn_ppu_ticks(&mut self) {
+        if self.trace {
+            trace!("Burning PPU ticks")
+        }
+        self.internal_ppu_ticks();
     }
 
-    pub fn ppu_ticks(&mut self) {
-        self.cnt += 1;
+    fn ppu_ticks(&mut self) {
+        if self.trace {
+            trace!("PPU ticks from fetch/store")
+        }
+        self.internal_ppu_ticks();
+    }
+
+    fn internal_ppu_ticks(&mut self) {
+        if self.trace {
+            trace!("Advancing PPU")
+        }
+        self.cycles_cnt += 1;
         let mapper = self.mapper.as_mut();
         for _ in 0..3 {
             self.ppu.tick(mapper);
@@ -124,7 +144,7 @@ impl Bus {
                 self.nes_ram[ind as usize]
             }
             0x2000..=0x3FFF => {
-                let ind = address & 0x0007;
+                let ind = (address & 0x0007) as u8;
                 self.ppu.cpu_read(ind, self.mapper.as_ref())
             }
             0x4000..=0x4017 => {
@@ -156,11 +176,24 @@ impl Bus {
         if update_open_bus {
             self.open_bus_value = value;
         }
+        if self.trace {
+            trace!(
+                "Fetch from bus, ADDRESS = {:#06X}, VALUE = {:#04X}",
+                address, value
+            );
+        }
         self.ppu_ticks();
         value
     }
 
     pub fn store(&mut self, address: u16, val: u8) {
+        if self.trace {
+            trace!(
+                "Store in bus, ADDRESS = {:#06X}, VALUE = {:#04X}",
+                address, val
+            );
+        }
+
         self.ppu_ticks();
 
         match address {

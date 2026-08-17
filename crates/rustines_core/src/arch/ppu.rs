@@ -107,14 +107,6 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
-        // update open bus
-        if self.open_bus_decay_timer > 0 {
-            self.open_bus_decay_timer -= 1;
-            if self.open_bus_decay_timer == 0 {
-                self.open_bus_value = 0;
-            }
-        }
-
         self.cycle += 1;
 
         let rendering_enabled = (self.mask & 0x18) != 0; // Controlla se BG o Sprite sono attivi
@@ -133,6 +125,14 @@ impl Ppu {
                 self.frame_ready = true;
                 self.is_odd_frame = !self.is_odd_frame;
                 self.renderer.draw();
+
+                // update open bus
+                if self.open_bus_decay_timer > 0 {
+                    self.open_bus_decay_timer -= 1;
+                    if self.open_bus_decay_timer == 0 {
+                        self.open_bus_value = 0;
+                    }
+                }
             }
         }
 
@@ -185,7 +185,7 @@ impl Ppu {
                     self.address_latch = 1;
                 } else {
                     self.temp_address = (self.temp_address & 0xFF00) | (value as u16);
-                    self.vram_address = self.temp_address;
+                    self.vram_address = self.temp_address & 0x3FFF;
                     self.address_latch = 0;
                 }
             }
@@ -204,7 +204,7 @@ impl Ppu {
         self.open_bus_decay_timer = OPEN_BUS_DECAY_FRAMES;
     }
 
-    pub fn cpu_read(&mut self, reg_index: u16, mapper: &dyn Mapper) -> u8 {
+    pub fn cpu_read(&mut self, reg_index: u8, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
                 let data = self.status_bits_shadow();

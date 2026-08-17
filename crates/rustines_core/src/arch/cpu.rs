@@ -13,6 +13,7 @@ pub struct Cpu {
     rst: bool,
     trace: bool,
     clock: u64,
+    function_level: u32,
 }
 
 impl Cpu {
@@ -25,21 +26,30 @@ impl Cpu {
             rst: true,
             trace: false,
             clock: 0,
+            function_level: 0,
         }
     }
 
     pub fn tick(&mut self, bus: &mut Bus) -> u8 {
         self.handle_interrupts(bus);
 
-        if log_enabled!(Level::Trace) && self.trace {
-            self.trace_instr(bus);
-        }
-
         bus.start_tick();
         let old_pc = self.registers.pc;
         let opcode = bus.fetch(old_pc);
 
         let instr = &INSTR_TABLE[opcode as usize];
+
+        if instr.fname.contains("rts") {
+            self.function_level -= 1;
+        }
+
+        if log_enabled!(Level::Trace) && self.trace {
+            self.trace_instr(bus);
+        }
+
+        if instr.fname.contains("jsr") {
+            self.function_level += 1;
+        }
 
         self.registers.pc += instr.ilen as u16;
 
@@ -58,7 +68,7 @@ impl Cpu {
     }
 
     pub fn burn_internal_cycle(&mut self, bus: &mut Bus) {
-        bus.ppu_ticks();
+        bus.burn_ppu_ticks();
     }
 
     fn trace_instr(&mut self, bus: &mut Bus) {
@@ -71,7 +81,8 @@ impl Cpu {
         let instr_str = instr.get_fname_for_print(&buf);
 
         trace!(
-            "TRACE CPU -> PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:010}]",
+            "TRACE CPU -> LEVEL: {:<2} | PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:010}]",
+            self.function_level,
             self.registers.pc,
             instr_str,
             self.registers.a_reg,
