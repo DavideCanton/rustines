@@ -14,7 +14,7 @@ mod tests {
             cpu.registers.clear_c();
         }
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
         let old_pc = cpu.registers.pc;
 
         let cycles = branches::bcc(&mut cpu, &mut bus);
@@ -22,7 +22,7 @@ mod tests {
         assert_eq!(3, cycles);
 
         let val = cpu.registers.pc;
-        assert_eq!(val, old_pc - 1);
+        assert_eq!(val, old_pc);
     }
 
     #[test]
@@ -36,7 +36,7 @@ mod tests {
             cpu.registers.set_c();
         }
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
         let old_pc = cpu.registers.pc;
 
         let cycles = branches::bcc(&mut cpu, &mut bus);
@@ -44,7 +44,7 @@ mod tests {
         assert_eq!(2, cycles);
 
         let val = cpu.registers.pc;
-        assert_eq!(val, old_pc);
+        assert_eq!(val, old_pc + 1);
     }
 
     #[test]
@@ -58,7 +58,7 @@ mod tests {
             cpu.registers.set_c();
         }
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
         let old_pc = cpu.registers.pc;
 
         let cycles = branches::bcs(&mut cpu, &mut bus);
@@ -66,7 +66,7 @@ mod tests {
         assert_eq!(3, cycles);
 
         let val = cpu.registers.pc;
-        assert_eq!(val, old_pc - 1);
+        assert_eq!(val, old_pc);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod tests {
             cpu.registers.clear_c();
         }
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
         let old_pc = cpu.registers.pc;
 
         let cycles = branches::bcs(&mut cpu, &mut bus);
@@ -88,6 +88,6 @@ mod tests {
         assert_eq!(2, cycles);
 
         let val = cpu.registers.pc;
-        assert_eq!(val, old_pc);
+        assert_eq!(val, old_pc + 1);
     }
 }

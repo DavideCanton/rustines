@@ -8,7 +8,7 @@ mod tests {
 
         bus.store(cpu.registers.pc + 1, 0xcd);
         bus.store(cpu.registers.pc + 2, 0xab);
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         let addr = cpu.decode_absolute(&mut bus);
 
@@ -20,7 +20,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let addr = cpu.decode_immediate(&mut bus);
 
@@ -32,7 +32,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage(&mut bus);
 
@@ -45,7 +45,7 @@ mod tests {
 
         bus.store(cpu.registers.pc + 1, 0xcd);
         bus.store(cpu.registers.pc + 2, 0xab);
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
@@ -58,7 +58,7 @@ mod tests {
 
         bus.store(cpu.registers.pc + 1, 0xfe);
         bus.store(cpu.registers.pc + 2, 0xff);
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
@@ -70,7 +70,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage_indexed(&mut bus, 0x10);
 
@@ -82,7 +82,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xfe);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage_indexed(&mut bus, 0x10);
 
@@ -94,7 +94,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0xdd, 0xcd);
         bus.store(0xde, 0xab);
@@ -111,7 +111,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xff);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0x0f, 0xcd);
         bus.store(0x10, 0xab);
@@ -128,7 +128,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0xcd, 0xcd);
         bus.store(0xce, 0xab);
@@ -145,7 +145,7 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         bus.store(cpu.registers.pc + 1, 0xcd);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0xcd, 0xfe);
         bus.store(0xce, 0xff);

@@ -10,7 +10,7 @@ mod tests {
         bus.store(cpu.registers.pc, 0xa9);
         bus.store(cpu.registers.pc + 1, 0xDE);
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let cycles = lda::immediate(&mut cpu, &mut bus);
 
@@ -28,7 +28,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0xDE);
         bus.store(0xDE, 0xAB);
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         let cycles = lda::zeropage(&mut cpu, &mut bus);
 
@@ -46,7 +46,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0xDE);
         bus.store(0xEE, 0xAB);
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         cpu.registers.x_reg = 0x10;
 
@@ -66,7 +66,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0xFF);
         bus.store(0x0, 0xAB);
 
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         cpu.registers.x_reg = 0x1;
 
@@ -87,7 +87,7 @@ mod tests {
         bus.store(cpu.registers.pc + 2, 0x12);
         bus.store(0x1234, 0xAB);
 
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         let cycles = lda::absolute(&mut cpu, &mut bus);
 
@@ -106,7 +106,7 @@ mod tests {
         bus.store(cpu.registers.pc + 2, 0x12);
         bus.store(0x1244, 0xAB);
 
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         cpu.registers.x_reg = 0x10;
 
@@ -126,7 +126,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0xFE);
         bus.store(cpu.registers.pc + 2, 0xFF);
 
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         bus.store(0x0001, 0xAB);
 
@@ -148,7 +148,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0x34);
         bus.store(cpu.registers.pc + 2, 0x12);
 
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         bus.store(0x1244, 0xAB);
 
@@ -170,7 +170,7 @@ mod tests {
         bus.store(cpu.registers.pc + 1, 0xFE);
         bus.store(cpu.registers.pc + 2, 0xFF);
 
-        cpu.registers.pc += 3;
+        cpu.registers.pc += 1;
 
         bus.store(0x0001, 0xAB);
 
@@ -190,7 +190,7 @@ mod tests {
 
         bus.store(cpu.registers.pc, 0xa1);
         bus.store(cpu.registers.pc + 1, 0x34);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0x44, 0x10);
         bus.store(0x45, 0x11);
@@ -213,7 +213,7 @@ mod tests {
 
         bus.store(cpu.registers.pc, 0xa1);
         bus.store(cpu.registers.pc + 1, 0xFE);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0x0E, 0x10);
         bus.store(0x0F, 0x11);
@@ -236,7 +236,7 @@ mod tests {
 
         bus.store(cpu.registers.pc, 0xb1);
         bus.store(cpu.registers.pc + 1, 0x34);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0x34, 0x10);
         bus.store(0x35, 0x11);
@@ -259,7 +259,7 @@ mod tests {
 
         bus.store(cpu.registers.pc, 0xb1);
         bus.store(cpu.registers.pc + 1, 0x0E);
-        cpu.registers.pc += 2;
+        cpu.registers.pc += 1;
 
         bus.store(0x0E, 0xFE);
         bus.store(0x0F, 0xFF);
