@@ -1,11 +1,22 @@
-use crate::arch::{bus::Bus, cpu::Cpu};
+use crate::{
+    arch::{bus::Bus, cpu::Cpu},
+    utils::bit_utils::to_u16,
+};
 
 pub fn jsr(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let return_addr = cpu.registers.pc.wrapping_add(1); // next instr address
-    let addr = cpu.decode_absolute(bus);
+    let low = bus.fetch(cpu.registers.pc);
+    cpu.registers.pc = cpu.registers.pc.wrapping_add(1);
+
     cpu.burn_internal_cycle(bus);
+
+    let return_addr = cpu.registers.pc;
+
     cpu.push16(bus, return_addr);
-    cpu.registers.pc = addr;
+
+    let high = bus.fetch(cpu.registers.pc);
+
+    cpu.registers.pc = to_u16(low, high);
+
     6
 }
 

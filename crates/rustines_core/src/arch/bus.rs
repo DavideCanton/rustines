@@ -131,7 +131,7 @@ impl Bus {
             0x4016 => self.controller1.peek_state(),
             0x4017 => self.controller2.peek_state(),
 
-            _ => 0,
+            _ => self.open_bus_value,
         }
     }
 
@@ -151,7 +151,7 @@ impl Bus {
                     self.controller1.read()
                 } else if address == 0x4017 {
                     self.controller2.read()
-                } else if address <= 0x4015 {
+                } else if address == 0x4015 {
                     let ind = address & 0xFF;
                     self.apu.cpu_read(ind, self.open_bus_value)
                 } else {
