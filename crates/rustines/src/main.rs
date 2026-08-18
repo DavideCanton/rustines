@@ -25,7 +25,8 @@ fn init_logger(file: Option<fs::File>, trace: u8) {
         .filter(None, LevelFilter::Debug)
         .filter(Some("wgpu"), LevelFilter::Warn)
         .filter(Some("winit"), LevelFilter::Warn)
-        .filter(Some("naga"), LevelFilter::Warn);
+        .filter(Some("naga"), LevelFilter::Warn)
+        .format_timestamp(None);
 
     if trace > 0 {
         builder = builder.filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace);
