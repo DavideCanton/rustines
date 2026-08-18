@@ -34,8 +34,9 @@ impl Cpu {
         self.handle_interrupts(bus);
 
         bus.start_tick();
-        let old_pc = self.registers.pc;
-        let opcode = bus.fetch(old_pc);
+
+        let pc = self.registers.pc;
+        let opcode = bus.fetch(self.registers.pc);
 
         let instr = &INSTR_TABLE[opcode as usize];
 
@@ -51,7 +52,7 @@ impl Cpu {
             self.function_level += 1;
         }
 
-        self.registers.pc += instr.ilen as u16;
+        self.registers.pc = self.registers.pc.wrapping_add(1);
 
         let cycles = (instr.fun)(self, bus);
 
@@ -60,7 +61,7 @@ impl Cpu {
         if let Some(cnt) = bus.check(cycles) {
             panic!(
                 "Bus tick count mismatch: expected {}, got {}, pc = {:#06X}, opcode = {:#04X}, instr = {}",
-                cycles, cnt, old_pc, opcode, instr.fname,
+                cycles, cnt, pc, opcode, instr.fname,
             );
         }
 
@@ -155,18 +156,26 @@ impl Cpu {
 
     // decode functions
 
-    pub fn decode_absolute(&self, bus: &mut Bus) -> u16 {
-        let low = bus.fetch(self.registers.pc - 2);
-        let high = bus.fetch(self.registers.pc - 1);
+    pub fn decode_absolute(&mut self, bus: &mut Bus) -> u16 {
+        let low = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
+        let high = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
         to_u16(low, high)
     }
 
-    pub fn decode_immediate(&self, bus: &mut Bus) -> u8 {
-        bus.fetch(self.registers.pc - 1)
+    pub fn decode_immediate(&mut self, bus: &mut Bus) -> u8 {
+        let val = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+        val
     }
 
-    pub fn decode_zeropage(&self, bus: &mut Bus) -> u8 {
-        bus.fetch(self.registers.pc - 1)
+    pub fn decode_zeropage(&mut self, bus: &mut Bus) -> u8 {
+        let val = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+        val
     }
 
     pub fn decode_absolute_indexed(
@@ -175,20 +184,30 @@ impl Cpu {
         offset: u8,
         is_write: bool,
     ) -> (u16, u8) {
-        let low = bus.fetch(self.registers.pc - 2);
-        let high = bus.fetch(self.registers.pc - 1);
-        read_with_dummy(bus, low, high, offset, is_write)
+        let low = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
+        let high = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
+        bus.read_with_dummy(low, high, offset, is_write)
     }
 
     pub fn decode_zeropage_indexed(&mut self, bus: &mut Bus, offset: u8) -> u8 {
-        let addr = bus.fetch(self.registers.pc - 1);
+        let addr = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
         self.burn_internal_cycle(bus);
+
         addr.wrapping_add(offset)
     }
 
     pub fn decode_indexed_indirect(&mut self, bus: &mut Bus) -> u16 {
-        let base = bus.fetch(self.registers.pc - 1);
+        let base = bus.fetch(self.registers.pc);
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
         self.burn_internal_cycle(bus);
+
         let op = (base.wrapping_add(self.registers.x_reg)) as u16 & 0xFF;
         let low = bus.fetch(op);
         let high = bus.fetch((op + 1) & 0xFF);
@@ -196,11 +215,14 @@ impl Cpu {
         to_u16(low, high)
     }
 
-    pub fn decode_indirect_indexed(&self, bus: &mut Bus, is_write: bool) -> (u16, u8) {
-        let op = bus.fetch(self.registers.pc - 1) as u16;
+    pub fn decode_indirect_indexed(&mut self, bus: &mut Bus, is_write: bool) -> (u16, u8) {
+        let op = bus.fetch(self.registers.pc) as u16;
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+
         let low = bus.fetch(op);
         let high = bus.fetch((op + 1) & 0xFF);
-        read_with_dummy(bus, low, high, self.registers.y_reg, is_write)
+
+        bus.read_with_dummy(low, high, self.registers.y_reg, is_write)
     }
 
     pub fn set_trace(&mut self, value: bool) {
@@ -272,25 +294,5 @@ impl Cpu {
         self.irq = false;
         self.nmi = false;
         self.rst = false;
-    }
-}
-
-fn read_with_dummy(bus: &mut Bus, low: u8, high: u8, offset: u8, is_write: bool) -> (u16, u8) {
-    let base = to_u16(low, high);
-    let raw_addr = base.wrapping_add(offset as u16);
-    let boundary = if low.overflowing_add(offset).1 { 1 } else { 0 };
-    let dummy_addr = (base & 0xFF00) | (raw_addr & 0x00FF);
-
-    // dummy read
-    if boundary == 1 {
-        // if boundary is crossed, do a dummy read in any case at the wrong address
-        let _ = bus.fetch(dummy_addr);
-        (raw_addr, 1)
-    } else {
-        // if boundary is not crossed, only write instructions do a dummy read to the same address
-        if is_write {
-            let _ = bus.fetch(dummy_addr);
-        }
-        (raw_addr, 0)
     }
 }

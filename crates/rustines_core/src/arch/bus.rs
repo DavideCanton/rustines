@@ -6,6 +6,7 @@ use crate::arch::mappers::mapper::{Mapper, MapperBox};
 
 use crate::arch::common::replace;
 use crate::arch::ppu::Ppu;
+use crate::utils::bit_utils::to_u16;
 
 pub struct Bus {
     nes_ram: [u8; 2048],
@@ -245,6 +246,26 @@ impl Bus {
     pub fn store_many(&mut self, addr: u16, values: &[u8]) {
         for (addr, v) in (addr..).zip(values.iter()) {
             self.store(addr, *v);
+        }
+    }
+
+    pub fn read_with_dummy(&mut self, low: u8, high: u8, offset: u8, is_write: bool) -> (u16, u8) {
+        let base = to_u16(low, high);
+        let raw_addr = base.wrapping_add(offset as u16);
+        let boundary = if low.overflowing_add(offset).1 { 1 } else { 0 };
+        let dummy_addr = (base & 0xFF00) | (raw_addr & 0x00FF);
+
+        // dummy read
+        if boundary == 1 {
+            // if boundary is crossed, do a dummy read in any case at the wrong address
+            let _ = self.fetch(dummy_addr);
+            (raw_addr, 1)
+        } else {
+            // if boundary is not crossed, only write instructions do a dummy read to the same address
+            if is_write {
+                let _ = self.fetch(dummy_addr);
+            }
+            (raw_addr, 0)
         }
     }
 }

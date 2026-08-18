@@ -33,19 +33,24 @@ pub fn bvc(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_branch(flag: bool, cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    let offset = bus.fetch(cpu.registers.pc) as i8 as i16;
+    cpu.registers.pc = cpu.registers.pc.wrapping_add(1);
+
     if flag {
-        let addr = cpu.decode_zeropage(bus) as i8;
         let old_pc = cpu.registers.pc;
-        let new_pc = old_pc.wrapping_add(addr as u16);
+        let new_pc = old_pc.wrapping_add(offset as u16);
+
         cpu.burn_internal_cycle(bus);
         cpu.registers.pc = new_pc;
+
         let page_crossed = (old_pc & 0xFF00) != (new_pc & 0xFF00);
         if page_crossed {
             cpu.burn_internal_cycle(bus);
+            4
+        } else {
+            3
         }
-        if page_crossed { 4 } else { 3 }
     } else {
-        let _offset = bus.fetch(cpu.registers.pc - 1);
         2
     }
 }
