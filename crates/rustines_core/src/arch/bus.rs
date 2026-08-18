@@ -148,10 +148,13 @@ impl Bus {
             }
             0x4000..=0x4017 => {
                 if address == 0x4016 {
-                    self.controller1.read()
+                    let data = self.controller1.read();
+                    (data & 0x1F) | (self.open_bus_value & 0xE0)
                 } else if address == 0x4017 {
-                    self.controller2.read()
+                    let data = self.controller2.read();
+                    (data & 0x1F) | (self.open_bus_value & 0xE0)
                 } else if address == 0x4015 {
+                    update_open_bus = false;
                     let ind = address & 0xFF;
                     self.apu.cpu_read(ind, self.open_bus_value)
                 } else {

@@ -78,7 +78,8 @@ impl Apu {
                     ret |= 1;
                 }
 
-                ret
+                // bit 5 is always open bus
+                (ret & 0xDF) | (open_bus_value & 0x20)
             }
             _ => open_bus_value,
         }
