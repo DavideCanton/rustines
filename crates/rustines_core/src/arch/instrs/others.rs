@@ -2,11 +2,6 @@ use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::utils::bit_utils::*;
 
-pub fn nop(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    cpu.burn_internal_cycle(bus);
-    2
-}
-
 pub fn brk(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let pc = cpu.registers.pc;
 

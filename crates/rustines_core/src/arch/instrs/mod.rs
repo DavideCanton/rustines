@@ -20,6 +20,7 @@ pub mod lda;
 pub mod ldx;
 pub mod ldy;
 pub mod lsr;
+pub mod nop;
 pub mod ora;
 pub mod others;
 pub mod pushpop;

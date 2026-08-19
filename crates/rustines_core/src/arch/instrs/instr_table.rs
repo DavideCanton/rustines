@@ -13,7 +13,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ora::indirect_x, 2),                   // 01
     Instr::error(),                               // 02
     Instr::error(),                               // 03
-    Instr::error(),                               // 04
+    instr!(nop::zeropage, 2),                     // 04
     instr!(ora::zeropage, 2),                     // 05
     instr!(asl::zeropage, 2),                     // 06
     Instr::error(),                               // 07
@@ -21,7 +21,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ora::immediate, 2),                    // 09
     instr!(asl::accumulator, 1),                  // 0a
     Instr::error(),                               // 0b
-    Instr::error(),                               // 0c
+    instr!(nop::absolute, 3),                     // 0c
     instr!(ora::absolute, 3),                     // 0d
     instr!(asl::absolute, 3),                     // 0e
     Instr::error(),                               // 0f
@@ -29,7 +29,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ora::indirect_y, 2),                   // 11
     Instr::error(),                               // 12
     Instr::error(),                               // 13
-    Instr::error(),                               // 14
+    instr!(nop::zeropage_x, 2),                   // 14
     instr!(ora::zeropage_x, 2),                   // 15
     instr!(asl::zeropage_x, 2),                   // 16
     Instr::error(),                               // 17
@@ -37,7 +37,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ora::absolute_y, 3),                   // 19
     Instr::error(),                               // 1a
     Instr::error(),                               // 1b
-    Instr::error(),                               // 1c
+    instr!(nop::absolute_x, 3),                   // 1c
     instr!(ora::absolute_x, 3),                   // 1d
     instr!(asl::absolute_x, 3),                   // 1e
     Instr::error(),                               // 1f
@@ -61,7 +61,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(and::indirect_y, 2),                   // 31
     Instr::error(),                               // 32
     Instr::error(),                               // 33
-    Instr::error(),                               // 34
+    instr!(nop::zeropage_x, 2),                   // 34
     instr!(and::zeropage_x, 2),                   // 35
     instr!(rol::zeropage_x, 2),                   // 36
     Instr::error(),                               // 37
@@ -69,7 +69,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(and::absolute_y, 3),                   // 39
     Instr::error(),                               // 3a
     Instr::error(),                               // 3b
-    Instr::error(),                               // 3c
+    instr!(nop::absolute_x, 3),                   // 3c
     instr!(and::absolute_x, 3),                   // 3d
     instr!(rol::absolute_x, 3),                   // 3e
     Instr::error(),                               // 3f
@@ -77,7 +77,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(eor::indirect_x, 2),                   // 41
     Instr::error(),                               // 42
     Instr::error(),                               // 43
-    Instr::error(),                               // 44
+    instr!(nop::zeropage, 2),                     // 44
     instr!(eor::zeropage, 2),                     // 45
     instr!(lsr::zeropage, 2),                     // 46
     Instr::error(),                               // 47
@@ -93,7 +93,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(eor::indirect_y, 2),                   // 51
     Instr::error(),                               // 52
     Instr::error(),                               // 53
-    Instr::error(),                               // 54
+    instr!(nop::zeropage_x, 2),                   // 54
     instr!(eor::zeropage_x, 2),                   // 55
     instr!(lsr::zeropage_x, 2),                   // 56
     Instr::error(),                               // 57
@@ -101,7 +101,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(eor::absolute_y, 3),                   // 59
     Instr::error(),                               // 5a
     Instr::error(),                               // 5b
-    Instr::error(),                               // 5c
+    instr!(nop::absolute_x, 3),                   // 5c
     instr!(eor::absolute_x, 3),                   // 5d
     instr!(lsr::absolute_x, 3),                   // 5e
     Instr::error(),                               // 5f
@@ -109,7 +109,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(adc::indirect_x, 2),                   // 61
     Instr::error(),                               // 62
     Instr::error(),                               // 63
-    Instr::error(),                               // 64
+    instr!(nop::zeropage, 2),                     // 64
     instr!(adc::zeropage, 2),                     // 65
     instr!(ror::zeropage, 2),                     // 66
     Instr::error(),                               // 67
@@ -125,7 +125,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(adc::indirect_y, 2),                   // 71
     Instr::error(),                               // 72
     Instr::error(),                               // 73
-    Instr::error(),                               // 74
+    instr!(nop::zeropage_x, 2),                   // 74
     instr!(adc::zeropage_x, 2),                   // 75
     instr!(ror::zeropage_x, 2),                   // 76
     Instr::error(),                               // 77
@@ -133,20 +133,20 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(adc::absolute_y, 3),                   // 79
     Instr::error(),                               // 7a
     Instr::error(),                               // 7b
-    Instr::error(),                               // 7c
+    instr!(nop::absolute_x, 3),                   // 7c
     instr!(adc::absolute_x, 3),                   // 7d
     instr!(ror::absolute_x, 3),                   // 7e
     Instr::error(),                               // 7f
-    Instr::error(),                               // 80
+    instr!(nop::immediate, 2),                    // 80
     instr!(sta::indirect_x, 2),                   // 81
-    Instr::error(),                               // 82
+    instr!(nop::immediate, 2),                    // 82
     Instr::error(),                               // 83
     instr!(sty::zeropage, 2),                     // 84
     instr!(sta::zeropage, 2),                     // 85
     instr!(stx::zeropage, 2),                     // 86
     Instr::error(),                               // 87
     instr!(dey::implied, 1),                      // 88
-    Instr::error(),                               // 89
+    instr!(nop::immediate, 2),                    // 89
     instr!(transfers::txa, "txa::implied", 1),    // 8a
     Instr::error(),                               // 8b
     instr!(sty::absolute, 3),                     // 8c
@@ -203,7 +203,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     Instr::error(),                               // bf
     instr!(cpy::immediate, 2),                    // c0
     instr!(cmp::indirect_x, 2),                   // c1
-    Instr::error(),                               // c2
+    instr!(nop::immediate, 2),                    // c2
     Instr::error(),                               // c3
     instr!(cpy::zeropage, 2),                     // c4
     instr!(cmp::zeropage, 2),                     // c5
@@ -221,7 +221,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cmp::indirect_y, 2),                   // d1
     Instr::error(),                               // d2
     Instr::error(),                               // d3
-    Instr::error(),                               // d4
+    instr!(nop::zeropage_x, 2),                   // d4
     instr!(cmp::zeropage_x, 2),                   // d5
     instr!(dec::zeropage_x, 2),                   // d6
     Instr::error(),                               // d7
@@ -229,13 +229,13 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cmp::absolute_y, 3),                   // d9
     Instr::error(),                               // da
     Instr::error(),                               // db
-    Instr::error(),                               // dc
+    instr!(nop::absolute_x, 3),                   // dc
     instr!(cmp::absolute_x, 3),                   // dd
     instr!(dec::absolute_x, 3),                   // de
     Instr::error(),                               // df
     instr!(cpx::immediate, 2),                    // e0
     instr!(sbc::indirect_x, 2),                   // e1
-    Instr::error(),                               // e2
+    instr!(nop::immediate, 2),                    // e2
     Instr::error(),                               // e3
     instr!(cpx::zeropage, 2),                     // e4
     instr!(sbc::zeropage, 2),                     // e5
@@ -243,7 +243,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     Instr::error(),                               // e7
     instr!(inx::implied, 1),                      // e8
     instr!(sbc::immediate, 2),                    // e9
-    instr!(others::nop, "nop::implied", 1),       // ea
+    instr!(nop::implied, 1),                      // ea
     Instr::error(),                               // eb
     instr!(cpx::absolute, 3),                     // ec
     instr!(sbc::absolute, 3),                     // ed
@@ -253,7 +253,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(sbc::indirect_y, 2),                   // f1
     Instr::error(),                               // f2
     Instr::error(),                               // f3
-    Instr::error(),                               // f4
+    instr!(nop::zeropage_x, 2),                   // f4
     instr!(sbc::zeropage_x, 2),                   // f5
     instr!(inc::zeropage_x, 2),                   // f6
     Instr::error(),                               // f7
@@ -261,7 +261,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(sbc::absolute_y, 3),                   // f9
     Instr::error(),                               // fa
     Instr::error(),                               // fb
-    Instr::error(),                               // fc
+    instr!(nop::absolute_x, 3),                   // fc
     instr!(sbc::absolute_x, 3),                   // fd
     instr!(inc::absolute_x, 3),                   // fe
     instr!(error_fn, 255),                        // ff
