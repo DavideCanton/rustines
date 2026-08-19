@@ -55,7 +55,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     5 + boundary
 }
 
-fn do_cmp(cpu: &mut Cpu, val: u8) {
+pub(crate) fn do_cmp(cpu: &mut Cpu, val: u8) {
     let a_reg = cpu.registers.a_reg;
     let res = (a_reg as u16).wrapping_sub(val as u16);
 

@@ -204,11 +204,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cpy::immediate, 2),                    // c0
     instr!(cmp::indirect_x, 2),                   // c1
     instr!(nop::immediate, 2),                    // c2
-    Instr::error(),                               // c3
+    instr!(dcp::indirect_x, 2),                   // c3
     instr!(cpy::zeropage, 2),                     // c4
     instr!(cmp::zeropage, 2),                     // c5
     instr!(dec::zeropage, 2),                     // c6
-    Instr::error(),                               // c7
+    instr!(dcp::zeropage, 2),                     // c7
     instr!(iny::implied, 1),                      // c8
     instr!(cmp::immediate, 2),                    // c9
     instr!(dex::implied, 1),                      // ca
@@ -216,23 +216,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cpy::absolute, 3),                     // cc
     instr!(cmp::absolute, 3),                     // cd
     instr!(dec::absolute, 3),                     // ce
-    Instr::error(),                               // cf
+    instr!(dcp::absolute, 3),                     // cf
     instr!(branches::bne, "bne", 2),              // d0
     instr!(cmp::indirect_y, 2),                   // d1
     Instr::error(),                               // d2
-    Instr::error(),                               // d3
+    instr!(dcp::indirect_y, 2),                   // d3
     instr!(nop::zeropage_x, 2),                   // d4
     instr!(cmp::zeropage_x, 2),                   // d5
     instr!(dec::zeropage_x, 2),                   // d6
-    Instr::error(),                               // d7
+    instr!(dcp::zeropage_x, 2),                   // d7
     instr!(flags::cld, "cld::implied", 1),        // d8
     instr!(cmp::absolute_y, 3),                   // d9
     Instr::error(),                               // da
-    Instr::error(),                               // db
+    instr!(dcp::absolute_y, 3),                   // db
     instr!(nop::absolute_x, 3),                   // dc
     instr!(cmp::absolute_x, 3),                   // dd
     instr!(dec::absolute_x, 3),                   // de
-    Instr::error(),                               // df
+    instr!(dcp::absolute_x, 3),                   // df
     instr!(cpx::immediate, 2),                    // e0
     instr!(sbc::indirect_x, 2),                   // e1
     instr!(nop::immediate, 2),                    // e2
