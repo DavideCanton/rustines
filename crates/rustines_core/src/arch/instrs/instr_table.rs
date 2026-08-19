@@ -236,11 +236,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cpx::immediate, 2),                    // e0
     instr!(sbc::indirect_x, 2),                   // e1
     instr!(nop::immediate, 2),                    // e2
-    Instr::error(),                               // e3
+    instr!(isc::indirect_x, 2),                   // e3
     instr!(cpx::zeropage, 2),                     // e4
     instr!(sbc::zeropage, 2),                     // e5
     instr!(inc::zeropage, 2),                     // e6
-    Instr::error(),                               // e7
+    instr!(isc::zeropage, 2),                     // e7
     instr!(inx::implied, 1),                      // e8
     instr!(sbc::immediate, 2),                    // e9
     instr!(nop::implied, 1),                      // ea
@@ -248,23 +248,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(cpx::absolute, 3),                     // ec
     instr!(sbc::absolute, 3),                     // ed
     instr!(inc::absolute, 3),                     // ee
-    Instr::error(),                               // ef
+    instr!(isc::absolute, 3),                     // ef
     instr!(branches::beq, "beq", 2),              // f0
     instr!(sbc::indirect_y, 2),                   // f1
     Instr::error(),                               // f2
-    Instr::error(),                               // f3
+    instr!(isc::indirect_y, 2),                   // f3
     instr!(nop::zeropage_x, 2),                   // f4
     instr!(sbc::zeropage_x, 2),                   // f5
     instr!(inc::zeropage_x, 2),                   // f6
-    Instr::error(),                               // f7
+    instr!(isc::zeropage_x, 2),                   // f7
     instr!(flags::sed, "sed::implied", 1),        // f8
     instr!(sbc::absolute_y, 3),                   // f9
     Instr::error(),                               // fa
-    Instr::error(),                               // fb
+    instr!(isc::absolute_y, 3),                   // fb
     instr!(nop::absolute_x, 3),                   // fc
     instr!(sbc::absolute_x, 3),                   // fd
     instr!(inc::absolute_x, 3),                   // fe
-    instr!(error_fn, 255),                        // ff
+    instr!(isc::absolute_x, 3),                   // ff
 ];
 
 pub type InstrFn = fn(&mut Cpu, &mut Bus) -> u8;

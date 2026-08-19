@@ -63,7 +63,7 @@ fn compute_c(res: u16) -> bool {
     res < 0x100
 }
 
-fn do_sbc(cpu: &mut Cpu, val: u8) {
+pub(crate) fn do_sbc(cpu: &mut Cpu, val: u8) {
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(val as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
