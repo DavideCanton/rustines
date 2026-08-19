@@ -44,11 +44,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(subroutines::jsr, "jsr::absolute", 3), // 20
     instr!(and::indirect_x, 2),                   // 21
     Instr::error(),                               // 22
-    Instr::error(),                               // 23
+    instr!(rla::indirect_x, 2),                   // 23
     instr!(bit::zeropage, 2),                     // 24
     instr!(and::zeropage, 2),                     // 25
     instr!(rol::zeropage, 2),                     // 26
-    Instr::error(),                               // 27
+    instr!(rla::zeropage, 2),                     // 27
     instr!(pushpop::plp, "plp::implied", 1),      // 28
     instr!(and::immediate, 2),                    // 29
     instr!(rol::accumulator, 1),                  // 2a
@@ -56,23 +56,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(bit::absolute, 3),                     // 2c
     instr!(and::absolute, 3),                     // 2d
     instr!(rol::absolute, 3),                     // 2e
-    Instr::error(),                               // 2f
+    instr!(rla::absolute, 3),                     // 2f
     instr!(branches::bmi, "bmi", 2),              // 30
     instr!(and::indirect_y, 2),                   // 31
     Instr::error(),                               // 32
-    Instr::error(),                               // 33
+    instr!(rla::indirect_y, 2),                   // 33
     instr!(nop::zeropage_x, 2),                   // 34
     instr!(and::zeropage_x, 2),                   // 35
     instr!(rol::zeropage_x, 2),                   // 36
-    Instr::error(),                               // 37
+    instr!(rla::zeropage_x, 2),                   // 37
     instr!(flags::sec, "sec::implied", 1),        // 38
     instr!(and::absolute_y, 3),                   // 39
     Instr::error(),                               // 3a
-    Instr::error(),                               // 3b
+    instr!(rla::absolute_y, 3),                   // 3b
     instr!(nop::absolute_x, 3),                   // 3c
     instr!(and::absolute_x, 3),                   // 3d
     instr!(rol::absolute_x, 3),                   // 3e
-    Instr::error(),                               // 3f
+    instr!(rla::absolute_x, 3),                   // 3f
     instr!(subroutines::rti, "rti::absolute", 1), // 40
     instr!(eor::indirect_x, 2),                   // 41
     Instr::error(),                               // 42

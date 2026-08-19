@@ -26,6 +26,7 @@ pub mod nop;
 pub mod ora;
 pub mod others;
 pub mod pushpop;
+pub mod rla;
 pub mod rol;
 pub mod ror;
 pub mod sax;
