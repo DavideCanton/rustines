@@ -33,6 +33,7 @@ pub mod rra;
 pub mod sax;
 pub mod sbc;
 pub mod slo;
+pub mod sre;
 pub mod sta;
 pub mod stx;
 pub mod sty;

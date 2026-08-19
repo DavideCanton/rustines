@@ -76,11 +76,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(subroutines::rti, "rti::absolute", 1), // 40
     instr!(eor::indirect_x, 2),                   // 41
     Instr::error(),                               // 42
-    Instr::error(),                               // 43
+    instr!(sre::indirect_x, 2),                   // 43
     instr!(nop::zeropage, 2),                     // 44
     instr!(eor::zeropage, 2),                     // 45
     instr!(lsr::zeropage, 2),                     // 46
-    Instr::error(),                               // 47
+    instr!(sre::zeropage, 2),                     // 47
     instr!(pushpop::pha, "pha::implied", 1),      // 48
     instr!(eor::immediate, 2),                    // 49
     instr!(lsr::accumulator, 1),                  // 4a
@@ -88,23 +88,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(jmp::absolute, 3),                     // 4c
     instr!(eor::absolute, 3),                     // 4d
     instr!(lsr::absolute, 3),                     // 4e
-    Instr::error(),                               // 4f
+    instr!(sre::absolute, 3),                     // 4f
     instr!(branches::bvc, "bvc", 2),              // 50
     instr!(eor::indirect_y, 2),                   // 51
     Instr::error(),                               // 52
-    Instr::error(),                               // 53
+    instr!(sre::indirect_y, 2),                   // 53
     instr!(nop::zeropage_x, 2),                   // 54
     instr!(eor::zeropage_x, 2),                   // 55
     instr!(lsr::zeropage_x, 2),                   // 56
-    Instr::error(),                               // 57
+    instr!(sre::zeropage_x, 2),                   // 57
     instr!(flags::cli, "cli::implied", 1),        // 58
     instr!(eor::absolute_y, 3),                   // 59
     Instr::error(),                               // 5a
-    Instr::error(),                               // 5b
+    instr!(sre::absolute_y, 3),                   // 5b
     instr!(nop::absolute_x, 3),                   // 5c
     instr!(eor::absolute_x, 3),                   // 5d
     instr!(lsr::absolute_x, 3),                   // 5e
-    Instr::error(),                               // 5f
+    instr!(sre::absolute_x, 3),                   // 5f
     instr!(subroutines::rts, "rts::absolute", 1), // 60
     instr!(adc::indirect_x, 2),                   // 61
     Instr::error(),                               // 62
