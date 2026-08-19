@@ -12,11 +12,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(others::brk, "brk::implied", 1),       // 00
     instr!(ora::indirect_x, 2),                   // 01
     Instr::error(),                               // 02
-    Instr::error(),                               // 03
+    instr!(slo::indirect_x, 2),                   // 03
     instr!(nop::zeropage, 2),                     // 04
     instr!(ora::zeropage, 2),                     // 05
     instr!(asl::zeropage, 2),                     // 06
-    Instr::error(),                               // 07
+    instr!(slo::zeropage, 2),                     // 07
     instr!(pushpop::php, "php::implied", 1),      // 08
     instr!(ora::immediate, 2),                    // 09
     instr!(asl::accumulator, 1),                  // 0a
@@ -24,23 +24,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(nop::absolute, 3),                     // 0c
     instr!(ora::absolute, 3),                     // 0d
     instr!(asl::absolute, 3),                     // 0e
-    Instr::error(),                               // 0f
+    instr!(slo::absolute, 3),                     // 0f
     instr!(branches::bpl, "bpl", 2),              // 10
     instr!(ora::indirect_y, 2),                   // 11
     Instr::error(),                               // 12
-    Instr::error(),                               // 13
+    instr!(slo::indirect_y, 2),                   // 13
     instr!(nop::zeropage_x, 2),                   // 14
     instr!(ora::zeropage_x, 2),                   // 15
     instr!(asl::zeropage_x, 2),                   // 16
-    Instr::error(),                               // 17
+    instr!(slo::zeropage_x, 2),                   // 17
     instr!(flags::clc, "clc::implied", 1),        // 18
     instr!(ora::absolute_y, 3),                   // 19
     Instr::error(),                               // 1a
-    Instr::error(),                               // 1b
+    instr!(slo::absolute_y, 3),                   // 1b
     instr!(nop::absolute_x, 3),                   // 1c
     instr!(ora::absolute_x, 3),                   // 1d
     instr!(asl::absolute_x, 3),                   // 1e
-    Instr::error(),                               // 1f
+    instr!(slo::absolute_x, 3),                   // 1f
     instr!(subroutines::jsr, "jsr::absolute", 3), // 20
     instr!(and::indirect_x, 2),                   // 21
     Instr::error(),                               // 22

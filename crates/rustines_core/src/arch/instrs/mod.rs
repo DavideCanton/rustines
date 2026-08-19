@@ -29,6 +29,7 @@ pub mod rol;
 pub mod ror;
 pub mod sax;
 pub mod sbc;
+pub mod slo;
 pub mod sta;
 pub mod stx;
 pub mod sty;
