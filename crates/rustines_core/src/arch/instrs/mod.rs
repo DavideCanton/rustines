@@ -16,6 +16,7 @@ pub mod instr_table;
 pub mod inx;
 pub mod iny;
 pub mod jmp;
+pub mod lax;
 pub mod lda;
 pub mod ldx;
 pub mod ldy;

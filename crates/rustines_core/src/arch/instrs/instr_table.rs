@@ -172,11 +172,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ldy::immediate, 2),                    // a0
     instr!(lda::indirect_x, 2),                   // a1
     instr!(ldx::immediate, 2),                    // a2
-    Instr::error(),                               // a3
+    instr!(lax::indirect_x, 2),                   // a3
     instr!(ldy::zeropage, 2),                     // a4
     instr!(lda::zeropage, 2),                     // a5
     instr!(ldx::zeropage, 2),                     // a6
-    Instr::error(),                               // a7
+    instr!(lax::zeropage, 2),                     // a7
     instr!(transfers::tay, "tay::implied", 1),    // a8
     instr!(lda::immediate, 2),                    // a9
     instr!(transfers::tax, "tax::implied", 1),    // aa
@@ -184,15 +184,15 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ldy::absolute, 3),                     // ac
     instr!(lda::absolute, 3),                     // ad
     instr!(ldx::absolute, 3),                     // ae
-    Instr::error(),                               // af
+    instr!(lax::absolute, 3),                     // af
     instr!(branches::bcs, "bcs", 2),              // b0
     instr!(lda::indirect_y, 2),                   // b1
     Instr::error(),                               // b2
-    Instr::error(),                               // b3
+    instr!(lax::indirect_y, 2),                   // b3
     instr!(ldy::zeropage_x, 2),                   // b4
     instr!(lda::zeropage_x, 2),                   // b5
     instr!(ldx::zeropage_y, 2),                   // b6
-    Instr::error(),                               // b7
+    instr!(lax::zeropage_y, 2),                   // b7
     instr!(flags::clv, "clv::implied", 1),        // b8
     instr!(lda::absolute_y, 3),                   // b9
     instr!(transfers::tsx, "tsx::implied", 1),    // ba
@@ -200,7 +200,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(ldy::absolute_x, 3),                   // bc
     instr!(lda::absolute_x, 3),                   // bd
     instr!(ldx::absolute_y, 3),                   // be
-    Instr::error(),                               // bf
+    instr!(lax::absolute_y, 3),                   // bf
     instr!(cpy::immediate, 2),                    // c0
     instr!(cmp::indirect_x, 2),                   // c1
     instr!(nop::immediate, 2),                    // c2
