@@ -1,6 +1,10 @@
 pub mod adc;
+pub mod alr;
+pub mod anc;
 pub mod and;
+pub mod arr;
 pub mod asl;
+pub mod axs;
 pub mod bit;
 pub mod branches;
 pub mod cmp;

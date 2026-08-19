@@ -20,7 +20,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(pushpop::php, "php::implied", 1),      // 08
     instr!(ora::immediate, 2),                    // 09
     instr!(asl::accumulator, 1),                  // 0a
-    Instr::error(),                               // 0b
+    instr!(anc::immediate, 2),                    // 0b
     instr!(nop::absolute, 3),                     // 0c
     instr!(ora::absolute, 3),                     // 0d
     instr!(asl::absolute, 3),                     // 0e
@@ -52,7 +52,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(pushpop::plp, "plp::implied", 1),      // 28
     instr!(and::immediate, 2),                    // 29
     instr!(rol::accumulator, 1),                  // 2a
-    Instr::error(),                               // 2b
+    instr!(anc::immediate, 2),                    // 2b
     instr!(bit::absolute, 3),                     // 2c
     instr!(and::absolute, 3),                     // 2d
     instr!(rol::absolute, 3),                     // 2e
@@ -84,7 +84,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(pushpop::pha, "pha::implied", 1),      // 48
     instr!(eor::immediate, 2),                    // 49
     instr!(lsr::accumulator, 1),                  // 4a
-    Instr::error(),                               // 4b
+    instr!(alr::immediate, 2),                    // 4b
     instr!(jmp::absolute, 3),                     // 4c
     instr!(eor::absolute, 3),                     // 4d
     instr!(lsr::absolute, 3),                     // 4e
@@ -116,7 +116,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(pushpop::pla, "pla::implied", 1),      // 68
     instr!(adc::immediate, 2),                    // 69
     instr!(ror::accumulator, 1),                  // 6a
-    Instr::error(),                               // 6b
+    instr!(arr::immediate, 2),                    // 6b
     instr!(jmp::indirect_absolute, 3),            // 6c
     instr!(adc::absolute, 3),                     // 6d
     instr!(ror::absolute, 3),                     // 6e
@@ -212,7 +212,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(iny::implied, 1),                      // c8
     instr!(cmp::immediate, 2),                    // c9
     instr!(dex::implied, 1),                      // ca
-    Instr::error(),                               // cb
+    instr!(axs::immediate, 2),                    // cb
     instr!(cpy::absolute, 3),                     // cc
     instr!(cmp::absolute, 3),                     // cd
     instr!(dec::absolute, 3),                     // ce
