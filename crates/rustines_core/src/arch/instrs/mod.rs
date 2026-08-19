@@ -27,6 +27,7 @@ pub mod others;
 pub mod pushpop;
 pub mod rol;
 pub mod ror;
+pub mod sax;
 pub mod sbc;
 pub mod sta;
 pub mod stx;

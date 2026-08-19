@@ -140,11 +140,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(nop::immediate, 2),                    // 80
     instr!(sta::indirect_x, 2),                   // 81
     instr!(nop::immediate, 2),                    // 82
-    Instr::error(),                               // 83
+    instr!(sax::indirect_x, 2),                   // 83
     instr!(sty::zeropage, 2),                     // 84
     instr!(sta::zeropage, 2),                     // 85
     instr!(stx::zeropage, 2),                     // 86
-    Instr::error(),                               // 87
+    instr!(sax::zeropage, 2),                     // 87
     instr!(dey::implied, 1),                      // 88
     instr!(nop::immediate, 2),                    // 89
     instr!(transfers::txa, "txa::implied", 1),    // 8a
@@ -152,7 +152,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(sty::absolute, 3),                     // 8c
     instr!(sta::absolute, 3),                     // 8d
     instr!(stx::absolute, 3),                     // 8e
-    Instr::error(),                               // 8f
+    instr!(sax::absolute, 3),                     // 8f
     instr!(branches::bcc, "bcc", 2),              // 90
     instr!(sta::indirect_y, 2),                   // 91
     Instr::error(),                               // 92
@@ -160,7 +160,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(sty::zeropage_x, 2),                   // 94
     instr!(sta::zeropage_x, 2),                   // 95
     instr!(stx::zeropage_y, 2),                   // 96
-    Instr::error(),                               // 97
+    instr!(sax::zeropage_y, 2),                   // 97
     instr!(transfers::tya, "tya::implied", 1),    // 98
     instr!(sta::absolute_y, 3),                   // 99
     instr!(transfers::txs, "txs::implied", 1),    // 9a
