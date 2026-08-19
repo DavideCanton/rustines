@@ -29,6 +29,7 @@ pub mod pushpop;
 pub mod rla;
 pub mod rol;
 pub mod ror;
+pub mod rra;
 pub mod sax;
 pub mod sbc;
 pub mod slo;

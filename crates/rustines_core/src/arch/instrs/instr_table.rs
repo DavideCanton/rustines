@@ -108,11 +108,11 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(subroutines::rts, "rts::absolute", 1), // 60
     instr!(adc::indirect_x, 2),                   // 61
     Instr::error(),                               // 62
-    Instr::error(),                               // 63
+    instr!(rra::indirect_x, 2),                   // 63
     instr!(nop::zeropage, 2),                     // 64
     instr!(adc::zeropage, 2),                     // 65
     instr!(ror::zeropage, 2),                     // 66
-    Instr::error(),                               // 67
+    instr!(rra::zeropage, 2),                     // 67
     instr!(pushpop::pla, "pla::implied", 1),      // 68
     instr!(adc::immediate, 2),                    // 69
     instr!(ror::accumulator, 1),                  // 6a
@@ -120,23 +120,23 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(jmp::indirect_absolute, 3),            // 6c
     instr!(adc::absolute, 3),                     // 6d
     instr!(ror::absolute, 3),                     // 6e
-    Instr::error(),                               // 6f
+    instr!(rra::absolute, 3),                     // 6f
     instr!(branches::bvs, "bvs", 2),              // 70
     instr!(adc::indirect_y, 2),                   // 71
     Instr::error(),                               // 72
-    Instr::error(),                               // 73
+    instr!(rra::indirect_y, 2),                   // 73
     instr!(nop::zeropage_x, 2),                   // 74
     instr!(adc::zeropage_x, 2),                   // 75
     instr!(ror::zeropage_x, 2),                   // 76
-    Instr::error(),                               // 77
+    instr!(rra::zeropage_x, 2),                   // 77
     instr!(flags::sei, "sei::implied", 1),        // 78
     instr!(adc::absolute_y, 3),                   // 79
     Instr::error(),                               // 7a
-    Instr::error(),                               // 7b
+    instr!(rra::absolute_y, 3),                   // 7b
     instr!(nop::absolute_x, 3),                   // 7c
     instr!(adc::absolute_x, 3),                   // 7d
     instr!(ror::absolute_x, 3),                   // 7e
-    Instr::error(),                               // 7f
+    instr!(rra::absolute_x, 3),                   // 7f
     instr!(nop::immediate, 2),                    // 80
     instr!(sta::indirect_x, 2),                   // 81
     instr!(nop::immediate, 2),                    // 82

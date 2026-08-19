@@ -55,7 +55,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     5 + boundary
 }
 
-fn do_adc(cpu: &mut Cpu, val: u8) {
+pub(crate) fn do_adc(cpu: &mut Cpu, val: u8) {
     let res = (cpu.registers.a_reg as u16) + (val as u16) + (cpu.registers.get_c() as u16);
     let res_a = (res & 0xFF) as u8;
     let old_a = cpu.registers.a_reg;
