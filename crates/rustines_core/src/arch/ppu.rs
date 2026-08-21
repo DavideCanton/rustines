@@ -215,7 +215,15 @@ impl Ppu {
             }
             7 => {
                 let data = self.vram_buffer_shadow(mapper);
-                self.data_buffer = self.vram_read(self.vram_address, mapper);
+
+                let current_addr = self.vram_address & 0x3FFF;
+                // when reading through $2007, buffer the nametable at addr - 0x1000
+                if current_addr >= 0x3F00 {
+                    self.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
+                } else {
+                    self.data_buffer = self.vram_read(current_addr, mapper);
+                }
+
                 self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
                 self.write_open_bus(data);
                 data
@@ -228,7 +236,7 @@ impl Ppu {
         addr &= 0x3FFF;
 
         match addr {
-            0x0000..=0x1FFF => 0,
+            0x0000..=0x1FFF => mapper.fetch_chr_rom(addr),
             0x2000..=0x3EFF => {
                 let idx = self.mirror_nametable_addr(addr, mapper.mirroring_mode());
                 self.nametables[idx]
