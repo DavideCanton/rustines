@@ -214,11 +214,18 @@ impl Ppu {
                 data
             }
             7 => {
-                let data = self.vram_buffer_shadow(mapper);
+                let mut data = self.vram_buffer_shadow(mapper);
 
                 let current_addr = self.vram_address & 0x3FFF;
+
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
+                    // if bit 0 of mask is 0, greyscale mode is enabled, mask the lower bits
+                    if (self.mask & 0x01) != 0 {
+                        data &= 0x30;
+                    }
+                    // when reading palette data, the upper two bits of the open bus are preserved
+                    data = (data & 0x3F) | (self.open_bus_value & 0xC0);
                     self.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
                 } else {
                     self.data_buffer = self.vram_read(current_addr, mapper);
