@@ -244,7 +244,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(inx::implied, 1),                      // e8
     instr!(sbc::immediate, 2),                    // e9
     instr!(nop::implied, 1),                      // ea
-    Instr::error(),                               // eb
+    instr!(sbc::immediate, 2),                    // eb
     instr!(cpx::absolute, 3),                     // ec
     instr!(sbc::absolute, 3),                     // ed
     instr!(inc::absolute, 3),                     // ee
