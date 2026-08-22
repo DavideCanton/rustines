@@ -164,7 +164,6 @@ impl Ppu {
         if self.scanline == -1 && self.cycle == 1 {
             self.status &= 0x7F;
             self.nmi_interrupt = false;
-            self.frame_ready = false;
         }
     }
 
