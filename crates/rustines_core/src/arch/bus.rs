@@ -85,16 +85,10 @@ impl Bus {
     }
 
     pub fn burn_cycle_from_cpu(&mut self) {
-        if self.trace {
-            trace!("Burn cycle from CPU")
-        }
         self.do_internal_cycle();
     }
 
     fn burn_cycle_from_bus(&mut self) {
-        if self.trace {
-            trace!("Burn cycle from BUS")
-        }
         self.do_internal_cycle();
     }
 

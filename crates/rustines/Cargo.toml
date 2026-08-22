@@ -10,7 +10,7 @@ winit = { workspace = true }
 pixels = { workspace = true }
 winit_input_helper = { workspace = true }
 log = { workspace = true }
-env_logger = { workspace = true }
 clap = { version = "4.6", features = ["derive"] }
 rustines-core = { path = "../rustines_core" }
 rustines-gui-utils = { path = "../rustines_gui_utils" }
+flexi_logger = { workspace = true }

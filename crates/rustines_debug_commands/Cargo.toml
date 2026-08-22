@@ -9,7 +9,7 @@ clap = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
-env_logger = { workspace = true }
+flexi_logger = { workspace = true }
 rustines-core = { path = "../rustines_core" }
 
 [[bin]]

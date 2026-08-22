@@ -3,12 +3,12 @@ mod renderer;
 
 use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 use clap::Parser;
-use env_logger::{Builder, Target};
-use log::{LevelFilter, info};
+use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
+use log::{LevelFilter, Record, info};
 use pixels::{Pixels, SurfaceTexture};
 use rustines_core as core;
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
-use std::{collections::HashMap, fs, path, sync::Arc};
+use std::{collections::HashMap, fs, io, path, sync::Arc};
 use winit::{
     dpi::LogicalSize,
     event::{Event, WindowEvent},
@@ -18,28 +18,40 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-fn init_logger(file: Option<fs::File>, trace: u8) {
-    let mut builder = Builder::from_default_env();
+#[must_use]
+fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
+    let mut log_spec_builder = LogSpecBuilder::new();
 
-    let mut builder = builder
-        .filter(None, LevelFilter::Debug)
-        .filter(Some("wgpu"), LevelFilter::Warn)
-        .filter(Some("winit"), LevelFilter::Warn)
-        .filter(Some("naga"), LevelFilter::Warn)
-        .format_timestamp(None);
+    log_spec_builder
+        .default(LevelFilter::Debug)
+        .module("wgpu", LevelFilter::Warn)
+        .module("winit", LevelFilter::Warn)
+        .module("naga", LevelFilter::Warn);
 
     if trace > 0 {
-        builder = builder.filter(Some("rustines_core::arch::cpu"), LevelFilter::Trace);
+        log_spec_builder.module("rustines_core::arch::cpu", LevelFilter::Trace);
     }
     if trace > 1 {
-        builder = builder.filter(Some("rustines_core::arch::bus"), LevelFilter::Trace);
+        log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
     }
+
+    let log_spec = log_spec_builder.build();
+
+    let mut logger_builder = Logger::with(log_spec);
 
     if let Some(file) = file {
-        builder = builder.target(Target::Pipe(Box::new(file)));
+        logger_builder = logger_builder.log_to_file(
+            FileSpec::try_from(file)
+                .expect("Cannot create filespec")
+                .suppress_timestamp(),
+        );
     }
 
-    builder.init();
+    logger_builder
+        .write_mode(WriteMode::Async)
+        .format(my_format)
+        .start()
+        .expect("Failed to start logger")
 }
 
 fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
@@ -68,13 +80,12 @@ const INNER_H: u32 = 240;
 pub fn main() {
     let args = RustinesArgs::parse();
 
-    if let Some(log_file_name) = args.log_file {
+    let _logger_handle = if let Some(log_file_name) = args.log_file {
         println!("Logging to file: {}", log_file_name);
-        let log_file = fs::File::create(log_file_name).expect("Cannot create log file");
-        init_logger(Some(log_file), args.trace_level);
+        init_logger(Some(log_file_name), args.trace_level)
     } else {
-        init_logger(None, args.trace_level);
-    }
+        init_logger(None, args.trace_level)
+    };
 
     let file_path = path::PathBuf::from(&args.file_path);
 
@@ -244,4 +255,13 @@ fn cpu_tick(bus: &mut core::Bus, cpu: &mut core::Cpu) -> bool {
     }
 
     false
+}
+
+fn my_format(
+    w: &mut dyn io::Write,
+    _now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), io::Error> {
+    let first = record.level().to_string().chars().next().unwrap_or(' ');
+    write!(w, "[{}]{}", first, record.args())
 }

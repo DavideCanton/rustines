@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use env_logger::Builder;
+use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::LevelFilter;
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
@@ -17,10 +17,11 @@ use winit_input_helper::WinitInputHelper;
 
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 
-fn init_logger() {
-    let mut builder = Builder::from_default_env();
+#[must_use]
+fn init_logger() -> LoggerHandle {
+    let builder = Logger::with(LogSpecBuilder::new().default(LevelFilter::Info).build());
 
-    builder.filter(None, LevelFilter::Info).init();
+    builder.start().expect("Failed to start logger")
 }
 
 const WIDTH: u32 = 1024;
@@ -30,7 +31,7 @@ const INNER_WIDTH: u32 = 256;
 const INNER_HEIGHT: u32 = 192;
 
 pub fn main() {
-    init_logger();
+    let _logger = init_logger();
 
     let event_loop = EventLoop::new().unwrap();
     let mut input = WinitInputHelper::new();

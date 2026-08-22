@@ -3,15 +3,16 @@ mod types;
 
 use crate::{context::Args, types::RustinesDebugError};
 use clap::Parser;
-use env_logger::Builder;
+use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::{LevelFilter, info};
 use rustines_core::{self as core, arch::instrs::instr_table::disassemble_instr};
 use std::{fs, path};
 
-fn init_logger() {
-    let mut builder = Builder::from_default_env();
+#[must_use]
+fn init_logger() -> LoggerHandle {
+    let builder = Logger::with(LogSpecBuilder::new().default(LevelFilter::Debug).build());
 
-    builder.filter(None, LevelFilter::Debug).init();
+    builder.start().expect("Failed to start logger")
 }
 
 fn disassemble_rom(rom: core::NesRom) {
@@ -69,7 +70,7 @@ pub fn main() -> anyhow::Result<()> {
     let matches = Args::parse();
     let context = context::Context::from_args(matches);
 
-    init_logger();
+    let _logger = init_logger();
 
     let file_path = path::PathBuf::from(&context.rom_name);
 

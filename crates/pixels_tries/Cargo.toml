@@ -9,5 +9,5 @@ winit = { workspace = true }
 pixels = { workspace = true }
 winit_input_helper = { workspace = true }
 log = { workspace = true }
-env_logger = { workspace = true }
+flexi_logger = { workspace = true }
 rustines-gui-utils = { path = "../rustines_gui_utils" }

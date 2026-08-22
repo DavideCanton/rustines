@@ -14,7 +14,7 @@ clap = { version = "4.6", features = ["derive"] }
 anyhow = "1.0.103"
 thiserror = "2.0.18"
 log = "0.4"
-env_logger = "0.11"
+flexi_logger = { version = "0.31.10", features = ["async"] }
 winit = "0.29"
 pixels = "0.17.1"
 winit_input_helper = "0.16.0"
