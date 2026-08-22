@@ -68,8 +68,9 @@ const INNER_H: u32 = 240;
 pub fn main() {
     let args = RustinesArgs::parse();
 
-    if args.log_file {
-        let log_file = fs::File::create("log.log").expect("Cannot create log file");
+    if let Some(log_file_name) = args.log_file {
+        println!("Logging to file: {}", log_file_name);
+        let log_file = fs::File::create(log_file_name).expect("Cannot create log file");
         init_logger(Some(log_file), args.trace_level);
     } else {
         init_logger(None, args.trace_level);
