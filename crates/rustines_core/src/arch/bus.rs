@@ -84,29 +84,30 @@ impl Bus {
         self.mapper.as_ref()
     }
 
-    pub fn burn_ppu_ticks(&mut self) {
+    pub fn burn_cycle_from_cpu(&mut self) {
         if self.trace {
-            trace!("Burning PPU ticks")
+            trace!("Burn cycle from CPU")
         }
-        self.internal_ppu_ticks();
+        self.do_internal_cycle();
     }
 
-    fn ppu_ticks(&mut self) {
+    fn burn_cycle_from_bus(&mut self) {
         if self.trace {
-            trace!("PPU ticks from fetch/store")
+            trace!("Burn cycle from BUS")
         }
-        self.internal_ppu_ticks();
+        self.do_internal_cycle();
     }
 
-    fn internal_ppu_ticks(&mut self) {
-        if self.trace {
-            trace!("Advancing PPU")
-        }
+    fn do_internal_cycle(&mut self) {
         self.cycles_cnt += 1;
         let mapper = self.mapper.as_mut();
+        if self.trace {
+            trace!("Advancing PPU x 3 AND APU x 1");
+        }
         for _ in 0..3 {
             self.ppu.tick(mapper);
         }
+        self.apu.tick();
     }
 
     pub fn controller1_mut(&mut self) -> &mut NesController {
@@ -184,7 +185,7 @@ impl Bus {
                 address, value
             );
         }
-        self.ppu_ticks();
+        self.burn_cycle_from_bus();
         value
     }
 
@@ -198,7 +199,7 @@ impl Bus {
 
         self.open_bus_value = val;
 
-        self.ppu_ticks();
+        self.burn_cycle_from_bus();
 
         match address {
             0x0000..=0x1FFF => {

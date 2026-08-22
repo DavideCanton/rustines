@@ -179,6 +179,7 @@ fn debug_keys(
     }
 
     if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
+        println!("LOGPOINT {}", logpoint);
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;
         cpu.set_trace(true);

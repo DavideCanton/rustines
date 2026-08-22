@@ -17,6 +17,10 @@ pub trait Mapper: Named {
     fn has_prg_ram(&self) -> bool {
         false
     }
+
+    fn irq_active(&self) -> bool {
+        false
+    }
 }
 
 pub type MapperBox = Box<dyn Mapper>;

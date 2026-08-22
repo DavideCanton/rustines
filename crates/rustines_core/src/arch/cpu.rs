@@ -8,12 +8,14 @@ use crate::{
 
 pub struct Cpu {
     pub registers: Registers,
-    irq: bool,
     nmi: bool,
     rst: bool,
     trace: bool,
     clock: u64,
     function_level: u32,
+    pending_irq_execution: bool,
+    pending_nmi_execution: bool,
+    pending_rst_execution: bool,
 }
 
 impl Cpu {
@@ -21,17 +23,21 @@ impl Cpu {
     pub fn new() -> Self {
         Cpu {
             registers: Registers::default(),
-            irq: false,
             nmi: false,
             rst: true,
             trace: false,
             clock: 0,
             function_level: 0,
+            pending_irq_execution: false,
+            pending_nmi_execution: false,
+            pending_rst_execution: true,
         }
     }
 
     pub fn tick(&mut self, bus: &mut Bus) -> u8 {
-        self.handle_interrupts(bus);
+        if let Some(value) = self.handle_interrupts(bus) {
+            return value;
+        }
 
         bus.start_tick();
 
@@ -65,11 +71,13 @@ impl Cpu {
             );
         }
 
+        self.poll_interrupts(bus);
+
         cycles
     }
 
     pub fn burn_internal_cycle(&mut self, bus: &mut Bus) {
-        bus.burn_ppu_ticks();
+        bus.burn_cycle_from_cpu();
     }
 
     fn trace_instr(&mut self, bus: &mut Bus) {
@@ -269,30 +277,64 @@ impl Cpu {
     }
 
     fn perform_rst(&mut self, bus: &mut Bus) {
+        for _ in 0..5 {
+            bus.burn_cycle_from_cpu();
+        }
+
         let low = bus.fetch(0xFFFC);
         let high = bus.fetch(0xFFFD);
 
         let pc = to_u16(low, high);
         self.registers.pc = pc;
-        self.rst = false;
+
+        self.registers.set_i();
+        self.registers.sp = self.registers.sp.wrapping_sub(3);
+
         if self.trace {
             trace!("A RST has occurred, jumping to {}", hex16!(pc));
         }
     }
 
-    fn handle_interrupts(&mut self, bus: &mut Bus) {
-        // TODO verify priority
-        if self.nmi {
-            self.perform_nmi(bus);
-        } else if self.irq {
-            // TODO check flag, since irq should not be performed in all cases
-            self.perform_irq(bus);
-        } else if self.rst {
+    fn handle_interrupts(&mut self, bus: &mut Bus) -> Option<u8> {
+        if self.pending_rst_execution {
+            self.pending_rst_execution = false;
+            self.pending_nmi_execution = false;
+            self.pending_irq_execution = false;
+
             self.perform_rst(bus);
+            return Some(7);
+        }
+        if self.pending_irq_execution {
+            self.pending_irq_execution = false;
+            self.perform_irq(bus);
+            return Some(7);
         }
 
-        self.irq = false;
-        self.nmi = false;
-        self.rst = false;
+        if self.pending_nmi_execution {
+            self.pending_nmi_execution = false;
+            self.perform_nmi(bus);
+            return Some(7);
+        }
+        None
+    }
+
+    fn poll_interrupts(&mut self, bus: &mut Bus) {
+        if self.rst {
+            self.rst = false;
+            self.pending_rst_execution = true;
+            return;
+        }
+
+        if self.nmi {
+            self.nmi = false;
+            self.pending_nmi_execution = true;
+            return;
+        }
+
+        let irq_line_low = bus.apu().irq_active() || bus.mapper().irq_active();
+
+        if irq_line_low && !self.registers.get_i() {
+            self.pending_irq_execution = true;
+        }
     }
 }
