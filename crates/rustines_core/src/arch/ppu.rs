@@ -111,11 +111,26 @@ impl Ppu {
 
         let rendering_enabled = (self.mask & 0x18) != 0;
 
-        if self.scanline == -1 && rendering_enabled && self.is_odd_frame && self.cycle == 340 {
-            self.cycle = 0;
-            self.scanline = 0;
-            self.is_odd_frame = false;
-        } else if self.cycle >= 341 {
+        if rendering_enabled && self.scanline == -1 {
+            if self.cycle == 256 {
+                self.increment_vram_address_y();
+            }
+            if self.cycle == 257 {
+                self.vram_address = (self.vram_address & 0xFBE0) | (self.temp_address & 0x041F);
+            }
+            if self.cycle == 304 {
+                self.vram_address = (self.vram_address & 0x841F) | (self.temp_address & 0x7BE0);
+            }
+        }
+
+        let max_cycles_for_this_scanline =
+            if self.scanline == -1 && rendering_enabled && self.is_odd_frame {
+                340
+            } else {
+                341
+            };
+
+        if self.cycle >= max_cycles_for_this_scanline {
             self.cycle = 0;
             self.scanline += 1;
 
@@ -125,28 +140,12 @@ impl Ppu {
                 self.is_odd_frame = !self.is_odd_frame;
                 self.renderer.draw();
 
-                // update open bus
                 if self.open_bus_decay_timer > 0 {
                     self.open_bus_decay_timer -= 1;
                     if self.open_bus_decay_timer == 0 {
                         self.open_bus_value = 0;
                     }
                 }
-            }
-        }
-
-        if rendering_enabled {
-            if self.scanline >= 0 && self.scanline <= 239 || self.scanline == -1 {
-                if self.cycle == 256 {
-                    self.increment_vram_address_y();
-                }
-                if self.cycle == 257 {
-                    self.vram_address = (self.vram_address & 0xFBE0) | (self.temp_address & 0x041F);
-                }
-            }
-
-            if self.scanline == -1 && self.cycle >= 304 && self.cycle <= 330 {
-                self.vram_address = (self.vram_address & 0x841F) | (self.temp_address & 0x7BE0);
             }
         }
 

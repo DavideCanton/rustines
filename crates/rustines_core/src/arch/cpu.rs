@@ -1,4 +1,4 @@
-use log::{Level, info, log_enabled, trace};
+use log::{Level, log_enabled, trace};
 
 use crate::{
     arch::{bus::Bus, instrs::instr_table::INSTR_TABLE, registers::*},
@@ -43,13 +43,6 @@ impl Cpu {
 
         let pc = self.registers.pc;
         let opcode = bus.fetch(self.registers.pc);
-
-        if self.registers.pc >= 0xFFF0 || self.registers.pc <= 0x0010 {
-            info!(
-                "PC WRAPAROUND REGION -> PC: {:#06X}, Opcode: {:#04X}",
-                self.registers.pc, opcode
-            );
-        }
 
         let instr = &INSTR_TABLE[opcode as usize];
 
