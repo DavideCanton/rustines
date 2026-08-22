@@ -1,12 +1,63 @@
 {
-    "version": "2.0.0",
+    "version": "2.0.0",    
     "tasks": [
         {
             "label": "Run AccuracyCoin",
             "command": "./run.sh",
             "type": "shell",
             "args": [
-                "-f","-t","roms/AccuracyCoin.nes"
+                "roms/AccuracyCoin.nes"
+            ],
+            "problemMatcher": [
+                "$codelldb-rustc"
+            ],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run AccuracyCoin in WSL",
+            "command": "./run-wsl.sh",
+            "type": "shell",
+            "args": [
+                "roms/AccuracyCoin.nes"
+            ],
+            "problemMatcher": [
+                "$codelldb-rustc"
+            ],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run AccuracyCoin with trace",
+            "command": "./run.sh",
+            "type": "shell",
+            "args": [
+                "-f",
+                "-t",
+                "2",
+                "roms/AccuracyCoin.nes"
+            ],
+            "problemMatcher": [
+                "$codelldb-rustc"
+            ],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run AccuracyCoin in WSL with trace",
+            "command": "./run-wsl.sh",
+            "type": "shell",
+            "args": [
+                "-f",
+                "-t",
+                "2",
+                "roms/AccuracyCoin.nes"
             ],
             "problemMatcher": [
                 "$codelldb-rustc"
