@@ -41,11 +41,11 @@ impl Apu {
             18 => self.dmc.update_3(value),
             19 => self.dmc.update_4(value),
             21 => {
-                log::info!(
-                    "Scrittura $4015: abilitato={}, lunghezza_campionata={}",
-                    extract_flag(value, 4),
-                    self.dmc.sample_length
-                );
+                // log::info!(
+                //     "Scrittura $4015: abilitato={}, lunghezza_campionata={}",
+                //     extract_flag(value, 4),
+                //     self.dmc.sample_length
+                // );
 
                 self.dmc.irq_active = false;
                 self.dmc.set_enabled(extract_flag(value, 4));
@@ -246,9 +246,9 @@ impl Dmc {
                             self.bytes_remaining = self.sample_length;
                         } else if self.irq_enable {
                             self.irq_active = true;
-                            log::info!(
-                                "DMC IRQ SCATTATO ADESSO! Attivato dopo il corretto intervallo di bit."
-                            );
+                            // log::info!(
+                            //     "DMC IRQ SCATTATO ADESSO! Attivato dopo il corretto intervallo di bit."
+                            // );
                         }
                     }
                 }

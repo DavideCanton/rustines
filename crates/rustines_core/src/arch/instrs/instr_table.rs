@@ -344,7 +344,15 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let msg = if is_error {
         format!("{} ({})", fname, hex!(opcode))
     } else {
-        instr.get_fname_for_print(&prg[current..current + ilen])
+        if current + ilen > prg.len() {
+            let mut buf = vec![0; ilen];
+            let rem = prg.len() - current;
+            buf[..rem].copy_from_slice(&prg[current..]);
+            buf[rem..].copy_from_slice(&prg[..ilen - rem]);
+            instr.get_fname_for_print(&buf)
+        } else {
+            instr.get_fname_for_print(&prg[current..current + ilen])
+        }
     };
 
     (msg, current + ilen)
@@ -355,7 +363,7 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
 mod test {
     use crate::arch::{bus::Bus, cpu::Cpu};
 
-    use super::{Instr, InstrFn};
+    use super::{Instr, InstrFn, disassemble_instr};
 
     fn instr_fn1(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
         0
@@ -409,5 +417,15 @@ mod test {
 
     fn compare_instr_fun(instr: &Instr, exp: InstrFn) {
         assert_eq!(instr.fun as *const (), exp as *const ());
+    }
+
+    #[test]
+    fn disassembles_instruction_wrapping_at_end_of_prg() {
+        let prg = [0x42, 0x00, 0xA9];
+
+        let (message, next) = disassemble_instr(&prg, 2);
+
+        assert_eq!(message, "(0xA9) LDA #$42");
+        assert_eq!(next, 4);
     }
 }

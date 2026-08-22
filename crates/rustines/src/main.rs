@@ -33,6 +33,7 @@ fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
     }
     if trace > 1 {
         log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
+        log_spec_builder.module("rustines_core::arch::controller", LevelFilter::Trace);
     }
 
     let log_spec = log_spec_builder.build();
