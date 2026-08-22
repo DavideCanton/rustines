@@ -91,8 +91,15 @@ impl Cpu {
         let pc = self.registers.pc;
         let opcode = bus.peek(pc);
         let instr = &INSTR_TABLE[opcode as usize];
-        let ilen = instr.ilen as u16;
-        let buf: Vec<u8> = (pc..pc + ilen).map(|addr| bus.peek(addr)).collect();
+
+        let mut buf = vec![0; instr.ilen];
+
+        let mut cur = pc;
+        for pos in buf.iter_mut() {
+            let val = bus.peek(cur);
+            *pos = val;
+            cur = cur.wrapping_add(1);
+        }
 
         let instr_str = instr.get_fname_for_print(&buf);
 

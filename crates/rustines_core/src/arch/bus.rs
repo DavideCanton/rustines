@@ -16,8 +16,9 @@ pub struct Bus {
     controller1: NesController,
     controller2: NesController,
     open_bus_value: u8,
-    cycles_cnt: u8,
+    cycles_cnt: usize,
     trace: bool,
+    dma_in_progress: bool,
 }
 
 impl Bus {
@@ -32,6 +33,7 @@ impl Bus {
             open_bus_value: 0,
             cycles_cnt: 0,
             trace: false,
+            dma_in_progress: false,
         }
     }
 
@@ -43,11 +45,10 @@ impl Bus {
         self.cycles_cnt = 0;
     }
 
-    pub fn check(&self, exp: u8) -> Option<u8> {
-        if exp == 0xFF {
-            // invalid opcodes
-            None
-        } else if self.cycles_cnt != exp {
+    pub fn check(&self, exp: u8) -> Option<usize> {
+        let exp = exp as usize;
+
+        if self.cycles_cnt != exp {
             Some(self.cycles_cnt)
         } else {
             None
@@ -93,7 +94,10 @@ impl Bus {
     }
 
     fn do_internal_cycle(&mut self) {
-        self.cycles_cnt += 1;
+        if !self.dma_in_progress {
+            self.cycles_cnt += 1;
+        }
+
         let mapper = self.mapper.as_mut();
         if self.trace {
             trace!("Advancing PPU x 3 AND APU x 1");
@@ -213,7 +217,9 @@ impl Bus {
                     // TODO stall?
                     let mut buf = vec![0; 256];
                     let start = (val as u16) << 8;
+                    self.dma_in_progress = true;
                     self.fetch_many(start, &mut buf);
+                    self.dma_in_progress = false;
                     if let Some(&last_dma_byte) = buf.last() {
                         self.open_bus_value = last_dma_byte;
                     }
