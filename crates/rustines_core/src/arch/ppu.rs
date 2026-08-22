@@ -111,25 +111,11 @@ impl Ppu {
 
         let rendering_enabled = (self.mask & 0x18) != 0;
 
-        if rendering_enabled && self.scanline == -1 {
-            if self.cycle == 256 {
-                self.increment_vram_address_y();
-            }
-            if self.cycle == 257 {
-                self.vram_address = (self.vram_address & 0xFBE0) | (self.temp_address & 0x041F);
-            }
-            if self.cycle == 304 {
-                self.vram_address = (self.vram_address & 0x841F) | (self.temp_address & 0x7BE0);
-            }
-        }
-
-        if self.scanline == -1 && self.cycle == 339 && rendering_enabled && self.is_odd_frame {
+        if self.scanline == -1 && rendering_enabled && self.is_odd_frame && self.cycle == 340 {
             self.cycle = 0;
             self.scanline = 0;
-            self.is_odd_frame = !self.is_odd_frame;
-        }
-
-        if self.cycle >= 341 {
+            self.is_odd_frame = false;
+        } else if self.cycle >= 341 {
             self.cycle = 0;
             self.scanline += 1;
 
@@ -149,11 +135,26 @@ impl Ppu {
             }
         }
 
+        if rendering_enabled {
+            if self.scanline >= 0 && self.scanline <= 239 || self.scanline == -1 {
+                if self.cycle == 256 {
+                    self.increment_vram_address_y();
+                }
+                if self.cycle == 257 {
+                    self.vram_address = (self.vram_address & 0xFBE0) | (self.temp_address & 0x041F);
+                }
+            }
+
+            if self.scanline == -1 && self.cycle >= 304 && self.cycle <= 330 {
+                self.vram_address = (self.vram_address & 0x841F) | (self.temp_address & 0x7BE0);
+            }
+        }
+
         if self.scanline >= 0 && self.scanline <= 239 && self.cycle == 256 {
             self.render_scanline(mapper);
         }
 
-        if self.scanline == 241 && self.cycle == 0 {
+        if self.scanline == 241 && self.cycle == 1 {
             self.status |= 0x80;
             if (self.ctrl & 0x80) != 0 {
                 self.nmi_interrupt = true;
@@ -163,6 +164,7 @@ impl Ppu {
         if self.scanline == -1 && self.cycle == 1 {
             self.status &= 0x7F;
             self.nmi_interrupt = false;
+            self.frame_ready = false;
         }
     }
 
@@ -225,9 +227,23 @@ impl Ppu {
     pub fn cpu_read(&mut self, reg_index: u8, mapper: &dyn Mapper) -> u8 {
         match reg_index {
             2 => {
-                let data = self.status_bits_shadow();
+                let mut data = self.status_bits_shadow();
+
+                if self.cycle == 1 {
+                    if self.scanline == 241 {
+                        data &= 0x7F;
+                    } else if self.scanline == -1 {
+                        data |= 0x80;
+                    }
+                }
+
                 self.status &= 0x7F;
                 self.address_latch = 0;
+
+                if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
+                    self.nmi_interrupt = false;
+                }
+
                 self.write_open_bus(data);
                 data
             }
