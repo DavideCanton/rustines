@@ -12,24 +12,24 @@ pub struct Registers {
     p_reg: u8,
 }
 
-pub const C_INDEX: u8 = 0;
-pub const Z_INDEX: u8 = 1;
-pub const I_INDEX: u8 = 2;
-pub const D_INDEX: u8 = 3;
-pub const B_INDEX: u8 = 4;
-pub const U_INDEX: u8 = 5;
-pub const V_INDEX: u8 = 6;
-pub const N_INDEX: u8 = 7;
+pub const C_INDEX: BitIndex = BitIndex::BIT_0;
+pub const Z_INDEX: BitIndex = BitIndex::BIT_1;
+pub const I_INDEX: BitIndex = BitIndex::BIT_2;
+pub const D_INDEX: BitIndex = BitIndex::BIT_3;
+pub const B_INDEX: BitIndex = BitIndex::BIT_4;
+pub const U_INDEX: BitIndex = BitIndex::BIT_5;
+pub const V_INDEX: BitIndex = BitIndex::BIT_6;
+pub const N_INDEX: BitIndex = BitIndex::BIT_7;
 
 macro_rules! gen_methods {
-    ($name: ident, $mask: expr) => {
+    ($name: ident, $index: expr) => {
         paste! {
             pub fn [<get_ $name>](&self) -> bool {
-                extract_flag(self.p_reg, BitIndex::new($mask))
+                extract_flag(self.p_reg, $index)
             }
 
             pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
-                self.p_reg = set_flag(self.p_reg, BitIndex::new($mask), val);
+                self.p_reg = set_flag(self.p_reg, $index, val);
             }
 
             pub fn [<set_ $name>](&mut self) {
@@ -51,7 +51,7 @@ impl Registers {
             a_reg: 0,
             x_reg: 0,
             y_reg: 0,
-            p_reg: 1 << U_INDEX,
+            p_reg: set_flag(0, U_INDEX, true),
         }
     }
 
@@ -60,18 +60,20 @@ impl Registers {
         self.set_z_from_bool(value == 0);
     }
 
-    pub fn get_p(&self, force_b: bool) -> u8 {
-        let mut p = self.p_reg;
-        if force_b {
-            p = set_flag(p, BitIndex::new(B_INDEX), true);
-        }
+    pub fn get_p(&self) -> u8 {
+        self.p_reg
+    }
+
+    pub fn get_p_force_b(&self, value: bool) -> u8 {
+        let mut p = self.get_p();
+        p = set_flag(p, B_INDEX, value);
         p
     }
 
     pub fn set_p(&mut self, p: u8) {
-        let old_b = extract_flag(self.p_reg, BitIndex::new(B_INDEX));
-        self.p_reg = p | (1 << U_INDEX);
-        self.p_reg = set_flag(self.p_reg, BitIndex::new(B_INDEX), old_b);
+        let mut p = set_flag(p, B_INDEX, false);
+        p = set_flag(p, U_INDEX, true);
+        self.p_reg = p;
     }
 
     pub fn p_to_str(&self) -> String {
@@ -81,7 +83,7 @@ impl Registers {
             self.get_n(),
             self.get_v(),
             true,
-            self.get_b(),
+            true,
             self.get_d(),
             self.get_i(),
             self.get_z(),
@@ -100,7 +102,6 @@ impl Registers {
     gen_methods!(n, N_INDEX);
     gen_methods!(v, V_INDEX);
     gen_methods!(c, C_INDEX);
-    gen_methods!(b, B_INDEX);
     gen_methods!(d, D_INDEX);
     gen_methods!(i, I_INDEX);
 }
@@ -124,7 +125,6 @@ impl fmt::Debug for Registers {
             .field("n_flag", &self.get_n())
             .field("v_flag", &self.get_v())
             .field("c_flag", &self.get_c())
-            .field("b_flag", &self.get_b())
             .field("d_flag", &self.get_d())
             .field("i_flag", &self.get_i())
             .finish()

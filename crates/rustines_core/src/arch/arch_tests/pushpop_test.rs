@@ -30,7 +30,6 @@ mod tests {
         cpu.registers.set_n();
         cpu.registers.set_z();
         cpu.registers.set_v();
-        cpu.registers.set_b();
         cpu.registers.set_d();
         cpu.registers.set_i();
 
@@ -54,7 +53,6 @@ mod tests {
         cpu.registers.clear_n();
         cpu.registers.clear_z();
         cpu.registers.clear_v();
-        cpu.registers.clear_b();
         cpu.registers.clear_d();
         cpu.registers.clear_i();
 
@@ -76,7 +74,6 @@ mod tests {
 
         cpu.registers.set_n();
         cpu.registers.clear_v();
-        cpu.registers.clear_b();
         cpu.registers.set_d();
         cpu.registers.clear_i();
         cpu.registers.set_z();
@@ -126,7 +123,6 @@ mod tests {
         assert!(cpu.registers.get_n());
         assert!(cpu.registers.get_z());
         assert!(cpu.registers.get_v());
-        assert!(!cpu.registers.get_b());
         assert!(cpu.registers.get_d());
         assert!(cpu.registers.get_i());
 
@@ -149,7 +145,6 @@ mod tests {
         assert!(!cpu.registers.get_n());
         assert!(!cpu.registers.get_z());
         assert!(!cpu.registers.get_v());
-        assert!(!cpu.registers.get_b());
         assert!(!cpu.registers.get_d());
         assert!(!cpu.registers.get_i());
 
@@ -170,7 +165,6 @@ mod tests {
 
         assert!(cpu.registers.get_n());
         assert!(!cpu.registers.get_v());
-        assert!(!cpu.registers.get_b());
         assert!(cpu.registers.get_d());
         assert!(!cpu.registers.get_i());
         assert!(cpu.registers.get_z());

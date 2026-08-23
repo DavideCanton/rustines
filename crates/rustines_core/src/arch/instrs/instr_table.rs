@@ -11,7 +11,7 @@ macro_rules! instr {
 }
 
 pub const INSTR_TABLE: [Instr; 256] = [
-    instr!(others::brk, "brk::implied", 1),       // 00
+    instr!(brk::implied, 1),                      // 00
     instr!(ora::indirect_x, 2),                   // 01
     Instr::error(),                               // 02
     instr!(slo::indirect_x, 2),                   // 03

@@ -28,16 +28,22 @@ impl InstructionTracer {
         self.tracing_enabled = tracing_enabled;
     }
 
-    pub fn trace_interrupt(&mut self, irq_type: &str, address: u16) {
+    pub fn trace_interrupt(
+        &mut self,
+        irq_type: &str,
+        address: u16,
+        registers: &Registers,
+        clock: u64,
+    ) {
+        let old_clock = self.previous_clock;
+        self.previous_clock = clock;
+
         if !log_enabled!(Level::Trace) || !self.tracing_enabled {
             return;
         }
 
-        trace!(
-            "A {} interrupt has occurred, jumping to {}",
-            irq_type,
-            hex16!(address)
-        );
+        let msg = format!("{} -> ${}", irq_type, hex16!(address));
+        self._trace(registers, clock, old_clock, msg);
     }
 
     pub fn trace_instr(&mut self, registers: &Registers, clock: u64, bus: &Bus, instr: &Instr) {
@@ -67,23 +73,27 @@ impl InstructionTracer {
 
         let instr_str = instr.get_fname_for_print(&buf);
 
+        self._trace(registers, clock, old_clock, instr_str);
+
+        if instr.fname.contains("jsr") {
+            self.function_level += 1;
+        }
+    }
+
+    fn _trace(&mut self, registers: &Registers, clock: u64, old_clock: u64, msg: String) {
         trace!(
             "TRACE CPU -> LEVEL: {:<2} | PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:10}](+{:>02})",
             self.function_level,
             registers.pc,
-            instr_str,
+            msg,
             registers.a_reg,
             registers.x_reg,
             registers.y_reg,
             registers.sp,
             registers.p_to_str(),
-            registers.get_p(false),
+            registers.get_p(),
             clock,
             clock - old_clock
         );
-
-        if instr.fname.contains("jsr") {
-            self.function_level += 1;
-        }
     }
 }

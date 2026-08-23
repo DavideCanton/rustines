@@ -9,7 +9,7 @@ pub fn pha(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn php(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
-    let p = cpu.registers.get_p(true);
+    let p = cpu.registers.get_p_force_b(true);
     cpu.push8(bus, p);
     3
 }

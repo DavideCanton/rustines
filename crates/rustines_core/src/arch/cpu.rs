@@ -10,7 +10,6 @@ use crate::{
 
 pub struct Cpu {
     pub(crate) registers: Registers,
-    rst: bool,
     clock: u64,
     pending_irq_execution: bool,
     pending_nmi_execution: bool,
@@ -23,7 +22,6 @@ impl Cpu {
     pub fn new() -> Self {
         Cpu {
             registers: Registers::default(),
-            rst: false,
             clock: 0,
             pending_irq_execution: false,
             pending_nmi_execution: false,
@@ -34,6 +32,7 @@ impl Cpu {
 
     pub fn tick(&mut self, bus: &mut Bus) -> u8 {
         if let Some(value) = self.handle_interrupts(bus) {
+            self.clock += value as u64;
             return value;
         }
 
@@ -41,6 +40,8 @@ impl Cpu {
 
         let pc = self.registers.pc;
         let opcode = bus.read(self.registers.pc);
+
+        self.poll_irq(bus, self.registers.get_i());
 
         let instr = &INSTR_TABLE[opcode as usize];
 
@@ -60,7 +61,7 @@ impl Cpu {
             );
         }
 
-        self.poll_interrupts(bus);
+        self.poll_non_maskable_interrupts(bus);
 
         cycles
     }
@@ -176,36 +177,48 @@ impl Cpu {
         let pc = self.registers.pc;
         self.push16(bus, pc);
 
-        let p = self.registers.get_p(false);
-        let p_to_push = (p & !0b0001_0000) | 0b0010_0000;
-        self.push8(bus, p_to_push);
+        let p = self.registers.get_p_force_b(false);
+        self.push8(bus, p);
         self.registers.set_i();
     }
 
-    fn perform_irq(&mut self, bus: &mut Bus) {
+    fn perform_irq(&mut self, bus: &mut Bus) -> u8 {
+        bus.read(self.registers.pc);
+        bus.read(self.registers.pc);
+
         self.save_state_before_interrupt(bus);
 
         let low = bus.read(0xFFFE);
         let high = bus.read(0xFFFF);
 
         let irq_address = to_u16(low, high);
+        self.tracer
+            .trace_interrupt("IRQ", irq_address, &self.registers, self.clock);
+
         self.registers.pc = irq_address;
 
-        self.tracer.trace_interrupt("IRQ", irq_address);
+        7
     }
 
-    pub fn perform_nmi(&mut self, bus: &mut Bus) {
+    pub fn perform_nmi(&mut self, bus: &mut Bus) -> u8 {
+        bus.read(self.registers.pc);
+        bus.read(self.registers.pc);
+
         self.save_state_before_interrupt(bus);
 
         let low = bus.read(0xFFFA);
         let high = bus.read(0xFFFB);
 
         let nmi_address = to_u16(low, high);
+        self.tracer
+            .trace_interrupt("NMI", nmi_address, &self.registers, self.clock);
+
         self.registers.pc = nmi_address;
-        self.tracer.trace_interrupt("NMI", nmi_address);
+
+        7
     }
 
-    fn perform_rst(&mut self, bus: &mut Bus) {
+    fn perform_rst(&mut self, bus: &mut Bus) -> u8 {
         for _ in 0..5 {
             bus.burn_cycle_from_cpu();
         }
@@ -214,12 +227,15 @@ impl Cpu {
         let high = bus.read(0xFFFD);
 
         let rst_address = to_u16(low, high);
+        self.tracer
+            .trace_interrupt("RST", rst_address, &self.registers, self.clock);
+
         self.registers.pc = rst_address;
 
         self.registers.set_i();
         self.registers.sp = self.registers.sp.wrapping_sub(3);
 
-        self.tracer.trace_interrupt("RST", rst_address);
+        7
     }
 
     fn handle_interrupts(&mut self, bus: &mut Bus) -> Option<u8> {
@@ -228,41 +244,31 @@ impl Cpu {
             self.pending_nmi_execution = false;
             self.pending_irq_execution = false;
 
-            self.perform_rst(bus);
-            return Some(7);
-        }
-        if self.pending_irq_execution {
-            self.pending_irq_execution = false;
-            self.perform_irq(bus);
-            return Some(7);
-        }
-
-        if self.pending_nmi_execution {
+            Some(self.perform_rst(bus))
+        } else if self.pending_nmi_execution {
             self.pending_nmi_execution = false;
+            self.pending_irq_execution = false;
             bus.ppu_mut().clear_nmi();
-            self.perform_nmi(bus);
-            return Some(7);
+
+            Some(self.perform_nmi(bus))
+        } else if self.pending_irq_execution {
+            self.pending_irq_execution = false;
+            Some(self.perform_irq(bus))
+        } else {
+            None
         }
-        None
     }
 
-    fn poll_interrupts(&mut self, bus: &mut Bus) {
-        if self.rst {
-            // triggered automatically at boot
-            // in the future this may be set from a user input to reset the emulator state
-            self.rst = false;
-            self.pending_rst_execution = true;
-            return;
-        }
-
+    fn poll_non_maskable_interrupts(&mut self, bus: &mut Bus) {
         if bus.ppu_mut().nmi_requested() {
             self.pending_nmi_execution = true;
-            return;
         }
+    }
 
+    fn poll_irq(&mut self, bus: &Bus, irq_masked: bool) {
         let irq_line_low = bus.apu().irq_active() || bus.mapper_ref().irq_active();
 
-        if irq_line_low && !self.registers.get_i() {
+        if irq_line_low && !irq_masked {
             self.pending_irq_execution = true;
         }
     }

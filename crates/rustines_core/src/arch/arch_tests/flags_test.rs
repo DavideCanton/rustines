@@ -71,17 +71,6 @@ mod tests {
     }
 
     #[test]
-    fn test_b() {
-        _run_test(
-            &mut Registers::default(),
-            Registers::get_b,
-            Registers::set_b,
-            Registers::clear_b,
-            Registers::set_b_from_bool,
-        );
-    }
-
-    #[test]
     fn test_i() {
         _run_test(
             &mut Registers::default(),
@@ -101,6 +90,26 @@ mod tests {
             Registers::clear_d,
             Registers::set_d_from_bool,
         );
+    }
+
+    #[test]
+    fn test_b_is_synthesized_when_exporting_p() {
+        let mut registers = Registers::default();
+        registers.set_c();
+
+        assert_eq!(registers.get_p(), 0x21);
+        assert_eq!(registers.get_p_force_b(true), 0x31);
+        assert_eq!(registers.get_p_force_b(false), 0x21);
+        assert_eq!(registers.get_p(), 0x21);
+    }
+
+    #[test]
+    fn test_b_is_not_persisted_when_importing_p() {
+        let mut registers = Registers::default();
+        registers.set_p(0xFF);
+
+        assert_eq!(registers.get_p(), 0xEF);
+        assert_eq!(registers.get_p_force_b(true), 0xFF);
     }
 
     fn _run_test<
