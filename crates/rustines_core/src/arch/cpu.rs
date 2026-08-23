@@ -12,7 +12,7 @@ pub struct Cpu {
     pub(crate) registers: Registers,
     clock: u64,
     pending_irq_execution: bool,
-    pending_nmi_execution: bool,
+    pub(crate) pending_nmi_execution: bool,
     pending_rst_execution: bool,
     tracer: InstructionTracer,
 }
@@ -241,15 +241,9 @@ impl Cpu {
     fn handle_interrupts(&mut self, bus: &mut Bus) -> Option<u8> {
         if self.pending_rst_execution {
             self.pending_rst_execution = false;
-            self.pending_nmi_execution = false;
-            self.pending_irq_execution = false;
-
             Some(self.perform_rst(bus))
         } else if self.pending_nmi_execution {
-            self.pending_nmi_execution = false;
-            self.pending_irq_execution = false;
-            bus.ppu_mut().clear_nmi();
-
+            self.clear_nmi(bus);
             Some(self.perform_nmi(bus))
         } else if self.pending_irq_execution {
             self.pending_irq_execution = false;
@@ -259,7 +253,12 @@ impl Cpu {
         }
     }
 
-    fn poll_non_maskable_interrupts(&mut self, bus: &mut Bus) {
+    pub fn clear_nmi(&mut self, bus: &mut Bus) {
+        self.pending_nmi_execution = false;
+        bus.ppu_mut().clear_nmi();
+    }
+
+    pub fn poll_non_maskable_interrupts(&mut self, bus: &mut Bus) {
         if bus.ppu_mut().nmi_requested() {
             self.pending_nmi_execution = true;
         }
