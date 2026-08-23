@@ -1,6 +1,8 @@
 use paste::paste;
 use std::fmt;
 
+use crate::utils::bit_utils::{extract_flag, set_flag};
+
 pub struct Registers {
     pub pc: u16,
     pub sp: u8,
@@ -10,36 +12,32 @@ pub struct Registers {
     p_reg: u8,
 }
 
-pub const FLAG_C: u8 = 1 << 0;
-pub const FLAG_Z: u8 = 1 << 1;
-pub const FLAG_I: u8 = 1 << 2;
-pub const FLAG_D: u8 = 1 << 3;
-pub const FLAG_B: u8 = 1 << 4;
-pub const FLAG_U: u8 = 1 << 5;
-pub const FLAG_V: u8 = 1 << 6;
-pub const FLAG_N: u8 = 1 << 7;
+pub const C_INDEX: u8 = 0;
+pub const Z_INDEX: u8 = 1;
+pub const I_INDEX: u8 = 2;
+pub const D_INDEX: u8 = 3;
+pub const B_INDEX: u8 = 4;
+pub const U_INDEX: u8 = 5;
+pub const V_INDEX: u8 = 6;
+pub const N_INDEX: u8 = 7;
 
 macro_rules! gen_methods {
     ($name: ident, $mask: expr) => {
         paste! {
             pub fn [<get_ $name>](&self) -> bool {
-                self.p_reg & $mask != 0
-            }
-
-            pub fn [<set_ $name>](&mut self) {
-                self.p_reg |= $mask;
+                extract_flag(self.p_reg, $mask)
             }
 
             pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
-                if val {
-                    self.[<set_ $name>]();
-                } else {
-                    self.[<clear_ $name>]();
-                }
+                self.p_reg = set_flag(self.p_reg, $mask, val);
+            }
+
+            pub fn [<set_ $name>](&mut self) {
+                self.[<set_ $name _from_bool>](true);
             }
 
             pub fn [<clear_ $name>](&mut self) {
-                self.p_reg &= !$mask;
+                self.[<set_ $name _from_bool>](false);
             }
         }
     };
@@ -53,33 +51,33 @@ impl Registers {
             a_reg: 0,
             x_reg: 0,
             y_reg: 0,
-            p_reg: FLAG_U,
+            p_reg: 1 << U_INDEX,
         }
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n_from_bool(value & FLAG_N != 0);
+        self.set_n_from_bool(value & 0b1000_0000 != 0);
         self.set_z_from_bool(value == 0);
     }
 
     pub fn get_p(&self, force_b: bool) -> u8 {
         let mut p = self.p_reg;
         if force_b {
-            p |= FLAG_B;
+            p = set_flag(p, B_INDEX, true);
         }
         p
     }
 
     pub fn set_p(&mut self, p: u8) {
-        let old_b = self.p_reg & FLAG_B;
-        self.p_reg = p | FLAG_U;
-        self.p_reg = (self.p_reg & !FLAG_B) | old_b;
+        let old_b = extract_flag(self.p_reg, B_INDEX);
+        self.p_reg = p | (1 << U_INDEX);
+        self.p_reg = set_flag(self.p_reg, B_INDEX, old_b);
     }
 
     pub fn p_to_str(&self) -> String {
-        let mut s = String::with_capacity(8);
+        let mut buf = String::with_capacity(8);
 
-        for (letter, value) in "NV1BDIZC".chars().zip([
+        for (mut letter, value) in "NV1BDIZC".chars().zip([
             self.get_n(),
             self.get_v(),
             true,
@@ -89,23 +87,22 @@ impl Registers {
             self.get_z(),
             self.get_c(),
         ]) {
-            if value {
-                s.push(letter);
-            } else {
-                s.push(letter.to_lowercase().next().unwrap());
+            if !value {
+                letter = letter.to_lowercase().next().unwrap();
             }
+            buf.push(letter);
         }
 
-        s
+        buf
     }
 
-    gen_methods!(z, FLAG_Z);
-    gen_methods!(n, FLAG_N);
-    gen_methods!(v, FLAG_V);
-    gen_methods!(c, FLAG_C);
-    gen_methods!(b, FLAG_B);
-    gen_methods!(d, FLAG_D);
-    gen_methods!(i, FLAG_I);
+    gen_methods!(z, Z_INDEX);
+    gen_methods!(n, N_INDEX);
+    gen_methods!(v, V_INDEX);
+    gen_methods!(c, C_INDEX);
+    gen_methods!(b, B_INDEX);
+    gen_methods!(d, D_INDEX);
+    gen_methods!(i, I_INDEX);
 }
 
 impl Default for Registers {
@@ -122,6 +119,7 @@ impl fmt::Debug for Registers {
             .field("a_reg", &format!("{:#04x}", self.a_reg))
             .field("x_reg", &format!("{:#04x}", self.x_reg))
             .field("y_reg", &format!("{:#04x}", self.y_reg))
+            .field("p_reg", &format!("{:#04x}", self.p_reg))
             .field("z_flag", &self.get_z())
             .field("n_flag", &self.get_n())
             .field("v_flag", &self.get_v())

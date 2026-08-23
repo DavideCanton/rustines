@@ -66,6 +66,19 @@ pub fn extract_flag(value: u8, offset: u8) -> bool {
     (value & (1 << offset)) > 0
 }
 
+/// Sets the bit at offset `offset` of `value` to 1 if `flag` is true, else to 0.
+#[inline(always)]
+pub fn set_flag(value: u8, offset: u8, flag: bool) -> u8 {
+    if offset >= 8 {
+        panic!("Invalid offset");
+    }
+    if flag {
+        value | (1 << offset)
+    } else {
+        value & !(1 << offset)
+    }
+}
+
 /// Shifts to the right `value` of `shift` bits, then keeps only `count`.
 ///
 /// For example, if value is `12345678`, shift is `3` and count is `2`, the result is `00000045`.
@@ -123,11 +136,13 @@ pub fn extract_bits_mask_lsb(value: u8, count: u8) -> u8 {
 #[cfg(test)]
 #[allow(clippy::assertions_on_constants)]
 mod tests {
+    use crate::utils::bit_utils::set_flag;
+
     use super::{extract_bits_mask_lsb, extract_bits_mask_msb, extract_bits_shift, extract_flag};
 
     #[test]
     fn test_extract_flag() {
-        let v: u8 = 0xF;
+        let v: u8 = 0b0000_1111;
         assert!(extract_flag(v, 0));
         assert!(extract_flag(v, 1));
         assert!(!extract_flag(v, 5));
@@ -140,23 +155,29 @@ mod tests {
     }
 
     #[test]
+    fn test_set_flag() {
+        let v: u8 = 0b0000_1111;
+        assert_eq!(set_flag(v, 0, false), 0b0000_1110);
+        assert_eq!(set_flag(v, 1, false), 0b0000_1101);
+        assert_eq!(set_flag(v, 5, true), 0b0010_1111);
+    }
+
+    #[test]
+    #[should_panic = "Invalid offset"]
+    fn test_set_flag_invalid() {
+        set_flag(0xF, 32, true);
+    }
+
+    #[test]
     fn test_extract_bits_shift() {
-        // 10101011
-        let v: u8 = 0xAB;
-        // 00001010
-        assert_eq!(extract_bits_shift(v, 4, 4), 0x0A);
-        // 00101010
-        assert_eq!(extract_bits_shift(v, 2, 6), 0x2A);
-        // 00001010
-        assert_eq!(extract_bits_shift(v, 2, 5), 0x0A);
-        // same
-        assert_eq!(extract_bits_shift(v, 0, 8), 0xAB);
-        // 00101011
-        assert_eq!(extract_bits_shift(v, 0, 6), 0x2B);
-        // 00010101
-        assert_eq!(extract_bits_shift(v, 3, 5), 0x15);
-        // 00000001
-        assert_eq!(extract_bits_shift(v, 3, 1), 0x1);
+        let v: u8 = 0b1010_1011;
+        assert_eq!(extract_bits_shift(v, 4, 4), 0b0000_1010);
+        assert_eq!(extract_bits_shift(v, 2, 6), 0b0010_1010);
+        assert_eq!(extract_bits_shift(v, 2, 5), 0b0000_1010);
+        assert_eq!(extract_bits_shift(v, 0, 8), 0b1010_1011);
+        assert_eq!(extract_bits_shift(v, 0, 6), 0b0010_1011);
+        assert_eq!(extract_bits_shift(v, 3, 5), 0b0001_0101);
+        assert_eq!(extract_bits_shift(v, 3, 1), 0b0000_0001);
     }
 
     #[test]
@@ -173,18 +194,12 @@ mod tests {
 
     #[test]
     fn test_extract_bits_mask_msb() {
-        // 10101011
-        let v: u8 = 0xAB;
-        // 10100000
-        assert_eq!(extract_bits_mask_msb(v, 4), 0xA0);
-        // 10000000
-        assert_eq!(extract_bits_mask_msb(v, 2), 0x80);
-        // 00000000
-        assert_eq!(extract_bits_mask_msb(v, 0), 0);
-        // 10101000
-        assert_eq!(extract_bits_mask_msb(v, 5), 0xA8);
-        // same
-        assert_eq!(extract_bits_mask_msb(v, 8), 0xAB);
+        let v: u8 = 0b1010_1011;
+        assert_eq!(extract_bits_mask_msb(v, 4), 0b1010_0000);
+        assert_eq!(extract_bits_mask_msb(v, 2), 0b1000_0000);
+        assert_eq!(extract_bits_mask_msb(v, 0), 0b0000_0000);
+        assert_eq!(extract_bits_mask_msb(v, 5), 0b1010_1000);
+        assert_eq!(extract_bits_mask_msb(v, 8), 0b1010_1011);
     }
 
     #[test]
@@ -195,18 +210,12 @@ mod tests {
 
     #[test]
     fn test_extract_bits_mask_lsb() {
-        // 10101011
-        let v: u8 = 0xAB;
-        // 00001011
-        assert_eq!(extract_bits_mask_lsb(v, 4), 0x0B);
-        // 00000011
-        assert_eq!(extract_bits_mask_lsb(v, 2), 0x03);
-        // 00000000
-        assert_eq!(extract_bits_mask_lsb(v, 0), 0);
-        // 00101011
-        assert_eq!(extract_bits_mask_lsb(v, 7), 0x2B);
-        // same
-        assert_eq!(extract_bits_mask_lsb(v, 8), 0xAB);
+        let v: u8 = 0b1010_1011;
+        assert_eq!(extract_bits_mask_lsb(v, 4), 0b0000_1011);
+        assert_eq!(extract_bits_mask_lsb(v, 2), 0b0000_0011);
+        assert_eq!(extract_bits_mask_lsb(v, 0), 0b0000_0000);
+        assert_eq!(extract_bits_mask_lsb(v, 7), 0b0010_1011);
+        assert_eq!(extract_bits_mask_lsb(v, 8), 0b1010_1011);
     }
 
     #[test]
