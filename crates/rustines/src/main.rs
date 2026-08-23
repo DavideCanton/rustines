@@ -29,7 +29,7 @@ fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
         .module("naga", LevelFilter::Warn);
 
     if trace > 0 {
-        log_spec_builder.module("rustines_core::arch::cpu", LevelFilter::Trace);
+        log_spec_builder.module("rustines_core::arch::instr_tracer", LevelFilter::Trace);
     }
     if trace > 1 {
         log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
