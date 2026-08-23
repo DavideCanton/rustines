@@ -325,8 +325,12 @@ impl Instr {
     }
 }
 
-pub fn error_fn(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
-    warn!("Invalid opcode!");
+pub fn error_fn(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
+    // decrease pc as it was already increased by 1 in the cpu step function
+    let pc = cpu.registers.pc.wrapping_sub(1);
+    // ensure the read has no side effects by using peek instead of read
+    let current_opcode = bus.peek(pc);
+    warn!("Invalid opcode found {:#04X}", current_opcode);
     1
 }
 

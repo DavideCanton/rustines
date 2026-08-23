@@ -10,7 +10,7 @@ pub fn accumulator(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage(bus);
-    let val = bus.fetch(addr as u16);
+    let val = bus.read(addr as u16);
     let res = do_lsr(cpu, val);
     store_with_dummy_write(bus, addr as u16, val, res);
     5
@@ -18,7 +18,7 @@ pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn zeropage_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage_indexed(bus, cpu.registers.x_reg);
-    let val = bus.fetch(addr as u16);
+    let val = bus.read(addr as u16);
     let res = do_lsr(cpu, val);
     store_with_dummy_write(bus, addr as u16, val, res);
     6
@@ -26,15 +26,17 @@ pub fn zeropage_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_absolute(bus);
-    let val = bus.fetch(addr);
+    let val = bus.read(addr);
     let res = do_lsr(cpu, val);
     store_with_dummy_write(bus, addr, val, res);
     6
 }
 
 pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let (addr, _) = cpu.decode_absolute_indexed(bus, cpu.registers.x_reg, true);
-    let val = bus.fetch(addr);
+    let addr = cpu
+        .decode_absolute_indexed(bus, cpu.registers.x_reg, true)
+        .address();
+    let val = bus.read(addr);
     let res = do_lsr(cpu, val);
     store_with_dummy_write(bus, addr, val, res);
     7

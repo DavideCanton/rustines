@@ -5,14 +5,14 @@ use crate::{
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage(bus);
-    let val = bus.fetch(addr as u16);
+    let val = bus.read(addr as u16);
     do_bit(cpu, val);
     3
 }
 
 pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_absolute(bus);
-    let val = bus.fetch(addr);
+    let val = bus.read(addr);
     do_bit(cpu, val);
     4
 }

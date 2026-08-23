@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub fn jsr(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let low = bus.fetch(cpu.registers.pc);
+    let low = bus.read(cpu.registers.pc);
     cpu.registers.pc = cpu.registers.pc.wrapping_add(1);
 
     cpu.burn_internal_cycle(bus);
@@ -13,7 +13,7 @@ pub fn jsr(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
     cpu.push16(bus, return_addr);
 
-    let high = bus.fetch(cpu.registers.pc);
+    let high = bus.read(cpu.registers.pc);
 
     cpu.registers.pc = to_u16(low, high);
 

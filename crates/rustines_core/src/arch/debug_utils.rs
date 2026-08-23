@@ -67,7 +67,7 @@ pub fn debug_dump_nametable(bus: &Bus) {
     println!("\n----{}", "---".repeat(32));
 
     let ppu = bus.ppu();
-    let mapper: &dyn Mapper = bus.mapper();
+    let mapper: &dyn Mapper = bus.mapper_ref();
 
     for row in 0..30 {
         print!("{:02X} | ", row);

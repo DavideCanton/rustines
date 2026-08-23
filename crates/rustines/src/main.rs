@@ -120,8 +120,8 @@ pub fn main() {
     let mut bus = core::Bus::new(rom.mapper, ppu, apu);
     let mut cpu = core::Cpu::new();
     if args.trace_boot {
-        cpu.set_trace(true);
-        bus.set_trace(true);
+        cpu.enable_tracing(true);
+        bus.enable_tracing(true);
     }
 
     let mut limiter = FpsLimiter::new(60.0);
@@ -194,8 +194,8 @@ fn debug_keys(
         println!("LOGPOINT {}", logpoint);
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;
-        cpu.set_trace(true);
-        bus.set_trace(true);
+        cpu.enable_tracing(true);
+        bus.enable_tracing(true);
     }
 }
 

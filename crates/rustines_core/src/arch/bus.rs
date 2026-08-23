@@ -17,7 +17,7 @@ pub struct Bus {
     controller2: NesController,
     open_bus_value: u8,
     cycles_cnt: usize,
-    trace: bool,
+    tracing_enabled: bool,
     dma_in_progress: bool,
 }
 
@@ -32,20 +32,20 @@ impl Bus {
             controller2: NesController::new(2),
             open_bus_value: 0,
             cycles_cnt: 0,
-            trace: false,
+            tracing_enabled: false,
             dma_in_progress: false,
         }
     }
 
-    pub fn set_trace(&mut self, trace: bool) {
-        self.trace = trace;
+    pub fn enable_tracing(&mut self, tracing_enabled: bool) {
+        self.tracing_enabled = tracing_enabled;
     }
 
-    pub fn start_tick(&mut self) {
+    pub fn tick_started(&mut self) {
         self.cycles_cnt = 0;
     }
 
-    pub fn check(&self, exp: u8) -> Option<usize> {
+    pub fn check_tick_end(&self, exp: u8) -> Option<usize> {
         let exp = exp as usize;
 
         if self.cycles_cnt != exp {
@@ -55,14 +55,14 @@ impl Bus {
         }
     }
 
-    pub fn push8(&mut self, sp: u8, val: u8) {
+    pub fn push(&mut self, sp: u8, val: u8) {
         let sp = sp as u16 + 0x0100;
-        self.store(sp, val);
+        self.write(sp, val);
     }
 
-    pub fn peek8(&mut self, sp: u8) -> u8 {
+    pub fn pop(&mut self, sp: u8) -> u8 {
         let sp = sp as u16 + 0x0100;
-        self.fetch(sp)
+        self.read(sp)
     }
 
     pub fn ppu(&self) -> &Ppu {
@@ -81,8 +81,20 @@ impl Bus {
         &mut self.apu
     }
 
-    pub fn mapper(&self) -> &dyn Mapper {
+    pub fn mapper_ref(&self) -> &dyn Mapper {
         self.mapper.as_ref()
+    }
+
+    pub fn controller1_mut(&mut self) -> &mut NesController {
+        &mut self.controller1
+    }
+
+    pub fn controller2_mut(&mut self) -> &mut NesController {
+        &mut self.controller2
+    }
+
+    pub fn open_bus_value(&self) -> u8 {
+        self.open_bus_value
     }
 
     pub fn burn_cycle_from_cpu(&mut self) {
@@ -99,7 +111,7 @@ impl Bus {
         }
 
         let mapper = self.mapper.as_mut();
-        if self.trace {
+        if self.tracing_enabled {
             trace!("Advancing PPU x 3 AND APU x 1");
         }
         for _ in 0..3 {
@@ -108,18 +120,8 @@ impl Bus {
         self.apu.tick();
     }
 
-    pub fn controller1_mut(&mut self) -> &mut NesController {
-        &mut self.controller1
-    }
-
-    pub fn controller2_mut(&mut self) -> &mut NesController {
-        &mut self.controller2
-    }
-
-    pub fn open_bus_value(&self) -> u8 {
-        self.open_bus_value
-    }
-
+    /// Peek the value at the given address without affecting the open bus value or triggering
+    /// side effects.
     pub fn peek(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.nes_ram[(address & 0b0000_0111_1111_1111) as usize],
@@ -134,7 +136,9 @@ impl Bus {
         }
     }
 
-    pub fn fetch(&mut self, address: u16) -> u8 {
+    /// Fetch the value at the given address, updating the open bus value and triggering side
+    /// effects.
+    pub fn read(&mut self, address: u16) -> u8 {
         let mut update_open_bus = true;
         let value = match address {
             0x0000..=0x1FFF => {
@@ -177,7 +181,7 @@ impl Bus {
         if update_open_bus {
             self.open_bus_value = value;
         }
-        if self.trace {
+        if self.tracing_enabled {
             trace!(
                 "Fetch from bus, ADDRESS = {:#06X}, VALUE = {:#04X}",
                 address, value
@@ -187,8 +191,10 @@ impl Bus {
         value
     }
 
-    pub fn store(&mut self, address: u16, val: u8) {
-        if self.trace {
+    /// Store the value at the given address, updating the open bus value and triggering side
+    /// effects.
+    pub fn write(&mut self, address: u16, val: u8) {
+        if self.tracing_enabled {
             trace!(
                 "Store in bus, ADDRESS = {:#06X}, VALUE = {:#04X}",
                 address, val
@@ -218,7 +224,7 @@ impl Bus {
                     let mut buf = vec![0; 256];
                     let start = (val as u16) << 8;
                     self.dma_in_progress = true;
-                    self.fetch_many(start, &mut buf);
+                    self.read_many(start, &mut buf);
                     self.dma_in_progress = false;
                     if let Some(&last_dma_byte) = buf.last() {
                         self.open_bus_value = last_dma_byte;
@@ -241,35 +247,75 @@ impl Bus {
         };
     }
 
-    pub fn fetch_many(&mut self, addr: u16, destination: &mut [u8]) {
+    /// Read multiple bytes from the bus starting at the given address into the provided destination
+    /// slice. The destination slice will be filled with the read values.
+    ///
+    /// NOTE: This method will trigger side effects and update the open bus value for each read.
+    pub fn read_many(&mut self, addr: u16, destination: &mut [u8]) {
         for (addr, v) in (addr..).zip(destination.iter_mut()) {
-            *v = self.fetch(addr);
+            *v = self.read(addr);
         }
     }
 
-    pub fn store_many(&mut self, addr: u16, values: &[u8]) {
+    /// Store multiple bytes to the bus starting at the given address from the provided source
+    /// slice. The source slice will be read for the values to store.
+    ///
+    /// NOTE: This method will trigger side effects and update the open bus value for each write.
+    pub fn write_many(&mut self, addr: u16, values: &[u8]) {
         for (addr, v) in (addr..).zip(values.iter()) {
-            self.store(addr, *v);
+            self.write(addr, *v);
         }
     }
 
-    pub fn read_with_dummy(&mut self, low: u8, high: u8, offset: u8, is_write: bool) -> (u16, u8) {
+    /// Simulates a dummy read from the bus, which is used in certain addressing modes to account
+    /// for the extra cycle when crossing a page boundary.
+    ///
+    /// It returns the final address after adding the offset and a flag indicating whether a page
+    /// boundary was crossed (1 if crossed, 0 otherwise).
+    pub fn perform_dummy_read(
+        &mut self,
+        low: u8,
+        high: u8,
+        offset: u8,
+        is_write: bool,
+    ) -> DummyReadResult {
         let base = to_u16(low, high);
         let raw_addr = base.wrapping_add(offset as u16);
-        let boundary = if low.overflowing_add(offset).1 { 1 } else { 0 };
+        let boundary_crossed = low.overflowing_add(offset).1;
         let dummy_addr = (base & 0b1111_1111_0000_0000) | (raw_addr & 0b0000_0000_1111_1111);
 
         // dummy read
-        if boundary == 1 {
-            // if boundary is crossed, do a dummy read in any case at the wrong address
-            let _ = self.fetch(dummy_addr);
-            (raw_addr, 1)
-        } else {
-            // if boundary is not crossed, only write instructions do a dummy read to the same address
-            if is_write {
-                let _ = self.fetch(dummy_addr);
-            }
-            (raw_addr, 0)
+        // if boundary is crossed, do a dummy read in any case at the wrong address, else
+        // only write instructions do a dummy read to the same address
+        if boundary_crossed || is_write {
+            let _ = self.read(dummy_addr);
         }
+        DummyReadResult::new(raw_addr, boundary_crossed)
+    }
+}
+
+pub struct DummyReadResult {
+    address: u16,
+    page_boundary_crossed: bool,
+}
+
+impl DummyReadResult {
+    fn new(address: u16, page_boundary_crossed: bool) -> Self {
+        Self {
+            address,
+            page_boundary_crossed,
+        }
+    }
+
+    pub fn address(&self) -> u16 {
+        self.address
+    }
+
+    pub fn page_boundary_crossed(&self) -> bool {
+        self.page_boundary_crossed
+    }
+
+    pub fn page_boundary_crossed_as_u8(&self) -> u8 {
+        if self.page_boundary_crossed { 1 } else { 0 }
     }
 }

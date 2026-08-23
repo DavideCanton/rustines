@@ -25,5 +25,5 @@ pub fn indirect_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_sax(bus: &mut Bus, addr: u16, cpu: &mut Cpu) {
-    bus.store(addr, cpu.registers.a_reg & cpu.registers.x_reg);
+    bus.write(addr, cpu.registers.a_reg & cpu.registers.x_reg);
 }

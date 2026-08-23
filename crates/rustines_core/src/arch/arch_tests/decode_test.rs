@@ -6,8 +6,8 @@ mod tests {
     fn test_decode_absolute() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
-        bus.store(cpu.registers.pc + 2, 0xab);
+        bus.write(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 2, 0xab);
         cpu.registers.pc += 1;
 
         let addr = cpu.decode_absolute(&mut bus);
@@ -19,7 +19,7 @@ mod tests {
     fn test_decode_immediate() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
         let addr = cpu.decode_immediate(&mut bus);
@@ -31,7 +31,7 @@ mod tests {
     fn test_decode_zeropage() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage(&mut bus);
@@ -43,33 +43,33 @@ mod tests {
     fn test_decode_absolute_indexed() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
-        bus.store(cpu.registers.pc + 2, 0xab);
+        bus.write(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 2, 0xab);
         cpu.registers.pc += 1;
 
-        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
+        let result = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
-        assert_eq!(addr, 0xabdd);
+        assert_eq!(result.address(), 0xabdd);
     }
 
     #[test]
     fn test_decode_absolute_indexed_wrapping() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xfe);
-        bus.store(cpu.registers.pc + 2, 0xff);
+        bus.write(cpu.registers.pc + 1, 0xfe);
+        bus.write(cpu.registers.pc + 2, 0xff);
         cpu.registers.pc += 1;
 
-        let (addr, _) = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
+        let result = cpu.decode_absolute_indexed(&mut bus, 0x10, false);
 
-        assert_eq!(addr, 0x000e);
+        assert_eq!(result.address(), 0x000e);
     }
 
     #[test]
     fn test_decode_zeropage_indexed() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage_indexed(&mut bus, 0x10);
@@ -81,7 +81,7 @@ mod tests {
     fn test_decode_zeropage_indexed_wrapping() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xfe);
+        bus.write(cpu.registers.pc + 1, 0xfe);
         cpu.registers.pc += 1;
 
         let addr = cpu.decode_zeropage_indexed(&mut bus, 0x10);
@@ -93,11 +93,11 @@ mod tests {
     fn test_decode_indexed_indirect() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
-        bus.store(0xdd, 0xcd);
-        bus.store(0xde, 0xab);
+        bus.write(0xdd, 0xcd);
+        bus.write(0xde, 0xab);
 
         cpu.registers.x_reg = 0x10;
 
@@ -110,11 +110,11 @@ mod tests {
     fn test_decode_indexed_indirect_wrapping() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xff);
+        bus.write(cpu.registers.pc + 1, 0xff);
         cpu.registers.pc += 1;
 
-        bus.store(0x0f, 0xcd);
-        bus.store(0x10, 0xab);
+        bus.write(0x0f, 0xcd);
+        bus.write(0x10, 0xab);
 
         cpu.registers.x_reg = 0x10;
 
@@ -127,33 +127,33 @@ mod tests {
     fn test_decode_indirect_indexed() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
-        bus.store(0xcd, 0xcd);
-        bus.store(0xce, 0xab);
+        bus.write(0xcd, 0xcd);
+        bus.write(0xce, 0xab);
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, _) = cpu.decode_indirect_indexed(&mut bus, false);
+        let result = cpu.decode_indirect_indexed(&mut bus, false);
 
-        assert_eq!(addr, 0xabdd);
+        assert_eq!(result.address(), 0xabdd);
     }
 
     #[test]
     fn test_decode_indirect_indexed_wrapping() {
         let (mut cpu, mut bus) = setup_tests();
 
-        bus.store(cpu.registers.pc + 1, 0xcd);
+        bus.write(cpu.registers.pc + 1, 0xcd);
         cpu.registers.pc += 1;
 
-        bus.store(0xcd, 0xfe);
-        bus.store(0xce, 0xff);
+        bus.write(0xcd, 0xfe);
+        bus.write(0xce, 0xff);
 
         cpu.registers.y_reg = 0x10;
 
-        let (addr, _) = cpu.decode_indirect_indexed(&mut bus, false);
+        let result = cpu.decode_indirect_indexed(&mut bus, false);
 
-        assert_eq!(addr, 0x000e);
+        assert_eq!(result.address(), 0x000e);
     }
 }

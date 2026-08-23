@@ -1,7 +1,11 @@
 use log::{Level, log_enabled, trace};
 
 use crate::{
-    arch::{bus::Bus, instrs::instr_table::INSTR_TABLE, registers::*},
+    arch::{
+        bus::{Bus, DummyReadResult},
+        instrs::instr_table::INSTR_TABLE,
+        registers::*,
+    },
     hex16,
     utils::bit_utils::*,
 };
@@ -10,7 +14,7 @@ pub struct Cpu {
     pub registers: Registers,
     nmi: bool,
     rst: bool,
-    trace: bool,
+    tracing_enabled: bool,
     clock: u64,
     function_level: u32,
     pending_irq_execution: bool,
@@ -25,7 +29,7 @@ impl Cpu {
             registers: Registers::default(),
             nmi: false,
             rst: true,
-            trace: false,
+            tracing_enabled: false,
             clock: 0,
             function_level: 0,
             pending_irq_execution: false,
@@ -39,10 +43,10 @@ impl Cpu {
             return value;
         }
 
-        bus.start_tick();
+        bus.tick_started();
 
         let pc = self.registers.pc;
-        let opcode = bus.fetch(self.registers.pc);
+        let opcode = bus.read(self.registers.pc);
 
         let instr = &INSTR_TABLE[opcode as usize];
 
@@ -50,7 +54,7 @@ impl Cpu {
             self.function_level -= 1;
         }
 
-        if log_enabled!(Level::Trace) && self.trace {
+        if log_enabled!(Level::Trace) && self.tracing_enabled {
             self.trace_instr(bus);
         }
 
@@ -64,7 +68,7 @@ impl Cpu {
 
         self.clock += cycles as u64;
 
-        if let Some(cnt) = bus.check(cycles) {
+        if let Some(cnt) = bus.check_tick_end(cycles) {
             panic!(
                 "Bus tick count mismatch: expected {}, got {}, pc = {:#06X}, opcode = {:#04X}, instr = {}",
                 cycles, cnt, pc, opcode, instr.fname,
@@ -126,13 +130,13 @@ impl Cpu {
     }
 
     pub fn push8(&mut self, bus: &mut Bus, v: u8) {
-        bus.push8(self.registers.sp, v);
+        bus.push(self.registers.sp, v);
         self.registers.sp = self.registers.sp.wrapping_sub(1);
     }
 
     pub fn pop8(&mut self, bus: &mut Bus) -> u8 {
         self.registers.sp = self.registers.sp.wrapping_add(1);
-        bus.peek8(self.registers.sp)
+        bus.pop(self.registers.sp)
     }
 
     pub fn pop16(&mut self, bus: &mut Bus) -> u16 {
@@ -150,20 +154,20 @@ impl Cpu {
     }
 
     pub fn peek8(&self, bus: &mut Bus) -> u8 {
-        bus.peek8(self.registers.sp + 1)
+        bus.pop(self.registers.sp + 1)
     }
 
     pub fn peek16(&self, bus: &mut Bus) -> u16 {
         let low = self.peek8(bus);
-        let high = bus.fetch(self.registers.sp as u16 + 0x0102);
+        let high = bus.read(self.registers.sp as u16 + 0x0102);
 
         to_u16(low, high)
     }
 
     pub fn peek32(&self, bus: &mut Bus) -> u32 {
         let low = self.peek16(bus);
-        let high_h = bus.fetch(self.registers.sp as u16 + 0x0103);
-        let high_l = bus.fetch(self.registers.sp as u16 + 0x0104);
+        let high_h = bus.read(self.registers.sp as u16 + 0x0103);
+        let high_l = bus.read(self.registers.sp as u16 + 0x0104);
         let high = to_u16(high_l, high_h);
 
         to_u32(low, high)
@@ -172,23 +176,23 @@ impl Cpu {
     // decode functions
 
     pub fn decode_absolute(&mut self, bus: &mut Bus) -> u16 {
-        let low = bus.fetch(self.registers.pc);
+        let low = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
-        let high = bus.fetch(self.registers.pc);
+        let high = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
         to_u16(low, high)
     }
 
     pub fn decode_immediate(&mut self, bus: &mut Bus) -> u8 {
-        let val = bus.fetch(self.registers.pc);
+        let val = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
         val
     }
 
     pub fn decode_zeropage(&mut self, bus: &mut Bus) -> u8 {
-        let val = bus.fetch(self.registers.pc);
+        let val = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
         val
     }
@@ -198,18 +202,18 @@ impl Cpu {
         bus: &mut Bus,
         offset: u8,
         is_write: bool,
-    ) -> (u16, u8) {
-        let low = bus.fetch(self.registers.pc);
+    ) -> DummyReadResult {
+        let low = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
-        let high = bus.fetch(self.registers.pc);
+        let high = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
-        bus.read_with_dummy(low, high, offset, is_write)
+        bus.perform_dummy_read(low, high, offset, is_write)
     }
 
     pub fn decode_zeropage_indexed(&mut self, bus: &mut Bus, offset: u8) -> u8 {
-        let addr = bus.fetch(self.registers.pc);
+        let addr = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
         self.burn_internal_cycle(bus);
@@ -218,30 +222,30 @@ impl Cpu {
     }
 
     pub fn decode_indexed_indirect(&mut self, bus: &mut Bus) -> u16 {
-        let base = bus.fetch(self.registers.pc);
+        let base = bus.read(self.registers.pc);
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
         self.burn_internal_cycle(bus);
 
         let op = (base.wrapping_add(self.registers.x_reg)) as u16 & 0b1111_1111;
-        let low = bus.fetch(op);
-        let high = bus.fetch((op + 1) & 0b1111_1111);
+        let low = bus.read(op);
+        let high = bus.read((op + 1) & 0b1111_1111);
 
         to_u16(low, high)
     }
 
-    pub fn decode_indirect_indexed(&mut self, bus: &mut Bus, is_write: bool) -> (u16, u8) {
-        let op = bus.fetch(self.registers.pc) as u16;
+    pub fn decode_indirect_indexed(&mut self, bus: &mut Bus, is_write: bool) -> DummyReadResult {
+        let op = bus.read(self.registers.pc) as u16;
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
-        let low = bus.fetch(op);
-        let high = bus.fetch((op + 1) & 0b1111_1111);
+        let low = bus.read(op);
+        let high = bus.read((op + 1) & 0b1111_1111);
 
-        bus.read_with_dummy(low, high, self.registers.y_reg, is_write)
+        bus.perform_dummy_read(low, high, self.registers.y_reg, is_write)
     }
 
-    pub fn set_trace(&mut self, value: bool) {
-        self.trace = value;
+    pub fn enable_tracing(&mut self, tracing_enabled: bool) {
+        self.tracing_enabled = tracing_enabled;
     }
 
     fn save_state_before_interrupt(&mut self, bus: &mut Bus) {
@@ -257,12 +261,12 @@ impl Cpu {
     fn perform_irq(&mut self, bus: &mut Bus) {
         self.save_state_before_interrupt(bus);
 
-        let low = bus.fetch(0xFFFE);
-        let high = bus.fetch(0xFFFF);
+        let low = bus.read(0xFFFE);
+        let high = bus.read(0xFFFF);
 
         let pc = to_u16(low, high);
         self.registers.pc = pc;
-        if self.trace {
+        if self.tracing_enabled {
             trace!("An IRQ has occurred, jumping to {}", hex16!(pc));
         }
     }
@@ -270,12 +274,12 @@ impl Cpu {
     pub fn perform_nmi(&mut self, bus: &mut Bus) {
         self.save_state_before_interrupt(bus);
 
-        let low = bus.fetch(0xFFFA);
-        let high = bus.fetch(0xFFFB);
+        let low = bus.read(0xFFFA);
+        let high = bus.read(0xFFFB);
 
         let nmi_address = to_u16(low, high);
         self.registers.pc = nmi_address;
-        if self.trace {
+        if self.tracing_enabled {
             trace!(
                 "A NMI interrupt has occurred, jumping to {}",
                 hex16!(nmi_address)
@@ -288,8 +292,8 @@ impl Cpu {
             bus.burn_cycle_from_cpu();
         }
 
-        let low = bus.fetch(0xFFFC);
-        let high = bus.fetch(0xFFFD);
+        let low = bus.read(0xFFFC);
+        let high = bus.read(0xFFFD);
 
         let pc = to_u16(low, high);
         self.registers.pc = pc;
@@ -297,7 +301,7 @@ impl Cpu {
         self.registers.set_i();
         self.registers.sp = self.registers.sp.wrapping_sub(3);
 
-        if self.trace {
+        if self.tracing_enabled {
             trace!("A RST has occurred, jumping to {}", hex16!(pc));
         }
     }
@@ -338,7 +342,7 @@ impl Cpu {
             return;
         }
 
-        let irq_line_low = bus.apu().irq_active() || bus.mapper().irq_active();
+        let irq_line_low = bus.apu().irq_active() || bus.mapper_ref().irq_active();
 
         if irq_line_low && !self.registers.get_i() {
             self.pending_irq_execution = true;

@@ -8,8 +8,8 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         {
-            bus.store(cpu.registers.pc, 0x90);
-            bus.store(cpu.registers.pc + 1, 0xFF);
+            bus.write(cpu.registers.pc, 0x90);
+            bus.write(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.clear_c();
         }
@@ -30,8 +30,8 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         {
-            bus.store(cpu.registers.pc, 0x90);
-            bus.store(cpu.registers.pc + 1, 0xFF);
+            bus.write(cpu.registers.pc, 0x90);
+            bus.write(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.set_c();
         }
@@ -52,8 +52,8 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         {
-            bus.store(cpu.registers.pc, 0x90);
-            bus.store(cpu.registers.pc + 1, 0xFF);
+            bus.write(cpu.registers.pc, 0x90);
+            bus.write(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.set_c();
         }
@@ -74,8 +74,8 @@ mod tests {
         let (mut cpu, mut bus) = setup_tests();
 
         {
-            bus.store(cpu.registers.pc, 0x90);
-            bus.store(cpu.registers.pc + 1, 0xFF);
+            bus.write(cpu.registers.pc, 0x90);
+            bus.write(cpu.registers.pc + 1, 0xFF);
 
             cpu.registers.clear_c();
         }

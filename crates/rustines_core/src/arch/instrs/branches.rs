@@ -33,7 +33,7 @@ pub fn bvc(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_branch(flag: bool, cpu: &mut Cpu, bus: &mut Bus) -> u8 {
-    let offset = bus.fetch(cpu.registers.pc) as i8 as i16;
+    let offset = bus.read(cpu.registers.pc) as i8 as i16;
     cpu.registers.pc = cpu.registers.pc.wrapping_add(1);
 
     if flag {
