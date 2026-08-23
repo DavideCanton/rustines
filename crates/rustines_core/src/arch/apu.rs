@@ -1,4 +1,6 @@
-use crate::utils::bit_utils::{extract_bits_mask_lsb, extract_bits_shift, extract_flag};
+use crate::utils::bit_utils::{
+    BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
+};
 
 #[derive(Default)]
 pub struct Apu {
@@ -48,15 +50,18 @@ impl Apu {
                 // );
 
                 self.dmc.irq_active = false;
-                self.dmc.set_enabled(extract_flag(value, 4));
-                self.noise.set_enabled(extract_flag(value, 3));
-                self.triangle.set_enabled(extract_flag(value, 2));
-                self.pulse2.set_enabled(extract_flag(value, 1));
-                self.pulse1.set_enabled(extract_flag(value, 0));
+                self.dmc.set_enabled(extract_flag(value, BitIndex::BIT_4));
+                self.noise.set_enabled(extract_flag(value, BitIndex::BIT_3));
+                self.triangle
+                    .set_enabled(extract_flag(value, BitIndex::BIT_2));
+                self.pulse2
+                    .set_enabled(extract_flag(value, BitIndex::BIT_1));
+                self.pulse1
+                    .set_enabled(extract_flag(value, BitIndex::BIT_0));
             }
             23 => {
-                self.mode = extract_flag(value, 7);
-                self.irq_disabled = extract_flag(value, 6);
+                self.mode = extract_flag(value, BitIndex::BIT_7);
+                self.irq_disabled = extract_flag(value, BitIndex::BIT_6);
             }
             _ => {}
         }
@@ -120,17 +125,17 @@ struct Pulse {
 
 impl Pulse {
     fn update_1(&mut self, value: u8) {
-        self.duty = extract_bits_shift(value, 6, 2);
-        self.loop_flag = extract_flag(value, 5);
-        self.const_vol = extract_flag(value, 4);
-        self.vol = extract_bits_mask_lsb(value, 4);
+        self.duty = extract_bits_shift(value, BitIndex::BIT_6, BitCount::BIT_2);
+        self.loop_flag = extract_flag(value, BitIndex::BIT_5);
+        self.const_vol = extract_flag(value, BitIndex::BIT_4);
+        self.vol = extract_bits_mask_lsb(value, BitCount::BIT_4);
     }
 
     fn update_2(&mut self, value: u8) {
-        self.sweep_enabled = extract_flag(value, 7);
-        self.sweep_period = extract_bits_shift(value, 4, 3);
-        self.sweep_negate = extract_flag(value, 3);
-        self.sweep_shift = extract_bits_mask_lsb(value, 3);
+        self.sweep_enabled = extract_flag(value, BitIndex::BIT_7);
+        self.sweep_period = extract_bits_shift(value, BitIndex::BIT_4, BitCount::BIT_3);
+        self.sweep_negate = extract_flag(value, BitIndex::BIT_3);
+        self.sweep_shift = extract_bits_mask_lsb(value, BitCount::BIT_3);
     }
 
     fn update_3(&mut self, value: u8) {
@@ -138,8 +143,8 @@ impl Pulse {
     }
 
     fn update_4(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, 3);
-        self.length_counter_load = extract_bits_shift(value, 3, 5);
+        self.timer_high = extract_bits_mask_lsb(value, BitCount::BIT_3);
+        self.length_counter_load = extract_bits_shift(value, BitIndex::BIT_3, BitCount::BIT_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -158,8 +163,8 @@ struct Triangle {
 
 impl Triangle {
     fn update_1(&mut self, value: u8) {
-        self.counter_ctl = extract_flag(value, 7);
-        self.counter_load = extract_bits_mask_lsb(value, 7);
+        self.counter_ctl = extract_flag(value, BitIndex::BIT_7);
+        self.counter_load = extract_bits_mask_lsb(value, BitCount::BIT_7);
     }
 
     fn update_2(&mut self, value: u8) {
@@ -167,8 +172,8 @@ impl Triangle {
     }
 
     fn update_3(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, 3);
-        self.length_counter_load = extract_bits_shift(value, 3, 5);
+        self.timer_high = extract_bits_mask_lsb(value, BitCount::BIT_3);
+        self.length_counter_load = extract_bits_shift(value, BitIndex::BIT_3, BitCount::BIT_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -188,18 +193,18 @@ struct Noise {
 
 impl Noise {
     fn update_1(&mut self, value: u8) {
-        self.loop_flag = extract_flag(value, 5);
-        self.const_vol = extract_flag(value, 4);
-        self.vol = extract_bits_mask_lsb(value, 4);
+        self.loop_flag = extract_flag(value, BitIndex::BIT_5);
+        self.const_vol = extract_flag(value, BitIndex::BIT_4);
+        self.vol = extract_bits_mask_lsb(value, BitCount::BIT_4);
     }
 
     fn update_2(&mut self, value: u8) {
-        self.noise_mode = extract_flag(value, 7);
-        self.period = extract_bits_mask_lsb(value, 4);
+        self.noise_mode = extract_flag(value, BitIndex::BIT_7);
+        self.period = extract_bits_mask_lsb(value, BitCount::BIT_4);
     }
 
     fn update_3(&mut self, value: u8) {
-        self.length_counter = extract_bits_shift(value, 3, 5);
+        self.length_counter = extract_bits_shift(value, BitIndex::BIT_3, BitCount::BIT_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -275,9 +280,9 @@ impl Dmc {
     }
 
     fn update_1(&mut self, value: u8) {
-        self.irq_enable = extract_flag(value, 7);
-        self.loop_flag = extract_flag(value, 6);
-        self.freq = extract_bits_mask_lsb(value, 4);
+        self.irq_enable = extract_flag(value, BitIndex::BIT_7);
+        self.loop_flag = extract_flag(value, BitIndex::BIT_6);
+        self.freq = extract_bits_mask_lsb(value, BitCount::BIT_4);
 
         if !self.irq_enable {
             self.irq_active = false;
@@ -285,7 +290,7 @@ impl Dmc {
     }
 
     fn update_2(&mut self, value: u8) {
-        self.load_counter = extract_bits_mask_lsb(value, 7);
+        self.load_counter = extract_bits_mask_lsb(value, BitCount::BIT_7);
     }
 
     fn update_3(&mut self, value: u8) {

@@ -53,25 +53,87 @@ macro_rules! bin {
     ( $val:expr ) => {{ format!("{:08b}", $val) }};
 }
 
+#[derive(Clone, Copy)]
+pub struct BitIndex(u8);
+
+impl BitIndex {
+    pub const BIT_0: Self = Self::new(0);
+    pub const BIT_1: Self = Self::new(1);
+    pub const BIT_2: Self = Self::new(2);
+    pub const BIT_3: Self = Self::new(3);
+    pub const BIT_4: Self = Self::new(4);
+    pub const BIT_5: Self = Self::new(5);
+    pub const BIT_6: Self = Self::new(6);
+    pub const BIT_7: Self = Self::new(7);
+
+    pub const fn new(value: u8) -> Self {
+        assert!(BitIndex::validate(value), "bit index must be 0..=7");
+        Self(value)
+    }
+
+    const fn validate(value: u8) -> bool {
+        value < 8
+    }
+}
+
+impl TryFrom<u8> for BitIndex {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        BitIndex::validate(value)
+            .then_some(Self(value))
+            .ok_or("bit index must be 0..=7")
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct BitCount(u8);
+
+impl BitCount {
+    pub const BIT_0: Self = Self::new(0);
+    pub const BIT_1: Self = Self::new(1);
+    pub const BIT_2: Self = Self::new(2);
+    pub const BIT_3: Self = Self::new(3);
+    pub const BIT_4: Self = Self::new(4);
+    pub const BIT_5: Self = Self::new(5);
+    pub const BIT_6: Self = Self::new(6);
+    pub const BIT_7: Self = Self::new(7);
+    pub const BIT_8: Self = Self::new(8);
+
+    pub const fn new(value: u8) -> Self {
+        assert!(BitCount::validate(value), "bit count must be 0..=8");
+        Self(value)
+    }
+
+    const fn validate(value: u8) -> bool {
+        value <= 8
+    }
+}
+
+impl TryFrom<u8> for BitCount {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        BitCount::validate(value)
+            .then_some(Self(value))
+            .ok_or("bit count must be 0..=8")
+    }
+}
+
 /// Extracts the bit at offset `offset` of `value` and returns true if it was 1, false else.
 ///
 /// `offset` is counted from the right, so 0 is the rightmost bit.
 ///
 /// Panics if `offset >= 8`.
 #[inline(always)]
-pub fn extract_flag(value: u8, offset: u8) -> bool {
-    if offset >= 8 {
-        panic!("Invalid offset");
-    }
-    (value & (1 << offset)) > 0
+pub fn extract_flag(value: u8, offset: BitIndex) -> bool {
+    (value & (1 << offset.0)) > 0
 }
 
 /// Sets the bit at offset `offset` of `value` to 1 if `flag` is true, else to 0.
 #[inline(always)]
-pub fn set_flag(value: u8, offset: u8, flag: bool) -> u8 {
-    if offset >= 8 {
-        panic!("Invalid offset");
-    }
+pub fn set_flag(value: u8, offset: BitIndex, flag: bool) -> u8 {
+    let offset = offset.0;
     if flag {
         value | (1 << offset)
     } else {
@@ -87,11 +149,8 @@ pub fn set_flag(value: u8, offset: u8, flag: bool) -> u8 {
 ///
 /// Panics if `shift >= 8`.
 #[inline(always)]
-pub fn extract_bits_shift(value: u8, shift: u8, count: u8) -> u8 {
-    if shift >= 8 {
-        panic!("Invalid offset");
-    }
-    let value = value >> shift;
+pub fn extract_bits_shift(value: u8, shift: BitIndex, count: BitCount) -> u8 {
+    let value = value >> shift.0;
     extract_bits_mask_lsb(value, count)
 }
 
@@ -103,10 +162,9 @@ pub fn extract_bits_shift(value: u8, shift: u8, count: u8) -> u8 {
 ///
 /// Panics if `count > 8`.
 #[inline(always)]
-pub fn extract_bits_mask_msb(value: u8, count: u8) -> u8 {
-    if count > 8 {
-        panic!("Invalid offset");
-    } else if count == 0 {
+pub fn extract_bits_mask_msb(value: u8, count: BitCount) -> u8 {
+    let count = count.0;
+    if count == 0 {
         0
     } else {
         let mask = !0 << (8 - count);
@@ -122,10 +180,9 @@ pub fn extract_bits_mask_msb(value: u8, count: u8) -> u8 {
 ///
 /// Panics if `count > 8`.
 #[inline(always)]
-pub fn extract_bits_mask_lsb(value: u8, count: u8) -> u8 {
-    if count > 8 {
-        panic!("Invalid offset");
-    } else if count == 0 {
+pub fn extract_bits_mask_lsb(value: u8, count: BitCount) -> u8 {
+    let count = count.0;
+    if count == 0 {
         0
     } else {
         let mask = !0 >> (8 - count);
@@ -136,91 +193,112 @@ pub fn extract_bits_mask_lsb(value: u8, count: u8) -> u8 {
 #[cfg(test)]
 #[allow(clippy::assertions_on_constants)]
 mod tests {
-    use crate::utils::bit_utils::set_flag;
+    use crate::utils::bit_utils::{BitCount, BitIndex, set_flag};
 
     use super::{extract_bits_mask_lsb, extract_bits_mask_msb, extract_bits_shift, extract_flag};
 
     #[test]
     fn test_extract_flag() {
         let v: u8 = 0b0000_1111;
-        assert!(extract_flag(v, 0));
-        assert!(extract_flag(v, 1));
-        assert!(!extract_flag(v, 5));
+        assert!(extract_flag(v, BitIndex::BIT_0));
+        assert!(extract_flag(v, BitIndex::BIT_1));
+        assert!(!extract_flag(v, BitIndex::BIT_5));
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit index must be 0..=7"]
     fn test_extract_flag_invalid() {
-        extract_flag(0xF, 32);
+        extract_flag(0xF, BitIndex::new(8));
     }
 
     #[test]
     fn test_set_flag() {
         let v: u8 = 0b0000_1111;
-        assert_eq!(set_flag(v, 0, false), 0b0000_1110);
-        assert_eq!(set_flag(v, 1, false), 0b0000_1101);
-        assert_eq!(set_flag(v, 5, true), 0b0010_1111);
+        assert_eq!(set_flag(v, BitIndex::BIT_0, false), 0b0000_1110);
+        assert_eq!(set_flag(v, BitIndex::BIT_1, false), 0b0000_1101);
+        assert_eq!(set_flag(v, BitIndex::BIT_5, true), 0b0010_1111);
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit index must be 0..=7"]
     fn test_set_flag_invalid() {
-        set_flag(0xF, 32, true);
+        set_flag(0xF, BitIndex::new(8), true);
     }
 
     #[test]
     fn test_extract_bits_shift() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_shift(v, 4, 4), 0b0000_1010);
-        assert_eq!(extract_bits_shift(v, 2, 6), 0b0010_1010);
-        assert_eq!(extract_bits_shift(v, 2, 5), 0b0000_1010);
-        assert_eq!(extract_bits_shift(v, 0, 8), 0b1010_1011);
-        assert_eq!(extract_bits_shift(v, 0, 6), 0b0010_1011);
-        assert_eq!(extract_bits_shift(v, 3, 5), 0b0001_0101);
-        assert_eq!(extract_bits_shift(v, 3, 1), 0b0000_0001);
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_4, BitCount::BIT_4),
+            0b0000_1010
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_2, BitCount::BIT_6),
+            0b0010_1010
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_2, BitCount::BIT_5),
+            0b0000_1010
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_0, BitCount::BIT_8),
+            0b1010_1011
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_0, BitCount::BIT_6),
+            0b0010_1011
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_3, BitCount::BIT_5),
+            0b0001_0101
+        );
+        assert_eq!(
+            extract_bits_shift(v, BitIndex::BIT_3, BitCount::BIT_1),
+            0b0000_0001
+        );
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit index must be 0..=7"]
     fn test_extract_bits_shift_invalid_shift() {
-        extract_bits_shift(0, 8, 1);
+        extract_bits_shift(0, BitIndex::new(8), BitCount::BIT_1);
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit count must be 0..=8"]
     fn test_extract_bits_shift_invalid_count() {
-        extract_bits_shift(0, 1, 9);
+        extract_bits_shift(0, BitIndex::BIT_1, BitCount::new(9));
     }
 
     #[test]
     fn test_extract_bits_mask_msb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_msb(v, 4), 0b1010_0000);
-        assert_eq!(extract_bits_mask_msb(v, 2), 0b1000_0000);
-        assert_eq!(extract_bits_mask_msb(v, 0), 0b0000_0000);
-        assert_eq!(extract_bits_mask_msb(v, 5), 0b1010_1000);
-        assert_eq!(extract_bits_mask_msb(v, 8), 0b1010_1011);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::BIT_4), 0b1010_0000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::BIT_2), 0b1000_0000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::BIT_0), 0b0000_0000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::BIT_5), 0b1010_1000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::BIT_8), 0b1010_1011);
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit count must be 0..=8"]
     fn test_extract_bits_mask_msb_invalid() {
-        extract_bits_mask_msb(0, 9);
+        extract_bits_mask_msb(0, BitCount::new(9));
     }
 
     #[test]
     fn test_extract_bits_mask_lsb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_lsb(v, 4), 0b0000_1011);
-        assert_eq!(extract_bits_mask_lsb(v, 2), 0b0000_0011);
-        assert_eq!(extract_bits_mask_lsb(v, 0), 0b0000_0000);
-        assert_eq!(extract_bits_mask_lsb(v, 7), 0b0010_1011);
-        assert_eq!(extract_bits_mask_lsb(v, 8), 0b1010_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::BIT_4), 0b0000_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::BIT_2), 0b0000_0011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::BIT_0), 0b0000_0000);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::BIT_7), 0b0010_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::BIT_8), 0b1010_1011);
     }
 
     #[test]
-    #[should_panic = "Invalid offset"]
+    #[should_panic = "bit count must be 0..=8"]
     fn test_extract_bits_mask_lsb_invalid() {
-        extract_bits_mask_lsb(0, 9);
+        extract_bits_mask_lsb(0, BitCount::new(9));
     }
 }

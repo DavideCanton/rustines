@@ -2,7 +2,9 @@ use std::mem;
 
 use crate::{
     arch::mappers::mapper::MapperBox,
-    utils::bit_utils::{extract_bits_mask_msb, extract_bits_shift, extract_flag},
+    utils::bit_utils::{
+        BitCount, BitIndex, extract_bits_mask_msb, extract_bits_shift, extract_flag,
+    },
 };
 
 #[repr(C, packed)]
@@ -55,7 +57,7 @@ impl INesHeader {
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
-        if extract_flag(self.flags_6, 0) {
+        if extract_flag(self.flags_6, BitIndex::BIT_0) {
             MirroringType::Vertical
         } else {
             MirroringType::Horizontal
@@ -63,20 +65,20 @@ impl INesHeader {
     }
 
     pub fn has_other_memory(&self) -> bool {
-        extract_flag(self.flags_6, 1)
+        extract_flag(self.flags_6, BitIndex::BIT_1)
     }
 
     pub fn has_trainer(&self) -> bool {
-        extract_flag(self.flags_6, 2)
+        extract_flag(self.flags_6, BitIndex::BIT_2)
     }
 
     pub fn ignore_mirroring(&self) -> bool {
-        extract_flag(self.flags_6, 3)
+        extract_flag(self.flags_6, BitIndex::BIT_3)
     }
 
     pub fn mapping_number(&self) -> u8 {
-        let low = extract_bits_shift(self.flags_6, 4, 4);
-        let high = extract_bits_mask_msb(self.flags_7, 4);
+        let low = extract_bits_shift(self.flags_6, BitIndex::BIT_4, BitCount::BIT_4);
+        let high = extract_bits_mask_msb(self.flags_7, BitCount::BIT_4);
         high | low
     }
 }

@@ -1,7 +1,7 @@
 use paste::paste;
 use std::fmt;
 
-use crate::utils::bit_utils::{extract_flag, set_flag};
+use crate::utils::bit_utils::{BitIndex, extract_flag, set_flag};
 
 pub struct Registers {
     pub pc: u16,
@@ -25,11 +25,11 @@ macro_rules! gen_methods {
     ($name: ident, $mask: expr) => {
         paste! {
             pub fn [<get_ $name>](&self) -> bool {
-                extract_flag(self.p_reg, $mask)
+                extract_flag(self.p_reg, BitIndex::new($mask))
             }
 
             pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
-                self.p_reg = set_flag(self.p_reg, $mask, val);
+                self.p_reg = set_flag(self.p_reg, BitIndex::new($mask), val);
             }
 
             pub fn [<set_ $name>](&mut self) {
@@ -56,22 +56,22 @@ impl Registers {
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n_from_bool(value & 0b1000_0000 != 0);
+        self.set_n_from_bool(extract_flag(value, BitIndex::BIT_7));
         self.set_z_from_bool(value == 0);
     }
 
     pub fn get_p(&self, force_b: bool) -> u8 {
         let mut p = self.p_reg;
         if force_b {
-            p = set_flag(p, B_INDEX, true);
+            p = set_flag(p, BitIndex::new(B_INDEX), true);
         }
         p
     }
 
     pub fn set_p(&mut self, p: u8) {
-        let old_b = extract_flag(self.p_reg, B_INDEX);
+        let old_b = extract_flag(self.p_reg, BitIndex::new(B_INDEX));
         self.p_reg = p | (1 << U_INDEX);
-        self.p_reg = set_flag(self.p_reg, B_INDEX, old_b);
+        self.p_reg = set_flag(self.p_reg, BitIndex::new(B_INDEX), old_b);
     }
 
     pub fn p_to_str(&self) -> String {

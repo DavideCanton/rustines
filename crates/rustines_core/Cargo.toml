@@ -15,3 +15,4 @@ rustines-macro = { path = "../rustines_macro" }
 [dev-dependencies]
 rand = "0.10"
 test-case = "3.1"
+trybuild = "1.0"
