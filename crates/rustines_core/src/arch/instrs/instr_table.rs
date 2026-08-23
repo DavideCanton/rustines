@@ -1,3 +1,5 @@
+use log::warn;
+
 use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::instrs::*;
@@ -324,8 +326,8 @@ impl Instr {
 }
 
 pub fn error_fn(_cpu: &mut Cpu, _bus: &mut Bus) -> u8 {
-    // panic!("Invalid opcode!");
-    0xFF
+    warn!("Invalid opcode!");
+    1
 }
 
 pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
