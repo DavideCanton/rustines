@@ -61,5 +61,5 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 fn do_eor(cpu: &mut Cpu, val: u8) {
     let res = cpu.registers.a_reg ^ val;
     cpu.registers.a_reg = res;
-    cpu.registers.compute_nz_flags(res);
+    cpu.registers.update_nz_flags(res);
 }

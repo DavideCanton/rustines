@@ -74,6 +74,6 @@ fn do_rla(cpu: &mut Cpu, val: u8) -> u8 {
     let res = (val << 1) & 0b1111_1110 | old_c;
     let res_a = res & cpu.registers.a_reg;
     cpu.registers.a_reg = res_a;
-    cpu.registers.compute_nz_flags(res_a);
+    cpu.registers.update_nz_flags(res_a);
     res
 }

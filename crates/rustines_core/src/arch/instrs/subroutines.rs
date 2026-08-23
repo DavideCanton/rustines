@@ -32,7 +32,7 @@ pub fn rts(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 pub fn rti(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     let p = cpu.pop8(bus);
-    cpu.registers.set_p(p, true);
+    cpu.registers.set_p(p);
     let pc = cpu.pop16(bus);
     cpu.registers.pc = pc;
     cpu.burn_internal_cycle(bus);

@@ -71,7 +71,7 @@ impl InstructionTracer {
             registers.x_reg,
             registers.y_reg,
             registers.sp,
-            registers.p_str(),
+            registers.p_to_str(),
             registers.get_p(false),
             clock
         );

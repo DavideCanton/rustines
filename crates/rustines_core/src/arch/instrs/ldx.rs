@@ -37,5 +37,5 @@ pub fn absolute_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_ldx(cpu: &mut Cpu, val: u8) {
     cpu.registers.x_reg = val;
-    cpu.registers.compute_nz_flags(val);
+    cpu.registers.update_nz_flags(val);
 }

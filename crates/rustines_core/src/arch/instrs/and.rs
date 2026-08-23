@@ -61,6 +61,6 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 pub(crate) fn do_and(cpu: &mut Cpu, val: u8) -> u8 {
     let res = cpu.registers.a_reg & val;
     cpu.registers.a_reg = res;
-    cpu.registers.compute_nz_flags(res);
+    cpu.registers.update_nz_flags(res);
     res
 }

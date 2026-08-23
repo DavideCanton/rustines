@@ -60,5 +60,5 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_lda(cpu: &mut Cpu, val: u8) {
     cpu.registers.a_reg = val;
-    cpu.registers.compute_nz_flags(val);
+    cpu.registers.update_nz_flags(val);
 }

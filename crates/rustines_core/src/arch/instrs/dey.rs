@@ -6,6 +6,6 @@ pub fn implied(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     val = val.wrapping_sub(1);
     cpu.registers.y_reg = val;
 
-    cpu.registers.compute_nz_flags(val);
+    cpu.registers.update_nz_flags(val);
     2
 }

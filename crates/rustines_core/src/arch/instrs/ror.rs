@@ -46,6 +46,6 @@ pub(crate) fn do_ror(cpu: &mut Cpu, val: u8) -> u8 {
     let old_c = cpu.registers.get_c() as u8;
     cpu.registers.set_c_from_bool(val & 0b0000_0001 != 0);
     let res = (val >> 1) | (old_c << 7);
-    cpu.registers.compute_nz_flags(res);
+    cpu.registers.update_nz_flags(res);
     res
 }

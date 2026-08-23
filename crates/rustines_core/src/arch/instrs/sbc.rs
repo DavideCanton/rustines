@@ -71,8 +71,9 @@ pub(crate) fn do_sbc(cpu: &mut Cpu, val: u8) {
         .wrapping_sub(val as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
     let res_a = (res & 0b1111_1111) as u8;
-    cpu.registers.compute_nz_flags(res_a);
+    cpu.registers.update_nz_flags(res_a);
     cpu.registers
-        .compute_vc_flags(compute_v(cpu.registers.a_reg, val, res_a), compute_c(res));
+        .set_v_from_bool(compute_v(cpu.registers.a_reg, val, res_a));
+    cpu.registers.set_c_from_bool(compute_c(res));
     cpu.registers.a_reg = res_a;
 }

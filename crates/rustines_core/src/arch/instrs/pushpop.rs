@@ -19,7 +19,7 @@ pub fn pla(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let a = cpu.pop8(bus);
     cpu.burn_internal_cycle(bus);
     cpu.registers.a_reg = a;
-    cpu.registers.compute_nz_flags(a);
+    cpu.registers.update_nz_flags(a);
     4
 }
 
@@ -27,6 +27,6 @@ pub fn plp(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     let p = cpu.pop8(bus);
     cpu.burn_internal_cycle(bus);
-    cpu.registers.set_p(p, true);
+    cpu.registers.set_p(p);
     4
 }

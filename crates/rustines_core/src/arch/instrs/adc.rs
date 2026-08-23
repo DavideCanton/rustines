@@ -62,9 +62,9 @@ pub(crate) fn do_adc(cpu: &mut Cpu, val: u8) {
     let res = (cpu.registers.a_reg as u16) + (val as u16) + (cpu.registers.get_c() as u16);
     let res_a = (res & 0b1111_1111) as u8;
     let old_a = cpu.registers.a_reg;
-    cpu.registers.compute_nz_flags(res_a);
-    cpu.registers
-        .compute_vc_flags(compute_v(old_a, res_a, val), compute_c(res));
+    cpu.registers.update_nz_flags(res_a);
+    cpu.registers.set_v_from_bool(compute_v(old_a, res_a, val));
+    cpu.registers.set_c_from_bool(compute_c(res));
     cpu.registers.a_reg = res_a;
 }
 

@@ -4,7 +4,7 @@ pub fn tax(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     cpu.registers.x_reg = cpu.registers.a_reg;
     let x = cpu.registers.x_reg;
-    cpu.registers.compute_nz_flags(x);
+    cpu.registers.update_nz_flags(x);
     2
 }
 
@@ -12,7 +12,7 @@ pub fn tay(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     cpu.registers.y_reg = cpu.registers.a_reg;
     let y = cpu.registers.y_reg;
-    cpu.registers.compute_nz_flags(y);
+    cpu.registers.update_nz_flags(y);
     2
 }
 
@@ -20,7 +20,7 @@ pub fn txa(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     cpu.registers.a_reg = cpu.registers.x_reg;
     let a = cpu.registers.a_reg;
-    cpu.registers.compute_nz_flags(a);
+    cpu.registers.update_nz_flags(a);
     2
 }
 
@@ -28,7 +28,7 @@ pub fn tya(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     cpu.registers.a_reg = cpu.registers.y_reg;
     let a = cpu.registers.a_reg;
-    cpu.registers.compute_nz_flags(a);
+    cpu.registers.update_nz_flags(a);
     2
 }
 
@@ -36,7 +36,7 @@ pub fn tsx(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
     cpu.registers.x_reg = cpu.registers.sp;
     let x = cpu.registers.x_reg;
-    cpu.registers.compute_nz_flags(x);
+    cpu.registers.update_nz_flags(x);
     2
 }
 

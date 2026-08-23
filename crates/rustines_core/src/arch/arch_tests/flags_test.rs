@@ -7,10 +7,10 @@ mod tests {
         let mut reg = Registers::default();
         assert!(!reg.get_n());
 
-        reg.compute_nz_flags(0xFF);
+        reg.update_nz_flags(0xFF);
         assert!(reg.get_n());
 
-        reg.compute_nz_flags(0x01);
+        reg.update_nz_flags(0x01);
         assert!(!reg.get_n());
     }
 
@@ -19,10 +19,10 @@ mod tests {
         let mut reg = Registers::default();
         assert!(!reg.get_z());
 
-        reg.compute_nz_flags(0x0);
+        reg.update_nz_flags(0x0);
         assert!(reg.get_z());
 
-        reg.compute_nz_flags(0x01);
+        reg.update_nz_flags(0x01);
         assert!(!reg.get_z());
     }
 

@@ -46,6 +46,6 @@ fn do_rol(cpu: &mut Cpu, val: u8) -> u8 {
     let old_c = cpu.registers.get_c() as u8;
     cpu.registers.set_c_from_bool(val & 0b1000_0000 != 0);
     let res = (val << 1) & 0b1111_1110 | old_c;
-    cpu.registers.compute_nz_flags(res);
+    cpu.registers.update_nz_flags(res);
     res
 }

@@ -33,5 +33,5 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 fn do_dec(cpu: &mut Cpu, bus: &mut Bus, addr: u16, val: u8) {
     let res = val.wrapping_sub(1);
     store_with_dummy_write(bus, addr, val, res);
-    cpu.registers.compute_nz_flags(res);
+    cpu.registers.update_nz_flags(res);
 }

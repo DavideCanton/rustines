@@ -64,6 +64,6 @@ fn do_slo(cpu: &mut Cpu, mut val: u8) -> u8 {
     cpu.registers.set_c_from_bool(val & 0b1000_0000 != 0);
     val <<= 1;
     cpu.registers.a_reg |= val;
-    cpu.registers.compute_nz_flags(val);
+    cpu.registers.update_nz_flags(val);
     val
 }

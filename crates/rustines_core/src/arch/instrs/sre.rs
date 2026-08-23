@@ -65,6 +65,6 @@ fn do_sre(cpu: &mut Cpu, val: u8) -> u8 {
     let res = val >> 1;
     let res_a = cpu.registers.a_reg ^ res;
     cpu.registers.a_reg = res_a;
-    cpu.registers.compute_nz_flags(res_a);
+    cpu.registers.update_nz_flags(res_a);
     res
 }
