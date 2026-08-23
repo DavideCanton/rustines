@@ -1,4 +1,7 @@
-use crate::arch::{bus::Bus, cpu::Cpu};
+use crate::{
+    arch::{bus::Bus, cpu::Cpu},
+    utils::bit_utils::extract_flag,
+};
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage(bus);
@@ -16,7 +19,7 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_bit(cpu: &mut Cpu, val: u8) {
     let res = val & cpu.registers.a_reg;
-    cpu.registers.set_n_from_bool(val & 0b1000_0000 != 0);
-    cpu.registers.set_v_from_bool(val & 0b0100_0000 != 0);
+    cpu.registers.set_n_from_bool(extract_flag(val, 7));
+    cpu.registers.set_v_from_bool(extract_flag(val, 6));
     cpu.registers.set_z_from_bool(res == 0);
 }
