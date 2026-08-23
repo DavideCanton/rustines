@@ -16,3 +16,4 @@ pub mod debug_utils;
 mod arch_tests;
 
 mod common;
+mod instr_tracer;

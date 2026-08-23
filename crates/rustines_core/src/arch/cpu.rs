@@ -1,25 +1,22 @@
-use log::{Level, log_enabled, trace};
-
 use crate::{
     arch::{
         bus::{Bus, DummyReadResult},
+        instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
         registers::*,
     },
-    hex16,
     utils::bit_utils::*,
 };
 
 pub struct Cpu {
-    pub registers: Registers,
+    pub(crate) registers: Registers,
     nmi: bool,
     rst: bool,
-    tracing_enabled: bool,
     clock: u64,
-    function_level: u32,
     pending_irq_execution: bool,
     pending_nmi_execution: bool,
     pending_rst_execution: bool,
+    tracer: InstructionTracer,
 }
 
 impl Cpu {
@@ -29,12 +26,11 @@ impl Cpu {
             registers: Registers::default(),
             nmi: false,
             rst: true,
-            tracing_enabled: false,
             clock: 0,
-            function_level: 0,
             pending_irq_execution: false,
             pending_nmi_execution: false,
             pending_rst_execution: true,
+            tracer: InstructionTracer::new(),
         }
     }
 
@@ -50,17 +46,8 @@ impl Cpu {
 
         let instr = &INSTR_TABLE[opcode as usize];
 
-        if instr.fname.contains("rts") {
-            self.function_level -= 1;
-        }
-
-        if log_enabled!(Level::Trace) && self.tracing_enabled {
-            self.trace_instr(bus);
-        }
-
-        if instr.fname.contains("jsr") {
-            self.function_level += 1;
-        }
+        self.tracer
+            .trace_instr(&self.registers, self.clock, bus, instr);
 
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
@@ -82,44 +69,6 @@ impl Cpu {
 
     pub fn burn_internal_cycle(&mut self, bus: &mut Bus) {
         bus.burn_cycle_from_cpu();
-    }
-
-    fn trace_instr(&mut self, bus: &mut Bus) {
-        let pc = self.registers.pc;
-        let opcode = bus.peek(pc);
-        let instr = &INSTR_TABLE[opcode as usize];
-
-        let mut buf = vec![0; instr.ilen];
-
-        let mut cur = pc;
-        for pos in buf.iter_mut() {
-            let val = bus.peek(cur);
-            *pos = val;
-            cur = cur.wrapping_add(1);
-        }
-
-        let instr_str = instr.get_fname_for_print(&buf);
-
-        trace!(
-            "TRACE CPU -> LEVEL: {:<2} | PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:010}]",
-            self.function_level,
-            self.registers.pc,
-            instr_str,
-            self.registers.a_reg,
-            self.registers.x_reg,
-            self.registers.y_reg,
-            self.registers.sp,
-            self.registers.p_str(),
-            self.registers.get_p(false),
-            self.clock
-        );
-    }
-
-    pub fn push32(&mut self, bus: &mut Bus, v: u32) {
-        let (low, high) = to_u16_lh(v);
-
-        self.push16(bus, high);
-        self.push16(bus, low);
     }
 
     pub fn push16(&mut self, bus: &mut Bus, v: u16) {
@@ -146,31 +95,8 @@ impl Cpu {
         to_u16(low, high)
     }
 
-    pub fn pop32(&mut self, bus: &mut Bus) -> u32 {
-        let low = self.pop16(bus);
-        let high = self.pop16(bus);
-
-        to_u32(low, high)
-    }
-
     pub fn peek8(&self, bus: &mut Bus) -> u8 {
         bus.pop(self.registers.sp + 1)
-    }
-
-    pub fn peek16(&self, bus: &mut Bus) -> u16 {
-        let low = self.peek8(bus);
-        let high = bus.read(self.registers.sp as u16 + 0x0102);
-
-        to_u16(low, high)
-    }
-
-    pub fn peek32(&self, bus: &mut Bus) -> u32 {
-        let low = self.peek16(bus);
-        let high_h = bus.read(self.registers.sp as u16 + 0x0103);
-        let high_l = bus.read(self.registers.sp as u16 + 0x0104);
-        let high = to_u16(high_l, high_h);
-
-        to_u32(low, high)
     }
 
     // decode functions
@@ -245,7 +171,7 @@ impl Cpu {
     }
 
     pub fn enable_tracing(&mut self, tracing_enabled: bool) {
-        self.tracing_enabled = tracing_enabled;
+        self.tracer.enable_tracing(tracing_enabled);
     }
 
     fn save_state_before_interrupt(&mut self, bus: &mut Bus) {
@@ -264,11 +190,10 @@ impl Cpu {
         let low = bus.read(0xFFFE);
         let high = bus.read(0xFFFF);
 
-        let pc = to_u16(low, high);
-        self.registers.pc = pc;
-        if self.tracing_enabled {
-            trace!("An IRQ has occurred, jumping to {}", hex16!(pc));
-        }
+        let irq_address = to_u16(low, high);
+        self.registers.pc = irq_address;
+
+        self.tracer.trace_interrupt("IRQ", irq_address);
     }
 
     pub fn perform_nmi(&mut self, bus: &mut Bus) {
@@ -279,12 +204,7 @@ impl Cpu {
 
         let nmi_address = to_u16(low, high);
         self.registers.pc = nmi_address;
-        if self.tracing_enabled {
-            trace!(
-                "A NMI interrupt has occurred, jumping to {}",
-                hex16!(nmi_address)
-            );
-        }
+        self.tracer.trace_interrupt("NMI", nmi_address);
     }
 
     fn perform_rst(&mut self, bus: &mut Bus) {
@@ -295,15 +215,13 @@ impl Cpu {
         let low = bus.read(0xFFFC);
         let high = bus.read(0xFFFD);
 
-        let pc = to_u16(low, high);
-        self.registers.pc = pc;
+        let rst_address = to_u16(low, high);
+        self.registers.pc = rst_address;
 
         self.registers.set_i();
         self.registers.sp = self.registers.sp.wrapping_sub(3);
 
-        if self.tracing_enabled {
-            trace!("A RST has occurred, jumping to {}", hex16!(pc));
-        }
+        self.tracer.trace_interrupt("RST", rst_address);
     }
 
     fn handle_interrupts(&mut self, bus: &mut Bus) -> Option<u8> {
