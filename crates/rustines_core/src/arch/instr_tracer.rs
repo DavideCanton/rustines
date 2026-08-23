@@ -12,6 +12,7 @@ use crate::{
 pub struct InstructionTracer {
     tracing_enabled: bool,
     function_level: u32,
+    previous_clock: u64,
 }
 
 impl InstructionTracer {
@@ -19,6 +20,7 @@ impl InstructionTracer {
         InstructionTracer {
             function_level: 0,
             tracing_enabled: false,
+            previous_clock: 0,
         }
     }
 
@@ -39,6 +41,9 @@ impl InstructionTracer {
     }
 
     pub fn trace_instr(&mut self, registers: &Registers, clock: u64, bus: &Bus, instr: &Instr) {
+        let old_clock = self.previous_clock;
+        self.previous_clock = clock;
+
         if !log_enabled!(Level::Trace) || !self.tracing_enabled {
             return;
         }
@@ -63,7 +68,7 @@ impl InstructionTracer {
         let instr_str = instr.get_fname_for_print(&buf);
 
         trace!(
-            "TRACE CPU -> LEVEL: {:<2} | PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:010}]",
+            "TRACE CPU -> LEVEL: {:<2} | PC: {:#06X} | {:<20} | A: {:#04X} | X: {:#04X} | Y: {:#04X} | SP: {:#04X} | P: {} ({:#04X}) [{:10}](+{:>02})",
             self.function_level,
             registers.pc,
             instr_str,
@@ -73,7 +78,8 @@ impl InstructionTracer {
             registers.sp,
             registers.p_to_str(),
             registers.get_p(false),
-            clock
+            clock,
+            clock - old_clock
         );
 
         if instr.fname.contains("jsr") {

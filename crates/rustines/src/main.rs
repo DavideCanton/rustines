@@ -245,17 +245,8 @@ fn map_inputs(
 }
 
 fn cpu_tick(bus: &mut core::Bus, cpu: &mut core::Cpu) -> bool {
-    let cycles = cpu.tick(bus);
-    if cycles == 0xFF {
-        return true;
-    }
-
-    if bus.ppu_mut().nmi_requested() {
-        bus.ppu_mut().clear_nmi();
-        cpu.perform_nmi(bus);
-    }
-
-    false
+    cpu.tick(bus);
+    true
 }
 
 fn my_format(

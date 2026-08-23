@@ -10,7 +10,6 @@ use crate::{
 
 pub struct Cpu {
     pub(crate) registers: Registers,
-    nmi: bool,
     rst: bool,
     clock: u64,
     pending_irq_execution: bool,
@@ -24,8 +23,7 @@ impl Cpu {
     pub fn new() -> Self {
         Cpu {
             registers: Registers::default(),
-            nmi: false,
-            rst: true,
+            rst: false,
             clock: 0,
             pending_irq_execution: false,
             pending_nmi_execution: false,
@@ -241,6 +239,7 @@ impl Cpu {
 
         if self.pending_nmi_execution {
             self.pending_nmi_execution = false;
+            bus.ppu_mut().clear_nmi();
             self.perform_nmi(bus);
             return Some(7);
         }
@@ -249,13 +248,14 @@ impl Cpu {
 
     fn poll_interrupts(&mut self, bus: &mut Bus) {
         if self.rst {
+            // triggered automatically at boot
+            // in the future this may be set from a user input to reset the emulator state
             self.rst = false;
             self.pending_rst_execution = true;
             return;
         }
 
-        if self.nmi {
-            self.nmi = false;
+        if bus.ppu_mut().nmi_requested() {
             self.pending_nmi_execution = true;
             return;
         }
