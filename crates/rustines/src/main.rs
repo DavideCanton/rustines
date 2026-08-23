@@ -145,10 +145,7 @@ pub fn main() {
             map_inputs(&input, bus.controller2_mut(), &key_map2);
 
             while !bus.ppu_mut().frame_ready() {
-                if cpu_tick(&mut bus, &mut cpu) {
-                    // elwt.exit();
-                    // return;
-                }
+                cpu.tick(&mut bus);
             }
             bus.ppu_mut().clear_frame_ready();
 
@@ -242,11 +239,6 @@ fn map_inputs(
             ctrl.released(*key_map.get(k).unwrap());
         }
     }
-}
-
-fn cpu_tick(bus: &mut core::Bus, cpu: &mut core::Cpu) -> bool {
-    cpu.tick(bus);
-    true
 }
 
 fn my_format(
