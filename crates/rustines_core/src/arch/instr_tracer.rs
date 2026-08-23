@@ -46,7 +46,13 @@ impl InstructionTracer {
         self._trace(registers, clock, old_clock, msg);
     }
 
-    pub fn trace_instr(&mut self, registers: &Registers, clock: u64, bus: &Bus, instr: &Instr) {
+    pub fn trace_instruction(
+        &mut self,
+        registers: &Registers,
+        clock: u64,
+        bus: &Bus,
+        instr: &Instr,
+    ) {
         let old_clock = self.previous_clock;
         self.previous_clock = clock;
 

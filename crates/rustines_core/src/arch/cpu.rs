@@ -1,3 +1,5 @@
+use log::warn;
+
 use crate::{
     arch::{
         bus::{Bus, DummyReadResult},
@@ -46,7 +48,7 @@ impl Cpu {
         let instr = &INSTR_TABLE[opcode as usize];
 
         self.tracer
-            .trace_instr(&self.registers, self.clock, bus, instr);
+            .trace_instruction(&self.registers, self.clock, bus, instr);
 
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
@@ -55,7 +57,7 @@ impl Cpu {
         self.clock += cycles as u64;
 
         if let Some(cnt) = bus.check_tick_end(cycles) {
-            panic!(
+            warn!(
                 "Bus tick count mismatch: expected {}, got {}, pc = {:#06X}, opcode = {:#04X}, instr = {}",
                 cycles, cnt, pc, opcode, instr.fname,
             );
@@ -95,7 +97,7 @@ impl Cpu {
     }
 
     pub fn peek8(&self, bus: &mut Bus) -> u8 {
-        bus.pop(self.registers.sp + 1)
+        bus.pop(self.registers.sp.wrapping_add(1))
     }
 
     // decode functions

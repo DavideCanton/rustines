@@ -1,6 +1,23 @@
 use crate::utils::bit_utils::{
-    BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
+    BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag, set_flag,
 };
+
+#[derive(Default, Clone, Copy)]
+enum ApuMode {
+    #[default]
+    FourStep,
+    FiveStep,
+}
+
+impl From<bool> for ApuMode {
+    fn from(value: bool) -> Self {
+        if value {
+            ApuMode::FiveStep
+        } else {
+            ApuMode::FourStep
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct Apu {
@@ -10,45 +27,79 @@ pub struct Apu {
     noise: Noise,
     dmc: Dmc,
     irq_disabled: bool,
-    mode: bool,
+    mode: ApuMode,
+    frame_irq_active: bool,
+    frame_cycles: u32,
+
+    delayed_reset_cycles: Option<u8>,
+    delayed_write_value: u8,
+    cpu_cycle_count: u64,
 }
 
 impl Apu {
     pub fn tick(&mut self) {
+        self.cpu_cycle_count += 1;
+
         self.dmc.tick();
+
+        self.delayed_reset_cycles = match self.delayed_reset_cycles {
+            None => None,
+            Some(0) => {
+                let val = self.delayed_write_value;
+                self.mode = extract_flag(val, BitIndex::BIT_7).into();
+                self.irq_disabled = extract_flag(val, BitIndex::BIT_6);
+                self.frame_cycles = 0;
+                None
+            }
+            Some(value) => Some(value - 1),
+        };
+
+        self.frame_cycles += 1;
+
+        match self.mode {
+            ApuMode::FiveStep => {
+                if self.frame_cycles >= 37282 {
+                    self.frame_cycles = 0;
+                }
+            }
+            ApuMode::FourStep => {
+                if (29828..=29831).contains(&self.frame_cycles) {
+                    if !self.irq_disabled {
+                        self.frame_irq_active = true;
+                    }
+                    if self.frame_cycles == 29831 {
+                        self.frame_cycles = 0;
+                    }
+                }
+            }
+        }
     }
 
     pub fn irq_active(&self) -> bool {
-        self.dmc.irq_active
+        self.dmc.irq_active || self.frame_irq_active
     }
 
     pub fn cpu_write(&mut self, reg_index: u8, value: u8) {
         match reg_index {
-            0 => self.pulse1.update_1(value),
-            1 => self.pulse1.update_2(value),
-            2 => self.pulse1.update_3(value),
-            3 => self.pulse1.update_4(value),
-            4 => self.pulse2.update_1(value),
-            5 => self.pulse2.update_2(value),
-            6 => self.pulse2.update_3(value),
-            7 => self.pulse2.update_4(value),
-            8 => self.triangle.update_1(value),
-            10 => self.triangle.update_2(value),
-            11 => self.triangle.update_3(value),
-            12 => self.noise.update_1(value),
-            14 => self.noise.update_2(value),
-            15 => self.noise.update_3(value),
-            16 => self.dmc.update_1(value),
-            17 => self.dmc.update_2(value),
-            18 => self.dmc.update_3(value),
-            19 => self.dmc.update_4(value),
-            21 => {
-                // log::info!(
-                //     "Scrittura $4015: abilitato={}, lunghezza_campionata={}",
-                //     extract_flag(value, 4),
-                //     self.dmc.sample_length
-                // );
-
+            0x00 => self.pulse1.update_1(value),
+            0x01 => self.pulse1.update_2(value),
+            0x02 => self.pulse1.update_3(value),
+            0x03 => self.pulse1.update_4(value),
+            0x04 => self.pulse2.update_1(value),
+            0x05 => self.pulse2.update_2(value),
+            0x06 => self.pulse2.update_3(value),
+            0x07 => self.pulse2.update_4(value),
+            0x08 => self.triangle.update_1(value),
+            0x0a => self.triangle.update_2(value),
+            0x0b => self.triangle.update_3(value),
+            0x0c => self.noise.update_1(value),
+            0x0e => self.noise.update_2(value),
+            0x0f => self.noise.update_3(value),
+            0x10 => self.dmc.update_1(value),
+            0x11 => self.dmc.update_2(value),
+            0x12 => self.dmc.update_3(value),
+            0x13 => self.dmc.update_4(value),
+            0x15 => {
                 self.dmc.irq_active = false;
                 self.dmc.set_enabled(extract_flag(value, BitIndex::BIT_4));
                 self.noise.set_enabled(extract_flag(value, BitIndex::BIT_3));
@@ -59,9 +110,18 @@ impl Apu {
                 self.pulse1
                     .set_enabled(extract_flag(value, BitIndex::BIT_0));
             }
-            23 => {
-                self.mode = extract_flag(value, BitIndex::BIT_7);
-                self.irq_disabled = extract_flag(value, BitIndex::BIT_6);
+            0x17 => {
+                self.delayed_write_value = value;
+
+                if self.cpu_cycle_count.is_multiple_of(2) {
+                    self.delayed_reset_cycles = Some(3);
+                } else {
+                    self.delayed_reset_cycles = Some(4);
+                }
+
+                if extract_flag(value, BitIndex::BIT_6) {
+                    self.frame_irq_active = false;
+                }
             }
             _ => {}
         }
@@ -69,38 +129,25 @@ impl Apu {
 
     pub fn cpu_read(&mut self, reg_index: u16, open_bus_value: u8) -> u8 {
         match reg_index {
-            21 => {
+            0x15 => {
                 let mut ret = 0;
 
-                if self.dmc.irq_active {
-                    ret |= 1 << 7;
-                }
+                // bit 5 is always open bus
+                let open_bus_5 = extract_flag(open_bus_value, BitIndex::BIT_5);
 
-                if false {
-                    // TODO F
-                    ret |= 1 << 6;
-                }
+                ret = set_flag(ret, BitIndex::BIT_7, self.dmc.irq_active);
+                ret = set_flag(ret, BitIndex::BIT_6, self.frame_irq_active);
+                ret = set_flag(ret, BitIndex::BIT_5, open_bus_5);
+                ret = set_flag(ret, BitIndex::BIT_4, self.dmc.enabled);
+                ret = set_flag(ret, BitIndex::BIT_3, self.noise.length_counter > 0);
+                ret = set_flag(ret, BitIndex::BIT_2, self.triangle.length_counter_load > 0);
+                ret = set_flag(ret, BitIndex::BIT_1, self.pulse2.length_counter_load > 0);
+                ret = set_flag(ret, BitIndex::BIT_0, self.pulse1.length_counter_load > 0);
 
-                if self.dmc.enabled {
-                    ret |= 1 << 4;
-                }
-                if self.noise.length_counter > 0 {
-                    ret |= 1 << 3;
-                }
-                if self.triangle.length_counter_load > 0 {
-                    ret |= 1 << 2;
-                }
-                if self.pulse2.length_counter_load > 0 {
-                    ret |= 1 << 1;
-                }
-                if self.pulse1.length_counter_load > 0 {
-                    ret |= 1;
-                }
-
+                self.frame_irq_active = false;
                 self.dmc.irq_active = false;
 
-                // bit 5 is always open bus
-                (ret & 0b1101_1111) | (open_bus_value & 0b0010_0000)
+                ret
             }
             _ => open_bus_value,
         }
@@ -226,6 +273,10 @@ struct Dmc {
 }
 
 impl Dmc {
+    const PERIODS: [u16; 16] = [
+        428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54,
+    ];
+
     pub fn tick(&mut self) {
         if !self.enabled {
             return;
@@ -234,7 +285,7 @@ impl Dmc {
         if self.timer > 0 {
             self.timer -= 1;
         } else {
-            self.timer = DMC_PERIOD_TABLE[(self.freq & 0b0000_1111) as usize];
+            self.timer = self.get_period();
 
             if self.bits_remaining > 0 {
                 self.bits_remaining -= 1;
@@ -251,9 +302,6 @@ impl Dmc {
                             self.bytes_remaining = self.sample_length;
                         } else if self.irq_enable {
                             self.irq_active = true;
-                            // log::info!(
-                            //     "DMC IRQ SCATTATO ADESSO! Attivato dopo il corretto intervallo di bit."
-                            // );
                         }
                     }
                 }
@@ -270,13 +318,17 @@ impl Dmc {
         } else {
             if !previous_enabled {
                 self.bits_remaining = 8;
-                self.timer = DMC_PERIOD_TABLE[(self.freq & 0b0000_1111) as usize];
+                self.timer = self.get_period();
             }
 
             if self.bytes_remaining == 0 {
                 self.bytes_remaining = self.sample_length;
             }
         }
+    }
+
+    fn get_period(&self) -> u16 {
+        Dmc::PERIODS[self.freq as usize]
     }
 
     fn update_1(&mut self, value: u8) {
@@ -317,12 +369,8 @@ impl Default for Dmc {
             bytes_remaining: 0,
             bits_remaining: 0,
             sample_length: 0,
-            timer: DMC_PERIOD_TABLE[0],
+            timer: Dmc::PERIODS[0],
             enabled: false,
         }
     }
 }
-
-const DMC_PERIOD_TABLE: [u16; 16] = [
-    428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54,
-];

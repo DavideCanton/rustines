@@ -37,7 +37,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(slo::zeropage_x, 2),                   // 17
     instr!(flags::clc, "clc::implied", 1),        // 18
     instr!(ora::absolute_y, 3),                   // 19
-    Instr::error(),                               // 1a
+    instr!(nop::implied, 1),                      // 1a
     instr!(slo::absolute_y, 3),                   // 1b
     instr!(nop::absolute_x, 3),                   // 1c
     instr!(ora::absolute_x, 3),                   // 1d
@@ -69,7 +69,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(rla::zeropage_x, 2),                   // 37
     instr!(flags::sec, "sec::implied", 1),        // 38
     instr!(and::absolute_y, 3),                   // 39
-    Instr::error(),                               // 3a
+    instr!(nop::implied, 1),                      // 3a
     instr!(rla::absolute_y, 3),                   // 3b
     instr!(nop::absolute_x, 3),                   // 3c
     instr!(and::absolute_x, 3),                   // 3d
@@ -101,7 +101,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(sre::zeropage_x, 2),                   // 57
     instr!(flags::cli, "cli::implied", 1),        // 58
     instr!(eor::absolute_y, 3),                   // 59
-    Instr::error(),                               // 5a
+    instr!(nop::implied, 1),                      // 5a
     instr!(sre::absolute_y, 3),                   // 5b
     instr!(nop::absolute_x, 3),                   // 5c
     instr!(eor::absolute_x, 3),                   // 5d
@@ -133,7 +133,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(rra::zeropage_x, 2),                   // 77
     instr!(flags::sei, "sei::implied", 1),        // 78
     instr!(adc::absolute_y, 3),                   // 79
-    Instr::error(),                               // 7a
+    instr!(nop::implied, 1),                      // 7a
     instr!(rra::absolute_y, 3),                   // 7b
     instr!(nop::absolute_x, 3),                   // 7c
     instr!(adc::absolute_x, 3),                   // 7d
@@ -229,7 +229,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(dcp::zeropage_x, 2),                   // d7
     instr!(flags::cld, "cld::implied", 1),        // d8
     instr!(cmp::absolute_y, 3),                   // d9
-    Instr::error(),                               // da
+    instr!(nop::implied, 1),                      // da
     instr!(dcp::absolute_y, 3),                   // db
     instr!(nop::absolute_x, 3),                   // dc
     instr!(cmp::absolute_x, 3),                   // dd
@@ -261,7 +261,7 @@ pub const INSTR_TABLE: [Instr; 256] = [
     instr!(isc::zeropage_x, 2),                   // f7
     instr!(flags::sed, "sed::implied", 1),        // f8
     instr!(sbc::absolute_y, 3),                   // f9
-    Instr::error(),                               // fa
+    instr!(nop::implied, 1),                      // fa
     instr!(isc::absolute_y, 3),                   // fb
     instr!(nop::absolute_x, 3),                   // fc
     instr!(sbc::absolute_x, 3),                   // fd
