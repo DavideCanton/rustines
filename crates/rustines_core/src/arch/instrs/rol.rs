@@ -42,8 +42,8 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_rol(cpu: &mut Cpu, val: u8) -> u8 {
     let old_c = cpu.registers.get_c() as u8;
-    cpu.registers.set_c_from_bool(val & 0x80 != 0);
-    let res = (val << 1) & 0xFE | old_c;
+    cpu.registers.set_c_from_bool(val & 0b1000_0000 != 0);
+    let res = (val << 1) & 0b1111_1110 | old_c;
     cpu.registers.compute_nz_flags(res);
     res
 }

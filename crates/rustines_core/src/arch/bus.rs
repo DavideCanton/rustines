@@ -122,7 +122,7 @@ impl Bus {
 
     pub fn peek(&self, address: u16) -> u8 {
         match address {
-            0x0000..=0x1FFF => self.nes_ram[(address & 0x07FF) as usize],
+            0x0000..=0x1FFF => self.nes_ram[(address & 0b0000_0111_1111_1111) as usize],
             0x8000..=0xFFFF => self.mapper.fetch_prg_rom(address),
 
             0x2002 => self.ppu.status_bits_shadow(),
@@ -138,23 +138,23 @@ impl Bus {
         let mut update_open_bus = true;
         let value = match address {
             0x0000..=0x1FFF => {
-                let ind = address & 0x07FF;
+                let ind = address & 0b0000_0111_1111_1111;
                 self.nes_ram[ind as usize]
             }
             0x2000..=0x3FFF => {
-                let ind = (address & 0x0007) as u8;
+                let ind = (address & 0b0000_0000_0000_0111) as u8;
                 self.ppu.cpu_read(ind, self.mapper.as_ref())
             }
             0x4000..=0x4017 => {
                 if address == 0x4016 {
                     let data = self.controller1.read();
-                    (data & 0x1F) | (self.open_bus_value & 0xE0)
+                    (data & 0b0001_1111) | (self.open_bus_value & 0b1110_0000)
                 } else if address == 0x4017 {
                     let data = self.controller2.read();
-                    (data & 0x1F) | (self.open_bus_value & 0xE0)
+                    (data & 0b0001_1111) | (self.open_bus_value & 0b1110_0000)
                 } else if address == 0x4015 {
                     update_open_bus = false;
-                    let ind = address & 0xFF;
+                    let ind = address & 0b1111_1111;
                     self.apu.cpu_read(ind, self.open_bus_value)
                 } else {
                     update_open_bus = false;
@@ -201,11 +201,11 @@ impl Bus {
 
         match address {
             0x0000..=0x1FFF => {
-                let ind = address & 0x07FF;
+                let ind = address & 0b0000_0111_1111_1111;
                 replace(&mut self.nes_ram, ind as usize, val);
             }
             0x2000..=0x3FFF => {
-                let ind = address & 0x0007;
+                let ind = address & 0b0000_0000_0000_0111;
                 self.ppu.cpu_write(ind as u8, val, self.mapper.as_ref());
             }
             0x4000..=0x4017 => {
@@ -225,7 +225,7 @@ impl Bus {
                     }
                     self.ppu_mut().dma_copy(&buf);
                 } else {
-                    let ind = address & 0xFF;
+                    let ind = address & 0b1111_1111;
                     self.apu.cpu_write(ind as u8, val);
                 }
             }
@@ -257,7 +257,7 @@ impl Bus {
         let base = to_u16(low, high);
         let raw_addr = base.wrapping_add(offset as u16);
         let boundary = if low.overflowing_add(offset).1 { 1 } else { 0 };
-        let dummy_addr = (base & 0xFF00) | (raw_addr & 0x00FF);
+        let dummy_addr = (base & 0b1111_1111_0000_0000) | (raw_addr & 0b0000_0000_1111_1111);
 
         // dummy read
         if boundary == 1 {

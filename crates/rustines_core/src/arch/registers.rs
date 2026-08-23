@@ -56,7 +56,7 @@ impl Registers {
     pub fn new() -> Registers {
         let mut nz_table = [0; 1 << 8];
         for i in 0u8..=255 {
-            nz_table[i as usize] = (((i & 0x80 != 0) as u8) << 1) | ((i == 0) as u8);
+            nz_table[i as usize] = (((i & 0b1000_0000 != 0) as u8) << 1) | ((i == 0) as u8);
         }
 
         Registers {
@@ -81,7 +81,7 @@ impl Registers {
     }
 
     pub fn compute_c_flag(&mut self, c: bool) {
-        self.vc = (self.vc & 0x10) | (c as u8);
+        self.vc = (self.vc & 0b0001_0000) | (c as u8);
     }
 
     pub fn get_p(&self, force_b: bool) -> u8 {
@@ -107,20 +107,20 @@ impl Registers {
         // V0 = NV1BDIZC & (01000000) -> 0V000000 >> 5 -> 000000V0
         // C = NV1BDIZC & (0000001) -> 0000000C
         // VC = V0 | C
-        self.vc = ((p & 0x40) >> 5) | (p & 0x1);
+        self.vc = ((p & 0b0100_0000) >> 5) | (p & 0b0000_0001);
         // N0 = NV1BDIZC & (10000000) -> N0000000 >> 6 -> 000000N0
         // Z = NV1BDIZC & (00000010) -> 000000Z0 >> 1 -> 0000000Z
         // NZ = N0 | Z
-        self.nz = ((p & 0x80) >> 6) | ((p & 0x2) >> 1);
+        self.nz = ((p & 0b1000_0000) >> 6) | ((p & 0b0000_0010) >> 1);
         if ignore_b {
             // ignore B
             // T = (NV1BDIZC) >> 2 -> 00NV1BDI & (11) -> 000000DI
             // BDI = (BDI & (100)) | 000000DI
-            self.bdi = (self.bdi & 0x4) | (p >> 2) & 0x3;
+            self.bdi = (self.bdi & 0b0000_0100) | (p >> 2) & 0b0000_0011;
         } else {
             // T = (NV1BDIZC) >> 2 -> 00NV1BDI & (111) -> 00000BDI
             // BDI = 00000BDI
-            self.bdi = (p >> 2) & 0x7;
+            self.bdi = (p >> 2) & 0b0000_0111;
         }
     }
 

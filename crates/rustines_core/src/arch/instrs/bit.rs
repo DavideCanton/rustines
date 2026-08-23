@@ -16,7 +16,7 @@ pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_bit(cpu: &mut Cpu, val: u8) {
     let res = val & cpu.registers.a_reg;
-    cpu.registers.set_n_from_bool(val & 0x80 != 0);
-    cpu.registers.set_v_from_bool(val & 0x40 != 0);
+    cpu.registers.set_n_from_bool(val & 0b1000_0000 != 0);
+    cpu.registers.set_v_from_bool(val & 0b0100_0000 != 0);
     cpu.registers.set_z_from_bool(res == 0);
 }

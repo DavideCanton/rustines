@@ -57,7 +57,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_sre(cpu: &mut Cpu, val: u8) -> u8 {
-    cpu.registers.set_c_from_bool(val & 0x01 != 0);
+    cpu.registers.set_c_from_bool(val & 0b0000_0001 != 0);
     let res = val >> 1;
     let res_a = cpu.registers.a_reg ^ res;
     cpu.registers.a_reg = res_a;

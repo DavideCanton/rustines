@@ -56,7 +56,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn compute_v(a: u8, m: u8, res: u8) -> bool {
-    ((a ^ res) & (m ^ !res) & 0x80) != 0
+    ((a ^ res) & (m ^ !res) & 0b1000_0000) != 0
 }
 
 fn compute_c(res: u16) -> bool {
@@ -67,7 +67,7 @@ pub(crate) fn do_sbc(cpu: &mut Cpu, val: u8) {
     let res = (cpu.registers.a_reg as u16)
         .wrapping_sub(val as u16)
         .wrapping_sub(!cpu.registers.get_c() as u16);
-    let res_a = (res & 0xFF) as u8;
+    let res_a = (res & 0b1111_1111) as u8;
     cpu.registers.compute_nz_flags(res_a);
     cpu.registers
         .compute_vc_flags(compute_v(cpu.registers.a_reg, val, res_a), compute_c(res));

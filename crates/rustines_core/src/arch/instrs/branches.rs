@@ -43,7 +43,7 @@ fn do_branch(flag: bool, cpu: &mut Cpu, bus: &mut Bus) -> u8 {
         cpu.burn_internal_cycle(bus);
         cpu.registers.pc = new_pc;
 
-        let page_crossed = (old_pc & 0xFF00) != (new_pc & 0xFF00);
+        let page_crossed = (old_pc & 0b1111_1111_0000_0000) != (new_pc & 0b1111_1111_0000_0000);
         if page_crossed {
             cpu.burn_internal_cycle(bus);
             4

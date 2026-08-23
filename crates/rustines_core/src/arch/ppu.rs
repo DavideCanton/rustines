@@ -109,17 +109,19 @@ impl Ppu {
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.cycle += 1;
 
-        let rendering_enabled = (self.mask & 0x18) != 0;
+        let rendering_enabled = (self.mask & 0b0001_1000) != 0;
 
         if rendering_enabled && self.scanline == -1 {
             if self.cycle == 256 {
                 self.increment_vram_address_y();
             }
             if self.cycle == 257 {
-                self.vram_address = (self.vram_address & 0xFBE0) | (self.temp_address & 0x041F);
+                self.vram_address = (self.vram_address & 0b1111_1011_1110_0000)
+                    | (self.temp_address & 0b0000_0100_0001_1111);
             }
             if self.cycle == 304 {
-                self.vram_address = (self.vram_address & 0x841F) | (self.temp_address & 0x7BE0);
+                self.vram_address = (self.vram_address & 0b1000_0100_0001_1111)
+                    | (self.temp_address & 0b0111_1011_1110_0000);
             }
         }
 
@@ -154,14 +156,14 @@ impl Ppu {
         }
 
         if self.scanline == 241 && self.cycle == 1 {
-            self.status |= 0x80;
-            if (self.ctrl & 0x80) != 0 {
+            self.status |= 0b1000_0000;
+            if (self.ctrl & 0b1000_0000) != 0 {
                 self.nmi_interrupt = true;
             }
         }
 
         if self.scanline == -1 && self.cycle == 1 {
-            self.status &= 0x7F;
+            self.status &= 0b0111_1111;
             self.nmi_interrupt = false;
         }
     }
@@ -181,36 +183,42 @@ impl Ppu {
             }
             5 => {
                 if self.address_latch == 0 {
-                    self.fine_x = value & 0x07;
-                    self.temp_address = (self.temp_address & 0xFFE0) | ((value >> 3) as u16);
+                    self.fine_x = value & 0b0000_0111;
+                    self.temp_address =
+                        (self.temp_address & 0b1111_1111_1110_0000) | ((value >> 3) as u16);
                     self.address_latch = 1;
                 } else {
-                    self.temp_address = (self.temp_address & 0x8C1F)
-                        | (((value & 0x07) as u16) << 12)
-                        | (((value & 0xF8) as u16) << 2);
+                    self.temp_address = (self.temp_address & 0b1000_1100_0001_1111)
+                        | (((value & 0b0000_0111) as u16) << 12)
+                        | (((value & 0b1111_1000) as u16) << 2);
                     self.address_latch = 0;
                 }
             }
             6 => {
                 if self.address_latch == 0 {
-                    self.temp_address =
-                        (self.temp_address & 0x00FF) | (((value & 0x3F) as u16) << 8);
+                    self.temp_address = (self.temp_address & 0b0000_0000_1111_1111)
+                        | (((value & 0b0011_1111) as u16) << 8);
                     self.address_latch = 1;
                 } else {
-                    self.temp_address = (self.temp_address & 0xFF00) | (value as u16);
-                    self.vram_address = self.temp_address & 0x3FFF;
+                    self.temp_address =
+                        (self.temp_address & 0b1111_1111_0000_0000) | (value as u16);
+                    self.vram_address = self.temp_address & 0b0011_1111_1111_1111;
                     self.address_latch = 0;
                 }
             }
             7 => {
-                let current_addr = self.vram_address & 0x3FFF;
+                let current_addr = self.vram_address & 0b0011_1111_1111_1111;
                 self.vram_write(current_addr, value, mapper);
 
                 if current_addr >= 0x3F00 {
                     self.vram_write(current_addr - 0x1000, value, mapper);
                 }
 
-                let increment = if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                let increment = if (self.ctrl & 0b0000_0100) != 0 {
+                    32
+                } else {
+                    1
+                };
                 self.vram_address = self.vram_address.wrapping_add(increment);
             }
             _ => unreachable!(),
@@ -229,13 +237,13 @@ impl Ppu {
 
                 if self.cycle == 1 {
                     if self.scanline == 241 {
-                        data &= 0x7F;
+                        data &= 0b0111_1111;
                     } else if self.scanline == -1 {
-                        data |= 0x80;
+                        data |= 0b1000_0000;
                     }
                 }
 
-                self.status &= 0x7F;
+                self.status &= 0b0111_1111;
                 self.address_latch = 0;
 
                 if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
@@ -248,22 +256,26 @@ impl Ppu {
             7 => {
                 let mut data = self.vram_buffer_shadow(mapper);
 
-                let current_addr = self.vram_address & 0x3FFF;
+                let current_addr = self.vram_address & 0b0011_1111_1111_1111;
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
                     // if bit 0 of mask is 0, greyscale mode is enabled, mask the lower bits
-                    if (self.mask & 0x01) != 0 {
-                        data &= 0x30;
+                    if (self.mask & 0b0000_0001) != 0 {
+                        data &= 0b0011_0000;
                     }
                     // when reading palette data, the upper two bits of the open bus are preserved
-                    data = (data & 0x3F) | (self.open_bus_value & 0xC0);
+                    data = (data & 0b0011_1111) | (self.open_bus_value & 0b1100_0000);
                     self.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
                 } else {
                     self.data_buffer = self.vram_read(current_addr, mapper);
                 }
 
-                self.vram_address += if (self.ctrl & 0x04) != 0 { 32 } else { 1 };
+                self.vram_address += if (self.ctrl & 0b0000_0100) != 0 {
+                    32
+                } else {
+                    1
+                };
                 self.write_open_bus(data);
                 data
             }
@@ -272,7 +284,7 @@ impl Ppu {
     }
 
     pub fn vram_read(&self, mut addr: u16, mapper: &dyn Mapper) -> u8 {
-        addr &= 0x3FFF;
+        addr &= 0b0011_1111_1111_1111;
 
         match addr {
             0x0000..=0x1FFF => mapper.fetch_chr_rom(addr),
@@ -281,9 +293,9 @@ impl Ppu {
                 self.nametables[idx]
             }
             0x3F00..=0x3FFF => {
-                let mut palette_addr = (addr & 0x001F) as usize;
+                let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
 
-                if palette_addr >= 0x10 && (palette_addr & 0x03) == 0 {
+                if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
                     palette_addr -= 0x10;
                 }
 
@@ -294,7 +306,7 @@ impl Ppu {
     }
 
     pub fn vram_write(&mut self, mut addr: u16, value: u8, mapper: &dyn Mapper) {
-        addr &= 0x3FFF;
+        addr &= 0b0011_1111_1111_1111;
         match addr {
             0x0000..=0x1FFF => {
                 // TODO
@@ -308,9 +320,9 @@ impl Ppu {
                 self.nametables[idx] = value;
             }
             0x3F00..=0x3FFF => {
-                let mut palette_addr = (addr & 0x001F) as usize;
+                let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
 
-                if palette_addr >= 0x10 && (palette_addr & 0x03) == 0 {
+                if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
                     palette_addr -= 0x10;
                 }
 
@@ -330,7 +342,7 @@ impl Ppu {
         let tile_y = (y / 8) as u16;
         let pixel_y = (y % 8) as u16;
 
-        let base_nametable_addr = 0x2000 + ((self.ctrl & 0x03) as u16 * 0x0400);
+        let base_nametable_addr = 0x2000 + ((self.ctrl & 0b0000_0011) as u16 * 0x0400);
 
         let visible_sprites = self.get_sprites_on_scanline();
 
@@ -347,9 +359,9 @@ impl Ppu {
             let attribute_byte = self.vram_read(attr_addr, mapper);
 
             let shift = ((tile_y & 2) << 1) | (tile_x & 2);
-            let palette_index = ((attribute_byte >> shift) & 0x03) as u16;
+            let palette_index = ((attribute_byte >> shift) & 0b0000_0011) as u16;
 
-            let pattern_table_base = if (self.ctrl & 0x10) != 0 {
+            let pattern_table_base = if (self.ctrl & 0b0001_0000) != 0 {
                 0x1000
             } else {
                 0x0000
@@ -359,8 +371,8 @@ impl Ppu {
             let byte1 = mapper.fetch_chr_rom(tile_addr);
             let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
 
-            let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
-            let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
+            let bit1 = (byte1 >> (7 - pixel_x)) & 0b0000_0001;
+            let bit2 = (byte2 >> (7 - pixel_x)) & 0b0000_0001;
             let color_index = (bit2 << 1) | bit1;
 
             let palette_offset = if color_index == 0 {
@@ -371,7 +383,7 @@ impl Ppu {
 
             let palette_color_id =
                 self.vram_read(0x3F00 + palette_offset + color_index as u16, mapper);
-            let background_rgb = NES_PALETTE[(palette_color_id & 0x3F) as usize];
+            let background_rgb = NES_PALETTE[(palette_color_id & 0b0011_1111) as usize];
 
             let mut pixel_color = background_rgb;
 
@@ -380,14 +392,14 @@ impl Ppu {
                     let mut pixel_x = (x - sprite.x as usize) as u16;
                     let mut pixel_y = (y - sprite.y as usize) as u16;
 
-                    if (sprite.attr & 0x40) != 0 {
+                    if (sprite.attr & 0b0100_0000) != 0 {
                         pixel_x = 7 - pixel_x;
                     }
-                    if (sprite.attr & 0x80) != 0 {
+                    if (sprite.attr & 0b1000_0000) != 0 {
                         pixel_y = 7 - pixel_y;
                     }
 
-                    let pattern_table_base = if (self.ctrl & 0x08) != 0 {
+                    let pattern_table_base = if (self.ctrl & 0b0000_1000) != 0 {
                         0x1000
                     } else {
                         0x0000
@@ -397,17 +409,17 @@ impl Ppu {
                     let byte1 = mapper.fetch_chr_rom(tile_addr);
                     let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
 
-                    let bit1 = (byte1 >> (7 - pixel_x)) & 0x01;
-                    let bit2 = (byte2 >> (7 - pixel_x)) & 0x01;
+                    let bit1 = (byte1 >> (7 - pixel_x)) & 0b0000_0001;
+                    let bit2 = (byte2 >> (7 - pixel_x)) & 0b0000_0001;
                     let sprite_pixel_bits = (bit2 << 1) | bit1;
 
                     if sprite_pixel_bits != 0 {
-                        let palette_num = (sprite.attr & 0x03) as u16;
+                        let palette_num = (sprite.attr & 0b0000_0011) as u16;
                         let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
                         let color_id = self.vram_read(palette_addr, mapper);
-                        let is_behind = (sprite.attr & 0x20) != 0;
+                        let is_behind = (sprite.attr & 0b0010_0000) != 0;
                         if !is_behind || color_index == 0 {
-                            pixel_color = NES_PALETTE[(color_id & 0x3F) as usize];
+                            pixel_color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
                             break;
                         }
                     }
@@ -419,11 +431,11 @@ impl Ppu {
     }
 
     fn increment_vram_address_y(&mut self) {
-        if (self.vram_address & 0x7000) != 0x7000 {
+        if (self.vram_address & 0b0111_0000_0000_0000) != 0x7000 {
             self.vram_address += 0x1000;
         } else {
-            self.vram_address &= 0x8FFF;
-            let mut y = (self.vram_address & 0x03E0) >> 5;
+            self.vram_address &= 0b1000_1111_1111_1111;
+            let mut y = (self.vram_address & 0b0000_0011_1110_0000) >> 5;
             if y == 29 {
                 y = 0;
                 self.vram_address ^= 0x0800;
@@ -432,12 +444,12 @@ impl Ppu {
             } else {
                 y += 1;
             }
-            self.vram_address = (self.vram_address & 0xFC1F) | (y << 5);
+            self.vram_address = (self.vram_address & 0b1111_1100_0001_1111) | (y << 5);
         }
     }
 
     fn mirror_nametable_addr(&self, addr: u16, mode: MirroringType) -> usize {
-        let title_addr = addr & 0x0FFF;
+        let title_addr = addr & 0b0000_1111_1111_1111;
         match mode {
             MirroringType::Horizontal => {
                 let mut idx = title_addr as usize;
@@ -484,11 +496,11 @@ impl Ppu {
     }
 
     pub(crate) fn status_bits_shadow(&self) -> u8 {
-        (self.status & 0xE0) | (self.open_bus_value & 0x1F)
+        (self.status & 0b1110_0000) | (self.open_bus_value & 0b0001_1111)
     }
 
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
-        let current_addr = self.vram_address & 0x3FFF;
+        let current_addr = self.vram_address & 0b0011_1111_1111_1111;
         if current_addr >= 0x3F00 {
             self.vram_read(current_addr, mapper)
         } else {

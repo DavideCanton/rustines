@@ -25,6 +25,6 @@ fn do_cpy(cpu: &mut Cpu, val: u8) {
     let res = (y_reg as u16).wrapping_sub(val as u16);
 
     cpu.registers.set_c_from_bool(y_reg >= val);
-    cpu.registers.set_n_from_bool((res & 0x80) != 0);
+    cpu.registers.set_n_from_bool((res & 0b1000_0000) != 0);
     cpu.registers.set_z_from_bool(y_reg == val);
 }

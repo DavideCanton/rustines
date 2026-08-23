@@ -144,11 +144,11 @@ impl World {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos()
-                & 0xFFFFFF) as u32;
+                & 0b1111_1111_1111_1111_1111_1111) as u32;
             self.color = [
-                ((inst & 0xFF0000) >> 16) as u8,
-                ((inst & 0xFF00) >> 8) as u8,
-                (inst & 0xFF) as u8,
+                ((inst & 0b1111_1111_0000_0000_0000_0000) >> 16) as u8,
+                ((inst & 0b1111_1111_0000_0000) >> 8) as u8,
+                (inst & 0b1111_1111) as u8,
                 255,
             ];
         }

@@ -48,7 +48,7 @@ impl NesController {
 
         if !self.strobe {
             self.shift_register >>= 1;
-            self.shift_register |= 0x80;
+            self.shift_register |= 0b1000_0000;
         }
 
         value
@@ -65,6 +65,6 @@ impl NesController {
     }
 
     pub fn peek_state(&self) -> u8 {
-        (self.shift_register & 1) | 0x40
+        (self.shift_register & 1) | 0b0100_0000
     }
 }

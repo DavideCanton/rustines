@@ -171,7 +171,7 @@ mod tests {
     }
 
     #[test_case(15 << 4, 18 << 4, 18 << 4 | 15)]
-    #[test_case(12 << 4 | 0x0F, 18 << 4 | 0x0E, 18 << 4 | 12)]
+    #[test_case(12 << 4 | 0b0000_1111, 18 << 4 | 0b0000_1110, 18 << 4 | 12)]
     fn test_mapping_number(flag_6: u8, flag_7: u8, map: u8) {
         let mut bytes = DEFAULT;
         bytes[6] = flag_6;

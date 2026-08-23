@@ -29,8 +29,8 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> io::Result<()> {
                     for pixel_x in 0..8 {
                         let bit_shift = 7 - pixel_x;
 
-                        let bit_low = (byte_low >> bit_shift) & 0x01;
-                        let bit_high = (byte_high >> bit_shift) & 0x01;
+                        let bit_low = (byte_low >> bit_shift) & 0b0000_0001;
+                        let bit_high = (byte_high >> bit_shift) & 0b0000_0001;
 
                         let color_index = (bit_high << 1) | bit_low;
 
@@ -76,8 +76,8 @@ pub fn debug_dump_nametable(bus: &Bus) {
             let rel_addr = row * 32 + col;
             let ppu_address = 0x2000 + rel_addr;
 
-            let cleared_addr = (ppu_address - 0x2000) & 0x0FFF;
-            let vram_index = cleared_addr & 0x07FF;
+            let cleared_addr = (ppu_address - 0x2000) & 0b0000_1111_1111_1111;
+            let vram_index = cleared_addr & 0b0000_0111_1111_1111;
             let tile_index = ppu.vram_read(vram_index, mapper);
 
             if tile_index == 0x00 || tile_index == 0x20 {

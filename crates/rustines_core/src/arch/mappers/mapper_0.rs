@@ -63,7 +63,7 @@ impl Mapper for Mapper0 {
         let mut addr = addr - 0x8000;
 
         if self.banks == 1 {
-            addr &= 0x3FFF;
+            addr &= 0b0011_1111_1111_1111;
         }
 
         self.prg_rom[addr as usize]

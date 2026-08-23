@@ -95,7 +95,7 @@ impl Apu {
                 self.dmc.irq_active = false;
 
                 // bit 5 is always open bus
-                (ret & 0xDF) | (open_bus_value & 0x20)
+                (ret & 0b1101_1111) | (open_bus_value & 0b0010_0000)
             }
             _ => open_bus_value,
         }
@@ -229,7 +229,7 @@ impl Dmc {
         if self.timer > 0 {
             self.timer -= 1;
         } else {
-            self.timer = DMC_PERIOD_TABLE[(self.freq & 0x0F) as usize];
+            self.timer = DMC_PERIOD_TABLE[(self.freq & 0b0000_1111) as usize];
 
             if self.bits_remaining > 0 {
                 self.bits_remaining -= 1;
@@ -265,7 +265,7 @@ impl Dmc {
         } else {
             if !previous_enabled {
                 self.bits_remaining = 8;
-                self.timer = DMC_PERIOD_TABLE[(self.freq & 0x0F) as usize];
+                self.timer = DMC_PERIOD_TABLE[(self.freq & 0b0000_1111) as usize];
             }
 
             if self.bytes_remaining == 0 {

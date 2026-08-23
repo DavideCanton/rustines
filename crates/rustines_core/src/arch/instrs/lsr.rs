@@ -41,8 +41,8 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub(crate) fn do_lsr(cpu: &mut Cpu, val: u8) -> u8 {
-    cpu.registers.set_c_from_bool(val & 0x1 != 0);
-    let res = (val >> 1) & 0x7f;
+    cpu.registers.set_c_from_bool(val & 0b0000_0001 != 0);
+    let res = (val >> 1) & 0b0111_1111;
     cpu.registers.compute_nz_flags(res);
     cpu.registers.clear_n();
     res

@@ -223,9 +223,9 @@ impl Cpu {
 
         self.burn_internal_cycle(bus);
 
-        let op = (base.wrapping_add(self.registers.x_reg)) as u16 & 0xFF;
+        let op = (base.wrapping_add(self.registers.x_reg)) as u16 & 0b1111_1111;
         let low = bus.fetch(op);
-        let high = bus.fetch((op + 1) & 0xFF);
+        let high = bus.fetch((op + 1) & 0b1111_1111);
 
         to_u16(low, high)
     }
@@ -235,7 +235,7 @@ impl Cpu {
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
         let low = bus.fetch(op);
-        let high = bus.fetch((op + 1) & 0xFF);
+        let high = bus.fetch((op + 1) & 0b1111_1111);
 
         bus.read_with_dummy(low, high, self.registers.y_reg, is_write)
     }
@@ -249,7 +249,7 @@ impl Cpu {
         self.push16(bus, pc);
 
         let p = self.registers.get_p(false);
-        let p_to_push = (p & !0x10) | 0x20;
+        let p_to_push = (p & !0b0001_0000) | 0b0010_0000;
         self.push8(bus, p_to_push);
         self.registers.set_i();
     }
