@@ -158,7 +158,9 @@ impl World {
     }
 
     fn draw(&mut self, frame: &mut [u8]) {
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+        let chunks = frame.as_chunks_mut::<4>().0;
+
+        for (i, pixel) in chunks.iter_mut().enumerate() {
             let x = (i % self.w as usize) as i16;
             let y = (i / self.w as usize) as i16;
 
