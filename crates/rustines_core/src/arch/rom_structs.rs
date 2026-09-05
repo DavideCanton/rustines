@@ -57,7 +57,7 @@ impl INesHeader {
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
-        if extract_flag(self.flags_6, BitIndex::BIT_0) {
+        if extract_flag(self.flags_6, BitIndex::Bit0) {
             MirroringType::Vertical
         } else {
             MirroringType::Horizontal
@@ -65,20 +65,20 @@ impl INesHeader {
     }
 
     pub fn has_other_memory(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::BIT_1)
+        extract_flag(self.flags_6, BitIndex::Bit1)
     }
 
     pub fn has_trainer(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::BIT_2)
+        extract_flag(self.flags_6, BitIndex::Bit2)
     }
 
     pub fn ignore_mirroring(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::BIT_3)
+        extract_flag(self.flags_6, BitIndex::Bit3)
     }
 
     pub fn mapping_number(&self) -> u8 {
-        let low = extract_bits_shift(self.flags_6, BitIndex::BIT_4, BitCount::BIT_4);
-        let high = extract_bits_mask_msb(self.flags_7, BitCount::BIT_4);
+        let low = extract_bits_shift(self.flags_6, BitIndex::Bit4, BitCount::Bit4);
+        let high = extract_bits_mask_msb(self.flags_7, BitCount::Bit4);
         high | low
     }
 }

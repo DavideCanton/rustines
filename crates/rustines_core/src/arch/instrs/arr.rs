@@ -10,9 +10,9 @@ pub fn immediate(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let res = do_ror(cpu, res);
     cpu.registers.a_reg = res;
     cpu.registers
-        .set_c_from_bool(extract_flag(res, BitIndex::BIT_6));
+        .set_c_from_bool(extract_flag(res, BitIndex::Bit6));
     cpu.registers
-        .set_v_from_bool(extract_flag(res, BitIndex::BIT_6) ^ extract_flag(res, BitIndex::BIT_5));
+        .set_v_from_bool(extract_flag(res, BitIndex::Bit6) ^ extract_flag(res, BitIndex::Bit5));
     cpu.registers.set_n_from_bool(old_c);
     2
 }

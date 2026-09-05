@@ -1,6 +1,7 @@
 use crate::{
     arch::{mappers::mapper::Mapper, rom_structs::MirroringType},
     renderer::Renderer,
+    utils::bit_utils::{BitIndex, extract_flag},
 };
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
@@ -11,6 +12,7 @@ pub struct Sprite {
     y: u8,
     tile: u8,
     attr: u8,
+    is_sprite_0: bool,
 }
 
 impl Sprite {
@@ -20,6 +22,7 @@ impl Sprite {
             tile: oam_data[i * 4 + 1],
             attr: oam_data[i * 4 + 2],
             x: oam_data[i * 4 + 3],
+            is_sprite_0: i == 0,
         }
     }
 }
@@ -125,11 +128,11 @@ impl Ppu {
             }
         }
 
-        let max_cycles_for_this_scanline =
-            if self.scanline == -1 && rendering_enabled && self.is_odd_frame {
-                340
+        let max_cycles_for_this_scanline = 340
+            + if self.scanline == -1 && rendering_enabled && self.is_odd_frame {
+                0
             } else {
-                341
+                1
             };
 
         if self.cycle >= max_cycles_for_this_scanline {
@@ -163,8 +166,11 @@ impl Ppu {
         }
 
         if self.scanline == -1 && self.cycle == 1 {
-            self.status &= 0b0111_1111;
+            self.status &= 0b0011_1111;
             self.nmi_interrupt = false;
+        }
+        if !rendering_enabled {
+            self.status &= 0b1011_1111;
         }
     }
 
@@ -338,6 +344,12 @@ impl Ppu {
         //     return;
         // }
 
+        let bg_enabled = (self.mask & 0b0000_1000) != 0;
+        let sprites_enabled = (self.mask & 0b0001_0000) != 0;
+        if !bg_enabled && !sprites_enabled {
+            return;
+        }
+
         let y = self.scanline as usize;
         let tile_y = (y / 8) as u16;
         let pixel_y = (y % 8) as u16;
@@ -345,6 +357,11 @@ impl Ppu {
         let base_nametable_addr = 0x2000 + ((self.ctrl & 0b0000_0011) as u16 * 0x0400);
 
         let visible_sprites = self.get_sprites_on_scanline();
+
+        let bg_enabled = extract_flag(self.mask, BitIndex::Bit3);
+        let sprites_enabled = extract_flag(self.mask, BitIndex::Bit4);
+        let bg_clip_left_8 = extract_flag(self.mask, BitIndex::Bit1);
+        let sprite_clip_left_8 = extract_flag(self.mask, BitIndex::Bit2);
 
         for x in 0..=255 {
             let tile_x = (x / 8) as u16;
@@ -399,12 +416,23 @@ impl Ppu {
                         pixel_y = 7 - pixel_y;
                     }
 
-                    let pattern_table_base = if (self.ctrl & 0b0000_1000) != 0 {
-                        0x1000
+                    let tile_addr = if (self.ctrl & 0b0010_0000) != 0 {
+                        let table = ((sprite.tile & 1) as u16) * 0x1000;
+                        let mut tile = (sprite.tile & 0xFE) as u16;
+                        let mut s_y = pixel_y;
+                        if s_y >= 8 {
+                            tile += 1;
+                            s_y -= 8;
+                        }
+                        table + (tile * 16) + s_y
                     } else {
-                        0x0000
+                        let table = if (self.ctrl & 0b0000_1000) != 0 {
+                            0x1000
+                        } else {
+                            0x0000
+                        };
+                        table + (sprite.tile as u16 * 16) + pixel_y
                     };
-                    let tile_addr = pattern_table_base + (sprite.tile as u16 * 16) + pixel_y;
 
                     let byte1 = mapper.fetch_chr_rom(tile_addr);
                     let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
@@ -414,6 +442,19 @@ impl Ppu {
                     let sprite_pixel_bits = (bit2 << 1) | bit1;
 
                     if sprite_pixel_bits != 0 {
+                        if sprite.is_sprite_0
+                            && bg_enabled
+                            && sprites_enabled
+                            && color_index != 0
+                            && x < 255
+                        {
+                            let in_clipped_left_zone =
+                                x < 8 && (bg_clip_left_8 || sprite_clip_left_8);
+                            if !in_clipped_left_zone {
+                                self.status |= 0b0100_0000;
+                            }
+                        }
+
                         let palette_num = (sprite.attr & 0b0000_0011) as u16;
                         let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
                         let color_id = self.vram_read(palette_addr, mapper);
