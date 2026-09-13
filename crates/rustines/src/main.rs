@@ -144,7 +144,7 @@ pub fn main() {
 
             debug_keys(&input, &mut bus, &mut cpu, &mut logpoint);
             if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
-                pattern_window = Some(PatternTableWindow::create(bus.mapper_ref(), elwt));
+                pattern_window = Some(PatternTableWindow::create(bus.mapper_ref(), elwt, 4));
             }
 
             map_inputs(&input, bus.controller1_mut(), &key_map1);
@@ -195,8 +195,12 @@ struct PatternTableWindow<'a> {
 }
 
 impl<'a> PatternTableWindow<'a> {
-    fn create(mapper: &dyn Mapper, target: &EventLoopWindowTarget<()>) -> Self {
-        let size = LogicalSize::new(512, 256);
+    fn create(mapper: &dyn Mapper, target: &EventLoopWindowTarget<()>, scale: usize) -> Self {
+        let pattern_width = 256 * scale;
+        let pattern_height = 128 * scale;
+        let buf = dump_pattern_tables(mapper, scale);
+
+        let size = LogicalSize::new(pattern_width as f64, pattern_height as f64);
 
         let window = Arc::new(
             WindowBuilder::new()
@@ -211,11 +215,9 @@ impl<'a> PatternTableWindow<'a> {
         let window_size = window.inner_size();
         let surface_texture =
             SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-        let mut pixels =
-            Pixels::new(512, 256, surface_texture).expect("Cannot create pixels buffer");
+        let mut pixels = Pixels::new(pattern_width as u32, pattern_height as u32, surface_texture)
+            .expect("Cannot create pixels buffer");
         pixels.set_scaling_mode(ScalingMode::Fill);
-
-        let buf = dump_pattern_tables(mapper);
 
         pixels.frame_mut().copy_from_slice(&buf);
 

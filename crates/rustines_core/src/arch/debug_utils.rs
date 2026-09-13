@@ -6,11 +6,15 @@ use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{Ppu, Sprite};
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 
-pub fn dump_pattern_tables(mapper: &dyn Mapper) -> [u8; 512 * 256 * 4] {
-    let mut buf = [0; 512 * 256 * 4];
+pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
+    assert!(scale > 0, "Pattern table scale must be greater than zero");
+
+    let width = 256 * scale;
+    let height = 128 * scale;
+    let mut buf = vec![0; width * height * 4];
 
     for table_index in 0..2 {
-        let table_x = table_index * 256;
+        let table_x = table_index * 128 * scale;
         for tile_y in 0..16 {
             for tile_x in 0..16 {
                 for pixel_y in 0..8 {
@@ -22,7 +26,7 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> [u8; 512 * 256 * 4] {
                     let byte_low = mapper.fetch_chr_rom(addr_low);
                     let byte_high = mapper.fetch_chr_rom(addr_high);
 
-                    let y = tile_y * 16 + pixel_y * 2;
+                    let y = (tile_y * 8 + pixel_y) * scale;
 
                     for pixel_x in 0..8 {
                         let bit_shift: BitIndex = (7 - (pixel_x as u8)).try_into().unwrap();
@@ -33,11 +37,11 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> [u8; 512 * 256 * 4] {
                         let color_index = (bit_high << 1) | bit_low;
                         let color: u8 = color_index * 85;
 
-                        let x = table_x + tile_x * 16 + pixel_x * 2;
+                        let x = table_x + (tile_x * 8 + pixel_x) * scale;
 
-                        for block_y in 0..2 {
-                            for block_x in 0..2 {
-                                let pixel_offset = ((y + block_y) * 512 + x + block_x) * 4;
+                        for block_y in 0..scale {
+                            for block_x in 0..scale {
+                                let pixel_offset = ((y + block_y) * width + x + block_x) * 4;
 
                                 buf[pixel_offset] = color;
                                 buf[pixel_offset + 1] = color;
