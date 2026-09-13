@@ -134,8 +134,6 @@ impl From<BitCount> for u8 {
 /// Extracts the bit at offset `offset` of `value` and returns true if it was 1, false else.
 ///
 /// `offset` is counted from the right, so 0 is the rightmost bit.
-///
-/// Panics if `offset >= 8`.
 #[inline(always)]
 pub fn extract_flag(value: u8, offset: BitIndex) -> bool {
     let offset = offset as u8;
@@ -158,8 +156,6 @@ pub fn set_flag(value: u8, offset: BitIndex, flag: bool) -> u8 {
 /// For example, if value is `12345678`, shift is `3` and count is `2`, the result is `00000045`.
 ///
 /// If `shift` is 0, the value is returned unchanged.
-///
-/// Panics if `shift >= 8`.
 #[inline(always)]
 pub fn extract_bits_shift(value: u8, shift: BitIndex, count: BitCount) -> u8 {
     let value = value >> (shift as u8);
@@ -171,8 +167,6 @@ pub fn extract_bits_shift(value: u8, shift: BitIndex, count: BitCount) -> u8 {
 /// For example, if value is `12345678` and count is `3`, the result is `12300000`.
 ///
 /// If `count` is 0, 0 is returned.
-///
-/// Panics if `count > 8`.
 #[inline(always)]
 pub fn extract_bits_mask_msb(value: u8, count: BitCount) -> u8 {
     let count = count as u8;
@@ -189,8 +183,6 @@ pub fn extract_bits_mask_msb(value: u8, count: BitCount) -> u8 {
 /// For example, if value is `12345678` and count is `3`, the result is `00000678`.
 ///
 /// If `count` is 0, 0 is returned.
-///
-/// Panics if `count > 8`.
 #[inline(always)]
 pub fn extract_bits_mask_lsb(value: u8, count: BitCount) -> u8 {
     let count = count as u8;

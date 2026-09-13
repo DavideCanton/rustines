@@ -4,6 +4,7 @@ use std::io::{self, BufWriter, Write};
 use crate::arch::bus::Bus;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{Ppu, Sprite};
+use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper) -> [u8; 512 * 256 * 4] {
     let mut buf = [0; 512 * 256 * 4];
@@ -21,32 +22,26 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper) -> [u8; 512 * 256 * 4] {
                     let byte_low = mapper.fetch_chr_rom(addr_low);
                     let byte_high = mapper.fetch_chr_rom(addr_high);
 
-                    for pixel_x in 0..8 {
-                        let bit_shift = 7 - pixel_x;
+                    let y = tile_y * 16 + pixel_y * 2;
 
-                        let bit_low = (byte_low >> bit_shift) & 0b0000_0001;
-                        let bit_high = (byte_high >> bit_shift) & 0b0000_0001;
+                    for pixel_x in 0..8 {
+                        let bit_shift: BitIndex = (7 - (pixel_x as u8)).try_into().unwrap();
+
+                        let bit_low = extract_bits_shift(byte_low, bit_shift, BitCount::Bit1);
+                        let bit_high = extract_bits_shift(byte_high, bit_shift, BitCount::Bit1);
 
                         let color_index = (bit_high << 1) | bit_low;
-
-                        let g: u8 = match color_index {
-                            0 => 0,
-                            1 => 85,
-                            2 => 170,
-                            3 => 255,
-                            _ => unreachable!(),
-                        };
+                        let color: u8 = color_index * 85;
 
                         let x = table_x + tile_x * 16 + pixel_x * 2;
-                        let y = tile_y * 16 + pixel_y * 2;
 
                         for block_y in 0..2 {
                             for block_x in 0..2 {
                                 let pixel_offset = ((y + block_y) * 512 + x + block_x) * 4;
 
-                                buf[pixel_offset] = g;
-                                buf[pixel_offset + 1] = g;
-                                buf[pixel_offset + 2] = g;
+                                buf[pixel_offset] = color;
+                                buf[pixel_offset + 1] = color;
+                                buf[pixel_offset + 2] = color;
                                 buf[pixel_offset + 3] = 0xFF;
                             }
                         }
