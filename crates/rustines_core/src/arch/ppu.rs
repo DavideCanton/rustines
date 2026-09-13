@@ -1,7 +1,7 @@
 use crate::{
     arch::{mappers::mapper::Mapper, rom_structs::MirroringType},
     renderer::Renderer,
-    utils::bit_utils::{BitIndex, extract_flag},
+    utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, extract_flag},
 };
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
@@ -178,7 +178,7 @@ impl Ppu {
         self.write_open_bus(value);
         match reg_index {
             0 => {
-                if extract_flag(value, BitIndex::Bit6) {
+                if extract_flag(value, BI::_6) {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
                 self.ctrl = value;
@@ -363,10 +363,10 @@ impl Ppu {
 
         let visible_sprites = self.get_sprites_on_scanline();
 
-        let bg_enabled = extract_flag(self.mask, BitIndex::Bit3);
-        let sprites_enabled = extract_flag(self.mask, BitIndex::Bit4);
-        let bg_clip_left_8 = extract_flag(self.mask, BitIndex::Bit1);
-        let sprite_clip_left_8 = extract_flag(self.mask, BitIndex::Bit2);
+        let bg_enabled = extract_flag(self.mask, BI::_3);
+        let sprites_enabled = extract_flag(self.mask, BI::_4);
+        let bg_clip_left_8 = extract_flag(self.mask, BI::_1);
+        let sprite_clip_left_8 = extract_flag(self.mask, BI::_2);
 
         for x in 0..=255 {
             let tile_x = (x / 8) as u16;
@@ -383,19 +383,17 @@ impl Ppu {
             let shift = ((tile_y & 2) << 1) | (tile_x & 2);
             let palette_index = ((attribute_byte >> shift) & 0b0000_0011) as u16;
 
-            let pattern_table_base = if (self.ctrl & 0b0001_0000) != 0 {
+            let pattern_table_base = if extract_flag(self.ctrl, BI::_4) {
                 0x1000
             } else {
                 0x0000
             };
             let tile_addr = pattern_table_base + (tile_id * 16) + pixel_y;
 
-            let byte1 = mapper.fetch_chr_rom(tile_addr);
-            let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
+            let byte_low = mapper.fetch_chr_rom(tile_addr);
+            let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
 
-            let bit1 = (byte1 >> (7 - pixel_x)) & 0b0000_0001;
-            let bit2 = (byte2 >> (7 - pixel_x)) & 0b0000_0001;
-            let color_index = (bit2 << 1) | bit1;
+            let color_index = get_color_index(byte_low, byte_high, pixel_x as u8);
 
             let palette_offset = if color_index == 0 {
                 0
@@ -414,14 +412,14 @@ impl Ppu {
                     let mut pixel_x = (x - sprite.x as usize) as u16;
                     let mut pixel_y = (y - sprite.y as usize) as u16;
 
-                    if (sprite.attr & 0b0100_0000) != 0 {
+                    if extract_flag(sprite.attr, BI::_6) {
                         pixel_x = 7 - pixel_x;
                     }
-                    if (sprite.attr & 0b1000_0000) != 0 {
+                    if extract_flag(sprite.attr, BI::_7) {
                         pixel_y = 7 - pixel_y;
                     }
 
-                    let tile_addr = if (self.ctrl & 0b0010_0000) != 0 {
+                    let tile_addr = if extract_flag(self.ctrl, BI::_5) {
                         let table = ((sprite.tile & 1) as u16) * 0x1000;
                         let mut tile = (sprite.tile & 0xFE) as u16;
                         let mut s_y = pixel_y;
@@ -439,12 +437,9 @@ impl Ppu {
                         table + (sprite.tile as u16 * 16) + pixel_y
                     };
 
-                    let byte1 = mapper.fetch_chr_rom(tile_addr);
-                    let byte2 = mapper.fetch_chr_rom(tile_addr + 8);
-
-                    let bit1 = (byte1 >> (7 - pixel_x)) & 0b0000_0001;
-                    let bit2 = (byte2 >> (7 - pixel_x)) & 0b0000_0001;
-                    let sprite_pixel_bits = (bit2 << 1) | bit1;
+                    let byte_low = mapper.fetch_chr_rom(tile_addr);
+                    let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
+                    let sprite_pixel_bits = get_color_index(byte_low, byte_high, pixel_x as u8);
 
                     if sprite_pixel_bits != 0 {
                         if sprite.is_sprite_0
@@ -553,6 +548,15 @@ impl Ppu {
             self.data_buffer
         }
     }
+}
+
+pub fn get_color_index(byte_low: u8, byte_high: u8, pixel_x: u8) -> u8 {
+    let bit_shift: BI = (7 - pixel_x).try_into().unwrap();
+
+    let bit_low = extract_bits_shift(byte_low, bit_shift, BC::_1);
+    let bit_high = extract_bits_shift(byte_high, bit_shift, BC::_1);
+
+    (bit_high << 1) | bit_low
 }
 
 const NES_PALETTE: [u32; 64] = [

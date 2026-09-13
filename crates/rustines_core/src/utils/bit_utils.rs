@@ -1,3 +1,5 @@
+#![allow(clippy::just_underscores_and_digits)]
+
 /// Converts the two values provided `low` and `high` to an `u16`
 /// by making `(high << 8) | low`.
 #[inline(always)]
@@ -55,78 +57,94 @@ macro_rules! bin {
 
 #[derive(Clone, Copy, Debug)]
 pub enum BitIndex {
-    Bit0 = 0,
-    Bit1,
-    Bit2,
-    Bit3,
-    Bit4,
-    Bit5,
-    Bit6,
-    Bit7,
+    _0 = 0,
+    _1,
+    _2,
+    _3,
+    _4,
+    _5,
+    _6,
+    _7,
 }
 
 impl TryFrom<u8> for BitIndex {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use BitIndex::*;
         match value {
-            0 => Ok(BitIndex::Bit0),
-            1 => Ok(BitIndex::Bit1),
-            2 => Ok(BitIndex::Bit2),
-            3 => Ok(BitIndex::Bit3),
-            4 => Ok(BitIndex::Bit4),
-            5 => Ok(BitIndex::Bit5),
-            6 => Ok(BitIndex::Bit6),
-            7 => Ok(BitIndex::Bit7),
+            0 => Ok(_0),
+            1 => Ok(_1),
+            2 => Ok(_2),
+            3 => Ok(_3),
+            4 => Ok(_4),
+            5 => Ok(_5),
+            6 => Ok(_6),
+            7 => Ok(_7),
             _ => Err("bit index must be 0..=7"),
+        }
+    }
+}
+
+impl From<BitIndex> for u8 {
+    fn from(value: BitIndex) -> Self {
+        use BitIndex::*;
+        match value {
+            _0 => 0,
+            _1 => 1,
+            _2 => 2,
+            _3 => 3,
+            _4 => 4,
+            _5 => 5,
+            _6 => 6,
+            _7 => 7,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum BitCount {
-    Bit0 = 0,
-    Bit1,
-    Bit2,
-    Bit3,
-    Bit4,
-    Bit5,
-    Bit6,
-    Bit7,
-    Bit8,
+    _1 = 1,
+    _2,
+    _3,
+    _4,
+    _5,
+    _6,
+    _7,
+    _8,
 }
 
 impl TryFrom<u8> for BitCount {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use BitCount::*;
         match value {
-            0 => Ok(BitCount::Bit0),
-            1 => Ok(BitCount::Bit1),
-            2 => Ok(BitCount::Bit2),
-            3 => Ok(BitCount::Bit3),
-            4 => Ok(BitCount::Bit4),
-            5 => Ok(BitCount::Bit5),
-            6 => Ok(BitCount::Bit6),
-            7 => Ok(BitCount::Bit7),
-            8 => Ok(BitCount::Bit8),
-            _ => Err("bit count must be 0..=7"),
+            1 => Ok(_1),
+            2 => Ok(_2),
+            3 => Ok(_3),
+            4 => Ok(_4),
+            5 => Ok(_5),
+            6 => Ok(_6),
+            7 => Ok(_7),
+            8 => Ok(_8),
+            _ => Err("bit count must be 1..=8"),
         }
     }
 }
 
 impl From<BitCount> for u8 {
     fn from(value: BitCount) -> Self {
+        use BitCount::*;
         match value {
-            BitCount::Bit0 => 0,
-            BitCount::Bit1 => 1,
-            BitCount::Bit2 => 2,
-            BitCount::Bit3 => 3,
-            BitCount::Bit4 => 4,
-            BitCount::Bit5 => 5,
-            BitCount::Bit6 => 6,
-            BitCount::Bit7 => 7,
-            BitCount::Bit8 => 8,
+            _1 => 1,
+            _2 => 2,
+            _3 => 3,
+            _4 => 4,
+            _5 => 5,
+            _6 => 6,
+            _7 => 7,
+            _8 => 8,
         }
     }
 }
@@ -204,48 +222,48 @@ mod tests {
     #[test]
     fn test_extract_flag() {
         let v: u8 = 0b0000_1111;
-        assert!(extract_flag(v, BitIndex::Bit0));
-        assert!(extract_flag(v, BitIndex::Bit1));
-        assert!(!extract_flag(v, BitIndex::Bit5));
+        assert!(extract_flag(v, BitIndex::_0));
+        assert!(extract_flag(v, BitIndex::_1));
+        assert!(!extract_flag(v, BitIndex::_5));
     }
 
     #[test]
     fn test_set_flag() {
         let v: u8 = 0b0000_1111;
-        assert_eq!(set_flag(v, BitIndex::Bit0, false), 0b0000_1110);
-        assert_eq!(set_flag(v, BitIndex::Bit1, false), 0b0000_1101);
-        assert_eq!(set_flag(v, BitIndex::Bit5, true), 0b0010_1111);
+        assert_eq!(set_flag(v, BitIndex::_0, false), 0b0000_1110);
+        assert_eq!(set_flag(v, BitIndex::_1, false), 0b0000_1101);
+        assert_eq!(set_flag(v, BitIndex::_5, true), 0b0010_1111);
     }
 
     #[test]
     fn test_extract_bits_shift() {
         let v: u8 = 0b1010_1011;
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit4, BitCount::Bit4),
+            extract_bits_shift(v, BitIndex::_4, BitCount::_4),
             0b0000_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit2, BitCount::Bit6),
+            extract_bits_shift(v, BitIndex::_2, BitCount::_6),
             0b0010_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit2, BitCount::Bit5),
+            extract_bits_shift(v, BitIndex::_2, BitCount::_5),
             0b0000_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit0, BitCount::Bit8),
+            extract_bits_shift(v, BitIndex::_0, BitCount::_8),
             0b1010_1011
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit0, BitCount::Bit6),
+            extract_bits_shift(v, BitIndex::_0, BitCount::_6),
             0b0010_1011
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit3, BitCount::Bit5),
+            extract_bits_shift(v, BitIndex::_3, BitCount::_5),
             0b0001_0101
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::Bit3, BitCount::Bit1),
+            extract_bits_shift(v, BitIndex::_3, BitCount::_1),
             0b0000_0001
         );
     }
@@ -253,21 +271,19 @@ mod tests {
     #[test]
     fn test_extract_bits_mask_msb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_msb(v, BitCount::Bit4), 0b1010_0000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::Bit2), 0b1000_0000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::Bit0), 0b0000_0000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::Bit5), 0b1010_1000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::Bit8), 0b1010_1011);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::_4), 0b1010_0000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::_2), 0b1000_0000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::_5), 0b1010_1000);
+        assert_eq!(extract_bits_mask_msb(v, BitCount::_8), 0b1010_1011);
     }
 
     #[test]
     fn test_extract_bits_mask_lsb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::Bit4), 0b0000_1011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::Bit2), 0b0000_0011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::Bit0), 0b0000_0000);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::Bit7), 0b0010_1011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::Bit8), 0b1010_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::_4), 0b0000_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::_2), 0b0000_0011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::_7), 0b0010_1011);
+        assert_eq!(extract_bits_mask_lsb(v, BitCount::_8), 0b1010_1011);
     }
 
     #[test]

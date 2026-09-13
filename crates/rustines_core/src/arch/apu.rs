@@ -46,8 +46,8 @@ impl Apu {
             None => None,
             Some(0) => {
                 let val = self.delayed_write_value;
-                self.mode = extract_flag(val, BitIndex::Bit7).into();
-                self.irq_disabled = extract_flag(val, BitIndex::Bit6);
+                self.mode = extract_flag(val, BitIndex::_7).into();
+                self.irq_disabled = extract_flag(val, BitIndex::_6);
                 self.frame_cycles = 0;
                 None
             }
@@ -101,12 +101,11 @@ impl Apu {
             0x13 => self.dmc.update_4(value),
             0x15 => {
                 self.dmc.irq_active = false;
-                self.dmc.set_enabled(extract_flag(value, BitIndex::Bit4));
-                self.noise.set_enabled(extract_flag(value, BitIndex::Bit3));
-                self.triangle
-                    .set_enabled(extract_flag(value, BitIndex::Bit2));
-                self.pulse2.set_enabled(extract_flag(value, BitIndex::Bit1));
-                self.pulse1.set_enabled(extract_flag(value, BitIndex::Bit0));
+                self.dmc.set_enabled(extract_flag(value, BitIndex::_4));
+                self.noise.set_enabled(extract_flag(value, BitIndex::_3));
+                self.triangle.set_enabled(extract_flag(value, BitIndex::_2));
+                self.pulse2.set_enabled(extract_flag(value, BitIndex::_1));
+                self.pulse1.set_enabled(extract_flag(value, BitIndex::_0));
             }
             0x17 => {
                 self.delayed_write_value = value;
@@ -117,7 +116,7 @@ impl Apu {
                     self.delayed_reset_cycles = Some(4);
                 }
 
-                if extract_flag(value, BitIndex::Bit6) {
+                if extract_flag(value, BitIndex::_6) {
                     self.frame_irq_active = false;
                 }
             }
@@ -131,16 +130,16 @@ impl Apu {
                 let mut ret = 0;
 
                 // bit 5 is always open bus
-                let open_bus_5 = extract_flag(open_bus_value, BitIndex::Bit5);
+                let open_bus_5 = extract_flag(open_bus_value, BitIndex::_5);
 
-                ret = set_flag(ret, BitIndex::Bit7, self.dmc.irq_active);
-                ret = set_flag(ret, BitIndex::Bit6, self.frame_irq_active);
-                ret = set_flag(ret, BitIndex::Bit5, open_bus_5);
-                ret = set_flag(ret, BitIndex::Bit4, self.dmc.enabled);
-                ret = set_flag(ret, BitIndex::Bit3, self.noise.length_counter > 0);
-                ret = set_flag(ret, BitIndex::Bit2, self.triangle.length_counter_load > 0);
-                ret = set_flag(ret, BitIndex::Bit1, self.pulse2.length_counter_load > 0);
-                ret = set_flag(ret, BitIndex::Bit0, self.pulse1.length_counter_load > 0);
+                ret = set_flag(ret, BitIndex::_7, self.dmc.irq_active);
+                ret = set_flag(ret, BitIndex::_6, self.frame_irq_active);
+                ret = set_flag(ret, BitIndex::_5, open_bus_5);
+                ret = set_flag(ret, BitIndex::_4, self.dmc.enabled);
+                ret = set_flag(ret, BitIndex::_3, self.noise.length_counter > 0);
+                ret = set_flag(ret, BitIndex::_2, self.triangle.length_counter_load > 0);
+                ret = set_flag(ret, BitIndex::_1, self.pulse2.length_counter_load > 0);
+                ret = set_flag(ret, BitIndex::_0, self.pulse1.length_counter_load > 0);
 
                 self.frame_irq_active = false;
                 self.dmc.irq_active = false;
@@ -170,17 +169,17 @@ struct Pulse {
 
 impl Pulse {
     fn update_1(&mut self, value: u8) {
-        self.duty = extract_bits_shift(value, BitIndex::Bit6, BitCount::Bit2);
-        self.loop_flag = extract_flag(value, BitIndex::Bit5);
-        self.const_vol = extract_flag(value, BitIndex::Bit4);
-        self.vol = extract_bits_mask_lsb(value, BitCount::Bit4);
+        self.duty = extract_bits_shift(value, BitIndex::_6, BitCount::_2);
+        self.loop_flag = extract_flag(value, BitIndex::_5);
+        self.const_vol = extract_flag(value, BitIndex::_4);
+        self.vol = extract_bits_mask_lsb(value, BitCount::_4);
     }
 
     fn update_2(&mut self, value: u8) {
-        self.sweep_enabled = extract_flag(value, BitIndex::Bit7);
-        self.sweep_period = extract_bits_shift(value, BitIndex::Bit4, BitCount::Bit3);
-        self.sweep_negate = extract_flag(value, BitIndex::Bit3);
-        self.sweep_shift = extract_bits_mask_lsb(value, BitCount::Bit3);
+        self.sweep_enabled = extract_flag(value, BitIndex::_7);
+        self.sweep_period = extract_bits_shift(value, BitIndex::_4, BitCount::_3);
+        self.sweep_negate = extract_flag(value, BitIndex::_3);
+        self.sweep_shift = extract_bits_mask_lsb(value, BitCount::_3);
     }
 
     fn update_3(&mut self, value: u8) {
@@ -188,8 +187,8 @@ impl Pulse {
     }
 
     fn update_4(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, BitCount::Bit3);
-        self.length_counter_load = extract_bits_shift(value, BitIndex::Bit3, BitCount::Bit5);
+        self.timer_high = extract_bits_mask_lsb(value, BitCount::_3);
+        self.length_counter_load = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -208,8 +207,8 @@ struct Triangle {
 
 impl Triangle {
     fn update_1(&mut self, value: u8) {
-        self.counter_ctl = extract_flag(value, BitIndex::Bit7);
-        self.counter_load = extract_bits_mask_lsb(value, BitCount::Bit7);
+        self.counter_ctl = extract_flag(value, BitIndex::_7);
+        self.counter_load = extract_bits_mask_lsb(value, BitCount::_7);
     }
 
     fn update_2(&mut self, value: u8) {
@@ -217,8 +216,8 @@ impl Triangle {
     }
 
     fn update_3(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, BitCount::Bit3);
-        self.length_counter_load = extract_bits_shift(value, BitIndex::Bit3, BitCount::Bit5);
+        self.timer_high = extract_bits_mask_lsb(value, BitCount::_3);
+        self.length_counter_load = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -238,18 +237,18 @@ struct Noise {
 
 impl Noise {
     fn update_1(&mut self, value: u8) {
-        self.loop_flag = extract_flag(value, BitIndex::Bit5);
-        self.const_vol = extract_flag(value, BitIndex::Bit4);
-        self.vol = extract_bits_mask_lsb(value, BitCount::Bit4);
+        self.loop_flag = extract_flag(value, BitIndex::_5);
+        self.const_vol = extract_flag(value, BitIndex::_4);
+        self.vol = extract_bits_mask_lsb(value, BitCount::_4);
     }
 
     fn update_2(&mut self, value: u8) {
-        self.noise_mode = extract_flag(value, BitIndex::Bit7);
-        self.period = extract_bits_mask_lsb(value, BitCount::Bit4);
+        self.noise_mode = extract_flag(value, BitIndex::_7);
+        self.period = extract_bits_mask_lsb(value, BitCount::_4);
     }
 
     fn update_3(&mut self, value: u8) {
-        self.length_counter = extract_bits_shift(value, BitIndex::Bit3, BitCount::Bit5);
+        self.length_counter = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
     }
     fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
@@ -330,9 +329,9 @@ impl Dmc {
     }
 
     fn update_1(&mut self, value: u8) {
-        self.irq_enable = extract_flag(value, BitIndex::Bit7);
-        self.loop_flag = extract_flag(value, BitIndex::Bit6);
-        self.freq = extract_bits_mask_lsb(value, BitCount::Bit4);
+        self.irq_enable = extract_flag(value, BitIndex::_7);
+        self.loop_flag = extract_flag(value, BitIndex::_6);
+        self.freq = extract_bits_mask_lsb(value, BitCount::_4);
 
         if !self.irq_enable {
             self.irq_active = false;
@@ -340,7 +339,7 @@ impl Dmc {
     }
 
     fn update_2(&mut self, value: u8) {
-        self.load_counter = extract_bits_mask_lsb(value, BitCount::Bit7);
+        self.load_counter = extract_bits_mask_lsb(value, BitCount::_7);
     }
 
     fn update_3(&mut self, value: u8) {

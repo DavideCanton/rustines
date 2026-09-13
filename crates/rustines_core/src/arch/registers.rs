@@ -12,14 +12,14 @@ pub struct Registers {
     p_reg: u8,
 }
 
-pub const C_INDEX: BitIndex = BitIndex::Bit0;
-pub const Z_INDEX: BitIndex = BitIndex::Bit1;
-pub const I_INDEX: BitIndex = BitIndex::Bit2;
-pub const D_INDEX: BitIndex = BitIndex::Bit3;
-pub const B_INDEX: BitIndex = BitIndex::Bit4;
-pub const U_INDEX: BitIndex = BitIndex::Bit5;
-pub const V_INDEX: BitIndex = BitIndex::Bit6;
-pub const N_INDEX: BitIndex = BitIndex::Bit7;
+pub const C_INDEX: BitIndex = BitIndex::_0;
+pub const Z_INDEX: BitIndex = BitIndex::_1;
+pub const I_INDEX: BitIndex = BitIndex::_2;
+pub const D_INDEX: BitIndex = BitIndex::_3;
+pub const B_INDEX: BitIndex = BitIndex::_4;
+pub const U_INDEX: BitIndex = BitIndex::_5;
+pub const V_INDEX: BitIndex = BitIndex::_6;
+pub const N_INDEX: BitIndex = BitIndex::_7;
 
 macro_rules! gen_methods {
     ($name: ident, $index: expr) => {
@@ -56,7 +56,7 @@ impl Registers {
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n_from_bool(extract_flag(value, BitIndex::Bit7));
+        self.set_n_from_bool(extract_flag(value, BitIndex::_7));
         self.set_z_from_bool(value == 0);
     }
 

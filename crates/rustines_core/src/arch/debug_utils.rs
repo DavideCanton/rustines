@@ -3,7 +3,7 @@ use std::io::{self, BufWriter, Write};
 
 use crate::arch::bus::Bus;
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::ppu::{Ppu, Sprite};
+use crate::arch::ppu::{Ppu, Sprite, get_color_index};
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
@@ -18,27 +18,16 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
         for tile_y in 0..16 {
             for tile_x in 0..16 {
                 for pixel_y in 0..8 {
-                    let tile_offset = (table_index * 0x1000) + (tile_y * 16 * 16) + (tile_x * 16);
-
-                    let addr_low = (tile_offset + pixel_y) as u16;
-                    let addr_high = (tile_offset + pixel_y + 8) as u16;
-
-                    let byte_low = mapper.fetch_chr_rom(addr_low);
-                    let byte_high = mapper.fetch_chr_rom(addr_high);
-
                     let y = (tile_y * 8 + pixel_y) * scale;
 
+                    let tile_offset = (table_index * 0x1000) + (tile_y * 16 * 16) + (tile_x * 16);
+                    let addr = (tile_offset + pixel_y) as u16;
+                    let byte_low = mapper.fetch_chr_rom(addr);
+                    let byte_high = mapper.fetch_chr_rom(addr + 8);
+
                     for pixel_x in 0..8 {
-                        let bit_shift: BitIndex = (7 - (pixel_x as u8)).try_into().unwrap();
-
-                        let bit_low = extract_bits_shift(byte_low, bit_shift, BitCount::Bit1);
-                        let bit_high = extract_bits_shift(byte_high, bit_shift, BitCount::Bit1);
-
-                        let color_index = (bit_high << 1) | bit_low;
-                        let color: u8 = color_index * 85;
-
+                        let color: u8 = get_color_index(byte_low, byte_high, pixel_x as u8) * 85;
                         let x = table_x + (tile_x * 8 + pixel_x) * scale;
-
                         for block_y in 0..scale {
                             for block_x in 0..scale {
                                 let pixel_offset = ((y + block_y) * width + x + block_x) * 4;

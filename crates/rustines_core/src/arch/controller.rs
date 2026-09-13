@@ -1,5 +1,7 @@
 use log::trace;
 
+use crate::utils::bit_utils::{BitIndex, set_flag};
+
 pub struct NesController {
     number: u8,
     buttons: [bool; 8],
@@ -48,7 +50,7 @@ impl NesController {
 
         if !self.strobe {
             self.shift_register >>= 1;
-            self.shift_register |= 0b1000_0000;
+            self.shift_register = set_flag(self.shift_register, BitIndex::_7, true);
         }
 
         value
@@ -65,6 +67,6 @@ impl NesController {
     }
 
     pub fn peek_state(&self) -> u8 {
-        (self.shift_register & 1) | 0b0100_0000
+        set_flag(self.shift_register & 1, BitIndex::_6, true)
     }
 }
