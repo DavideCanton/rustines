@@ -177,7 +177,12 @@ impl Ppu {
     pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &dyn Mapper) {
         self.write_open_bus(value);
         match reg_index {
-            0 => self.ctrl = value,
+            0 => {
+                if extract_flag(value, BitIndex::Bit6) {
+                    panic!("Bit 6 of PPUCTRL should NEVER be set");
+                }
+                self.ctrl = value;
+            }
             1 => self.mask = value,
             2 => {}
             3 => {
