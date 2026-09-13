@@ -1,7 +1,12 @@
-use std::{fs::File, io::Write};
+use std::{
+    fs::{File, create_dir, remove_dir_all},
+    io::Write,
+};
 
 use pixels::Pixels;
 use rustines_core::renderer::Renderer;
+
+const FRAME_INTERVAL: Option<usize> = None;
 
 pub struct PixelsRenderer<'a> {
     pixels: Pixels<'a>,
@@ -9,17 +14,22 @@ pub struct PixelsRenderer<'a> {
     #[allow(unused)]
     height: usize,
     frame_cnt: usize,
-    log_frames: bool,
+    frame_interval: Option<usize>,
 }
 
 impl<'a> PixelsRenderer<'a> {
     pub(crate) fn new(pixels: Pixels<'a>, width: usize, height: usize) -> Self {
+        if FRAME_INTERVAL.is_some() {
+            let _ = remove_dir_all("frames");
+            let _ = create_dir("frames");
+        }
+
         Self {
             pixels,
             width,
             height,
             frame_cnt: 0,
-            log_frames: false,
+            frame_interval: FRAME_INTERVAL,
         }
     }
 }
@@ -32,11 +42,24 @@ impl<'a> Renderer for PixelsRenderer<'a> {
     }
 
     fn draw(&mut self) {
-        if self.log_frames {
-            File::create(format!("frame_{}.bin", self.frame_cnt))
-                .expect("Failed to create file")
-                .write_all(self.pixels.frame())
+        if let Some(fi) = self.frame_interval
+            && self.frame_cnt.is_multiple_of(fi)
+        {
+            let mut file = File::create(format!("frames/frame_{}.ppm", self.frame_cnt))
+                .expect("Failed to create file");
+
+            file.write_all(b"P6\n256 240\n255\n")
                 .expect("Failed to write file");
+
+            let data: Vec<u8> = self
+                .pixels
+                .frame()
+                .iter()
+                .enumerate()
+                .filter_map(|(i, f)| if i % 4 == 3 { None } else { Some(*f) })
+                .collect();
+
+            file.write_all(&data).expect("Failed to write file");
         }
 
         self.pixels.render().unwrap();
