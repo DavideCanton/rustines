@@ -45,9 +45,6 @@ pub trait Loader: Named {
             ))
         })?;
 
-        // uncomment to dump the tables
-        // let _ = dump_pattern_tables(mapper.as_ref());
-
         Ok(NesRom::new(header, mapper))
     }
 }

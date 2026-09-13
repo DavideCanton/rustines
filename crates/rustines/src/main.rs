@@ -5,16 +5,16 @@ use crate::{context::RustinesArgs, renderer::PixelsRenderer};
 use clap::Parser;
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
 use log::{LevelFilter, Record, info};
-use pixels::{Pixels, SurfaceTexture};
-use rustines_core as core;
+use pixels::{Pixels, ScalingMode, SurfaceTexture};
+use rustines_core::{self as core, Mapper, arch::debug_utils::dump_pattern_tables};
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 use std::{collections::HashMap, fs, io, path, sync::Arc};
 use winit::{
-    dpi::LogicalSize,
+    dpi::{LogicalSize, PhysicalSize},
     event::{Event, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{EventLoop, EventLoopWindowTarget},
     keyboard::KeyCode,
-    window::WindowBuilder,
+    window::{Window, WindowBuilder},
 };
 use winit_input_helper::WinitInputHelper;
 
@@ -97,6 +97,8 @@ pub fn main() {
     let event_loop = EventLoop::new().unwrap();
     let mut input = WinitInputHelper::new();
 
+    let mut pattern_window = None;
+
     let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
     let window = Arc::new(
         WindowBuilder::new()
@@ -135,11 +137,15 @@ pub fn main() {
         if input.update(&event) {
             // Close events
             if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+                // this closes everything, don't really care
                 elwt.exit();
                 return;
             }
 
             debug_keys(&input, &mut bus, &mut cpu, &mut logpoint);
+            if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
+                pattern_window = Some(PatternTableWindow::create(bus.mapper_ref(), elwt));
+            }
 
             map_inputs(&input, bus.controller1_mut(), &key_map1);
             map_inputs(&input, bus.controller2_mut(), &key_map2);
@@ -154,6 +160,16 @@ pub fn main() {
             window.request_redraw();
         }
 
+        if let Event::WindowEvent {
+            window_id,
+            event: WindowEvent::Resized(size),
+        } = &event
+            && let Some(pattern_window) = pattern_window.as_mut()
+            && *window_id == pattern_window.window.id()
+        {
+            pattern_window.resize(*size);
+        }
+
         // Draw the current frame
         if let Event::WindowEvent {
             event: WindowEvent::RedrawRequested,
@@ -161,12 +177,60 @@ pub fn main() {
         } = event
         {
             bus.ppu_mut().renderer().draw();
+            if let Some(pattern_window) = pattern_window.as_ref() {
+                pattern_window.draw();
+            }
 
             if let Some(fps) = counter.drawn() {
                 window.set_title(&format!("Rustines | FPS: {:.1}", fps));
             }
         }
     });
+}
+
+#[allow(dead_code)]
+struct PatternTableWindow<'a> {
+    window: Arc<Window>,
+    pixels: Pixels<'a>,
+}
+
+impl<'a> PatternTableWindow<'a> {
+    fn create(mapper: &dyn Mapper, target: &EventLoopWindowTarget<()>) -> Self {
+        let size = LogicalSize::new(512, 256);
+
+        let window = Arc::new(
+            WindowBuilder::new()
+                .with_title("Pattern tables")
+                .with_inner_size(size)
+                .with_min_inner_size(size)
+                .with_resizable(true)
+                .build(target)
+                .unwrap(),
+        );
+
+        let window_size = window.inner_size();
+        let surface_texture =
+            SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
+        let mut pixels =
+            Pixels::new(512, 256, surface_texture).expect("Cannot create pixels buffer");
+        pixels.set_scaling_mode(ScalingMode::Fill);
+
+        let buf = dump_pattern_tables(mapper);
+
+        pixels.frame_mut().copy_from_slice(&buf);
+
+        PatternTableWindow { window, pixels }
+    }
+
+    fn draw(&self) {
+        self.pixels.render().expect("Failed to draw");
+    }
+
+    fn resize(&mut self, size: PhysicalSize<u32>) {
+        self.pixels
+            .resize_surface(size.width, size.height)
+            .expect("Failed to resize pattern table surface");
+    }
 }
 
 fn debug_keys(
