@@ -226,9 +226,7 @@ impl Bus {
                     self.dma_in_progress = true;
                     self.read_many(start, &mut buf);
                     self.dma_in_progress = false;
-                    if let Some(&last_dma_byte) = buf.last() {
-                        self.open_bus_value = last_dma_byte;
-                    }
+                    self.open_bus_value = buf[255];
                     self.ppu_mut().dma_copy(&buf);
                 } else {
                     let ind = address & 0b1111_1111;

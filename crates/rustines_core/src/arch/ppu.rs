@@ -22,7 +22,7 @@ bitfield! {
     /** 5  -> Priority (0: in front of background; 1: behind background) */
     pub behind, _: 5;
     /** 0,1 -> Palette (4 to 7) of sprite */
-    pub palette, _: 0, 1;
+    pub palette, _: 1, 0;
 }
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -35,7 +35,7 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    pub fn table(&self) -> bool {
+    pub fn pattern_table(&self) -> bool {
         extract_flag(self.tile, BI::_0)
     }
 }
@@ -476,7 +476,8 @@ impl Ppu {
             for (sprite_index, sprite) in visible_sprites.iter().enumerate() {
                 if x >= sprite.x as usize && x < sprite.x as usize + 8 {
                     let mut pixel_x = (x - sprite.x as usize) as u16;
-                    let mut pixel_y = (y - sprite.y as usize) as u16;
+                    // sprite y is delayed by 1 scanline
+                    let mut pixel_y = (y as i16 - sprite.y as i16 - 1) as u16;
 
                     if sprite.attr.horizontal_flip() {
                         pixel_x = 7 - pixel_x;
@@ -485,22 +486,21 @@ impl Ppu {
                         pixel_y = 7 - pixel_y;
                     }
 
+                    let tile_addr = sprite_tile_addr(
+                        sprite,
+                        self.ctrl.sprite_size(),
+                        self.ctrl.sprite_pattern_table(),
+                    );
                     let tile_addr = if self.ctrl.sprite_size() {
-                        let table = if sprite.table() { 0x1000 } else { 0 };
-                        let mut tile = set_flag(sprite.tile, BI::_0, false) as u16;
                         let mut s_y = pixel_y;
+                        let mut offset = 0;
                         if s_y >= 8 {
-                            tile += 1;
+                            offset = 16;
                             s_y -= 8;
                         }
-                        table + (tile * 16) + s_y
+                        tile_addr + offset + s_y
                     } else {
-                        let table = if self.ctrl.sprite_pattern_table() {
-                            0x1000
-                        } else {
-                            0
-                        };
-                        table + (sprite.tile as u16 * 16) + pixel_y
+                        tile_addr + pixel_y
                     };
 
                     let byte_low = mapper.fetch_chr_rom(tile_addr);
@@ -519,8 +519,10 @@ impl Ppu {
                         }
 
                         let palette_num = sprite.attr.palette() as u16;
-                        let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
+                        // sprite palettes are at address 0x3F10
+                        let palette_addr = 0x3F10 + (palette_num << 2) + sprite_pixel_bits as u16;
                         let color_id = self.vram_read(palette_addr, mapper);
+
                         if !sprite.attr.behind() || color_index == 0 {
                             pixel_color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
                             break;
@@ -621,6 +623,17 @@ pub fn get_color_index(byte_low: u8, byte_high: u8, pixel_x: u8) -> u8 {
     let bit_high = extract_bits_shift(byte_high, bit_shift, BC::_1);
 
     (bit_high << 1) | bit_low
+}
+
+pub fn sprite_tile_addr(sprite: &Sprite, sprite_size: bool, sprite_pattern_table: bool) -> u16 {
+    if sprite_size {
+        let table = if sprite.pattern_table() { 0x1000 } else { 0 };
+        let tile = set_flag(sprite.tile, BI::_0, false) as u16;
+        table + (tile * 16)
+    } else {
+        let table = if sprite_pattern_table { 0x1000 } else { 0 };
+        table + (sprite.tile as u16 * 16)
+    }
 }
 
 const NES_PALETTE: [u32; 64] = [

@@ -4,7 +4,7 @@ use std::{
 };
 
 use pixels::Pixels;
-use rustines_core::renderer::Renderer;
+use rustines_core::{arch::debug_utils::generate_ppm, renderer::Renderer};
 
 const FRAME_INTERVAL: Option<usize> = None;
 
@@ -48,16 +48,7 @@ impl Renderer for PixelsRenderer {
             let mut file = File::create(format!("frames/frame_{}.ppm", self.frame_cnt))
                 .expect("Failed to create file");
 
-            file.write_all(b"P6\n256 240\n255\n")
-                .expect("Failed to write file");
-
-            let data: Vec<u8> = self
-                .pixels
-                .frame()
-                .iter()
-                .enumerate()
-                .filter_map(|(i, f)| if i % 4 == 3 { None } else { Some(*f) })
-                .collect();
+            let data = generate_ppm(256, 240, self.pixels.frame(), true);
 
             file.write_all(&data).expect("Failed to write file");
         }

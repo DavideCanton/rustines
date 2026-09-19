@@ -44,6 +44,8 @@ struct AppState {
     key_map2: KeyMap,
 
     pattern_window: Option<PatternTableWindow>,
+
+    pause: bool,
 }
 
 pub fn main() {
@@ -91,6 +93,7 @@ pub fn main() {
         limiter: FpsLimiter::new(60.0),
         logpoint: 1,
         pattern_window: None,
+        pause: false,
     };
 
     let mut input = WinitInputHelper::new();
@@ -111,12 +114,14 @@ pub fn main() {
             map_inputs(&input, bus.controller1_mut(), &app_state.key_map1);
             map_inputs(&input, bus.controller2_mut(), &app_state.key_map2);
 
-            while !bus.ppu_mut().frame_ready() {
-                app_state.cpu.tick(bus);
-            }
-            bus.ppu_mut().clear_frame_ready();
+            if !app_state.pause {
+                while !bus.ppu_mut().frame_ready() {
+                    app_state.cpu.tick(bus);
+                }
+                bus.ppu_mut().clear_frame_ready();
 
-            app_state.limiter.update();
+                app_state.limiter.update();
+            }
 
             window.request_redraw();
         }
@@ -172,6 +177,10 @@ fn map_debug_keys(
         core::debug_dump_oam(bus);
     }
 
+    if debug_keys_state.toggle_pause {
+        app_state.pause = !app_state.pause;
+    }
+
     if debug_keys_state.logpoint {
         let logpoint = &mut app_state.logpoint;
         println!("LOGPOINT {}", logpoint);
@@ -205,6 +214,7 @@ struct DebugKeyResult {
     dump_oam: bool,
     logpoint: bool,
     show_pattern_window: bool,
+    toggle_pause: bool,
 }
 
 fn debug_keys(input: &WinitInputHelper) -> DebugKeyResult {
@@ -216,6 +226,10 @@ fn debug_keys(input: &WinitInputHelper) -> DebugKeyResult {
 
     if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
         r.dump_palette = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyX) && input.held_shift() {
+        r.toggle_pause = true;
     }
 
     if input.key_pressed(KeyCode::KeyO) && input.held_shift() {

@@ -43,6 +43,11 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
             }
         }
     }
+
+    let mut file = File::create("pattern_table.ppm").expect("Failed to create file");
+    let data = generate_ppm(width, height, &buf, true);
+    file.write_all(&data).expect("Failed to write file");
+
     buf
 }
 
@@ -100,6 +105,20 @@ pub fn debug_dump_oam(bus: &Bus) {
         println!("Sprite {} = {:?}", i, sprite);
     }
     println!("\n===============\n");
+}
+
+pub fn generate_ppm(width: usize, height: usize, data: &[u8], skip_fourth: bool) -> Vec<u8> {
+    let mut vec = Vec::new();
+
+    vec.extend(format!("P6\n{} {}\n255\n", width, height).as_bytes());
+
+    for (i, v) in data.iter().enumerate() {
+        if i % 4 != 3 || !skip_fourth {
+            vec.push(*v);
+        }
+    }
+
+    vec
 }
 
 #[macro_export]

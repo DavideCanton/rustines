@@ -21,3 +21,4 @@ data/
 .vscode/launch.json
 
 *.log
+*.ppm
