@@ -15,7 +15,6 @@ bitfield! {
     #[repr(C)]
     struct SpriteAttr(u8);
     impl Debug;
-    u8;
     /** 7 -> Vertical flip */
     pub vertical_flip, _: 7;
     /** 6 -> Horizontal flip */
@@ -49,13 +48,12 @@ impl From<[u8; 4]> for Sprite {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PPUCTRL(u8);
+    struct PpuCtrl(u8);
     impl Debug;
-    u8;
     /** 7 -> Vblank NMI enable (0: off, 1: on) */
     pub vblank_nmi_enable, _: 7;
     /** 6 -> PPU master/slave select (0: read backdrop from EXT pins; 1: output color on EXT pins) */
-    pub ppu_master_slave, _: 6;
+    pub ppu_write_ext, _: 6;
     /** 5  -> Sprite size (0: 8x8 pixels; 1: 8x16 pixels – see PPU OAM#Byte 1) */
     pub sprite_size, _: 5;
     /** 4 -> Background pattern table address (0: $0000; 1: $1000) */
@@ -65,14 +63,13 @@ bitfield! {
     /** 2 -> VRAM address increment per CPU read/write of PPUDATA (0: add 1, going across; 1: add 32, going down) */
     pub vram_address_incr, _: 2;
     /** 10 -> Base nametable address (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00) */
-    pub nametable_addr, _: 0, 1;
+    pub nametable_addr, _: 1, 0;
 }
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PPUMASK(u8);
+    struct PpuMask(u8);
     impl Debug;
-    u8;
     /** 7 -> Emphasize blue */
     pub emphasis_blue, set_emphasis_blue: 7;
     /** 6 -> Emphasize green (red on PAL/Dendy) */
@@ -93,9 +90,8 @@ bitfield! {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PPUSTATUS(u8);
+    struct PpuStatus(u8);
     impl Debug;
-    u8;
     /** 7 -> Vblank flag, cleared on read. Unreliable. */
     pub vblank_started, set_vblank_started: 7;
     /** 6 -> Sprite 0 hit flag */
@@ -103,7 +99,7 @@ bitfield! {
     /** 5 -> Sprite overflow flag */
     pub sprite_overflow, set_sprite_overflow: 5;
     /** 4-0 -> (PPU open bus or 2C05 PPU identifier) */
-    pub open_bus, _: 0, 4;
+    pub open_bus, _: 4, 0;
 }
 
 pub struct Ppu {
@@ -111,29 +107,9 @@ pub struct Ppu {
     palette_table: [u8; 32],
     oam_data: [u8; 256],
 
-    ctrl: PPUCTRL,
-    /**
-    ```markdown
-    7 -> Emphasize blue
-    6 -> Emphasize green (red on PAL/Dendy)
-    5 -> Emphasize red (green on PAL/Dendy)
-    4 -> 1: Enable sprite rendering
-    3 -> 1: Enable background rendering
-    2 -> 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
-    1 -> 1: Show background in leftmost 8 pixels of screen, 0: Hide
-    0 -> Greyscale (0: normal color, 1: greyscale)
-    ```
-    */
-    mask: PPUMASK,
-    /**
-    ```markdown
-    7   -> Vblank flag, cleared on read. Unreliable.
-    6   -> Sprite 0 hit flag
-    5   -> Sprite overflow flag
-    4-0 -> (PPU open bus or 2C05 PPU identifier)
-    ```
-    */
-    status: PPUSTATUS,
+    ctrl: PpuCtrl,
+    mask: PpuMask,
+    status: PpuStatus,
     open_bus_value: u8,
     open_bus_decay_timer: u8,
 
@@ -141,15 +117,15 @@ pub struct Ppu {
     temp_address: u16,
     oam_addr: u8,
     end_x: u8,
-    address_latch: u8,
     data_buffer: u8,
 
     scanline: i16,
-    cycle: i16,
+    cycle: u16,
 
     nmi_interrupt: bool,
     frame_ready: bool,
     is_odd_frame: bool,
+    address_latch: bool,
 
     renderer: Box<dyn Renderer>,
 }
@@ -161,9 +137,9 @@ impl Ppu {
             palette_table: [0; 32],
             oam_data: [0; 256],
 
-            ctrl: PPUCTRL(0),
-            mask: PPUMASK(0),
-            status: PPUSTATUS(0),
+            ctrl: PpuCtrl(0),
+            mask: PpuMask(0),
+            status: PpuStatus(0),
             open_bus_value: 0,
             open_bus_decay_timer: 0,
 
@@ -171,7 +147,7 @@ impl Ppu {
             temp_address: 0,
             oam_addr: 0,
             end_x: 0,
-            address_latch: 0,
+            address_latch: false,
             data_buffer: 0,
 
             scanline: -1,
@@ -277,13 +253,13 @@ impl Ppu {
         self.write_open_bus(value);
         match reg_index {
             0 => {
-                let ctrl = PPUCTRL(value);
-                if ctrl.ppu_master_slave() {
+                let ctrl = PpuCtrl(value);
+                if ctrl.ppu_write_ext() {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
                 self.ctrl = ctrl;
             }
-            1 => self.mask = PPUMASK(value),
+            1 => self.mask = PpuMask(value),
             2 => {}
             3 => {
                 self.oam_addr = value;
@@ -293,28 +269,28 @@ impl Ppu {
                 self.oam_addr = self.oam_addr.wrapping_add(1);
             }
             5 => {
-                if self.address_latch == 0 {
-                    self.end_x = value & 0b0000_0111;
-                    self.temp_address =
-                        (self.temp_address & 0b1111_1111_1110_0000) | ((value >> 3) as u16);
-                    self.address_latch = 1;
-                } else {
+                if self.address_latch {
                     self.temp_address = (self.temp_address & 0b1000_1100_0001_1111)
                         | (((value & 0b0000_0111) as u16) << 12)
                         | (((value & 0b1111_1000) as u16) << 2);
-                    self.address_latch = 0;
+                    self.address_latch = false;
+                } else {
+                    self.end_x = value & 0b0000_0111;
+                    self.temp_address =
+                        (self.temp_address & 0b1111_1111_1110_0000) | ((value >> 3) as u16);
+                    self.address_latch = true;
                 }
             }
             6 => {
-                if self.address_latch == 0 {
-                    self.temp_address = (self.temp_address & 0b0000_0000_1111_1111)
-                        | (((value & 0b0011_1111) as u16) << 8);
-                    self.address_latch = 1;
-                } else {
+                if self.address_latch {
                     self.temp_address =
                         (self.temp_address & 0b1111_1111_0000_0000) | (value as u16);
                     self.vram_address = self.temp_address & 0b0011_1111_1111_1111;
-                    self.address_latch = 0;
+                    self.address_latch = false;
+                } else {
+                    self.temp_address = (self.temp_address & 0b0000_0000_1111_1111)
+                        | (((value & 0b0011_1111) as u16) << 8);
+                    self.address_latch = true;
                 }
             }
             7 => {
@@ -351,7 +327,7 @@ impl Ppu {
                 }
 
                 self.status.set_vblank_started(false);
-                self.address_latch = 0;
+                self.address_latch = false;
 
                 if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
                     self.nmi_interrupt = false;

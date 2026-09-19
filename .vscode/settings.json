@@ -1,7 +1,11 @@
 {
     "cSpell.words": [
+        "bitfield",
         "ilen",
-        "rustines"
+        "nametable",
+        "rustines",
+        "unisystem",
+        "Zeroable"
     ],
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer",

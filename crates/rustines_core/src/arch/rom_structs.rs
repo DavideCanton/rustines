@@ -8,39 +8,39 @@ bitfield! {
     #[repr(C)]
     struct HeaderFlags(u16);
     impl Debug;
-    u16;
+    u8;
 
-    /** 7 / 0 -> VS Unisystem */
-    pub vs_unisystem, _: 0;
-    /** 7 / 1 -> PlayChoice-10 (8 KB of Hint Screen data stored after CHR data) */
-    pub play_choice_10, _: 1;
-    /** 7 / 2-3 -> If equal to 2, flags 8-15 are in NES 2.0 format */
-    pub nes_2, _: 2, 3;
-    /** 7 / 4-7 -> Upper nybble of mapper number */
-    pub u8, mapper_number_upper, _: 4, 7;
     /** 6 / 0 -> Nametable arrangement: 0: horizontal mirrored, 1: vertically mirrored */
-    pub mirroring, _: 8;
+    pub mirroring, _: 0;
     /** 6 / 1 -> Cartridge contains battery-backed PRG RAM ($6000-7FFF) or other persistent memory */
-    pub battery_backed_prg_ram, _: 9;
+    pub battery_backed_prg_ram, _: 1;
     /** 6 / 2 -> 512-byte trainer at $7000-$71FF (stored before PRG data) */
-    pub has_trainer, _: 10;
+    pub has_trainer, _: 2;
     /** 6 / 3 -> Alternative nametable layout */
-    pub alt_nametable_layout, _: 11;
+    pub alt_nametable_layout, _: 3;
     /** 6 / 4-7 -> Lower nybble of mapper number */
-    pub u8, mapper_number_lower, _: 12, 15;
+    pub mapper_number_lower, _: 7, 4;
+    /** 7 / 0 -> VS Unisystem */
+    pub vs_unisystem, _: 8;
+    /** 7 / 1 -> PlayChoice-10 (8 KB of Hint Screen data stored after CHR data) */
+    pub play_choice_10, _: 9;
+    /** 7 / 2-3 -> If equal to 2, flags 8-15 are in NES 2.0 format */
+    pub nes_2, _: 11, 10;
+    /** 7 / 4-7 -> Upper nybble of mapper number */
+    pub mapper_number_upper, _: 15, 12;
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct INesHeader {
     pub header: [u8; 4],
-    pub prg_rom_size: u8,
-    pub chr_rom_size: u8,
+    pub prg_rom_banks: u8,
+    pub chr_rom_banks: u8,
     flags: HeaderFlags,
     pub prg_ram_size: u8,
     pub flags_9: u8,
     pub flags_10: u8,
-    pub padding: [u8; 5],
+    pub _padding: [u8; 5],
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -59,19 +59,19 @@ pub const HEADER: &[u8; 4] = b"NES\x1A";
 
 impl INesHeader {
     pub fn prg_rom_size(&self) -> usize {
-        (self.prg_rom_size as usize) * PRG_ROM_BANK_SIZE
+        (self.prg_rom_banks as usize) * PRG_ROM_BANK_SIZE
     }
 
     pub fn prg_rom_banks(&self) -> usize {
-        self.prg_rom_size as usize
+        self.prg_rom_banks as usize
     }
 
     pub fn chr_rom_size(&self) -> usize {
-        (self.chr_rom_size as usize) * CHR_ROM_BANK_SIZE
+        (self.chr_rom_banks as usize) * CHR_ROM_BANK_SIZE
     }
 
     pub fn uses_chr_ram(&self) -> bool {
-        self.chr_rom_size == 0
+        self.chr_rom_banks == 0
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
@@ -82,7 +82,7 @@ impl INesHeader {
         }
     }
 
-    pub fn has_other_memory(&self) -> bool {
+    pub fn battery_backed_prg_ram(&self) -> bool {
         self.flags.battery_backed_prg_ram()
     }
 
@@ -90,7 +90,7 @@ impl INesHeader {
         self.flags.has_trainer()
     }
 
-    pub fn ignore_mirroring(&self) -> bool {
+    pub fn alt_nametable_layout(&self) -> bool {
         self.flags.alt_nametable_layout()
     }
 
@@ -130,14 +130,14 @@ mod tests {
     #[test]
     fn test_header() {
         let header: INesHeader = (&DEFAULT).into();
-        assert_eq!(header.header, [1u8, 2, 3, 4]);
-        assert_eq!(header.prg_rom_size, 5);
-        assert_eq!(header.chr_rom_size, 6);
+        assert_eq!(header.header, [1, 2, 3, 4]);
+        assert_eq!(header.prg_rom_banks, 5);
+        assert_eq!(header.chr_rom_banks, 6);
         assert_eq!(header.flags.0, 0x0807);
         assert_eq!(header.prg_ram_size, 9);
         assert_eq!(header.flags_9, 10);
         assert_eq!(header.flags_10, 11);
-        assert_eq!(header.padding, [12u8, 13, 14, 15, 16]);
+        assert_eq!(header._padding, [12, 13, 14, 15, 16]);
 
         assert_eq!(header.prg_rom_size(), 5 * PRG_ROM_BANK_SIZE);
         assert_eq!(header.prg_rom_banks(), 5);
@@ -173,24 +173,24 @@ mod tests {
     #[test_case(6, true)]
     #[test_case(5, false)]
     #[test_case(8, false)]
-    fn test_has_other_memory(val: u8, has_other: bool) {
+    fn test_battery_backed_prg_ram(val: u8, has_other: bool) {
         let mut bytes = DEFAULT;
         bytes[6] = val;
 
         let header: INesHeader = (&bytes).into();
-        assert_eq!(header.has_other_memory(), has_other);
+        assert_eq!(header.battery_backed_prg_ram(), has_other);
     }
 
     #[test_case(15, true)]
     #[test_case(12, true)]
     #[test_case(6, false)]
     #[test_case(0, false)]
-    fn test_ignore_mirroring(val: u8, ignore: bool) {
+    fn test_alt_nametable_layout(val: u8, ignore: bool) {
         let mut bytes = DEFAULT;
         bytes[6] = val;
 
         let header: INesHeader = (&bytes).into();
-        assert_eq!(header.ignore_mirroring(), ignore);
+        assert_eq!(header.alt_nametable_layout(), ignore);
     }
 
     #[test_case(15 << 4, 18 << 4, 18 << 4 | 15)]

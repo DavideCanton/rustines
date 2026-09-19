@@ -23,7 +23,7 @@ mod test {
     #[test]
     fn it_detects_0_correctly() {
         let mut header = INesHeader::zeroed();
-        header.prg_rom_size = 1;
+        header.prg_rom_banks = 1;
         let mapper = instantiate_mapper(&header, vec![0; PRG_ROM_BANK_SIZE]);
 
         assert!(mapper.is_ok());
@@ -33,7 +33,7 @@ mod test {
     #[test]
     fn it_detects_none_correctly() {
         let mut header: INesHeader = (&[0xFF; 16]).into();
-        header.prg_rom_size = 1;
+        header.prg_rom_banks = 1;
         let mapper = instantiate_mapper(&header, vec![]);
 
         assert!(mapper.is_err());
