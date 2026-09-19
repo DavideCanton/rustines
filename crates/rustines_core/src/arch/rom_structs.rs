@@ -1,5 +1,6 @@
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
+use std::fmt::Debug;
 
 use crate::arch::mappers::mapper::MapperBox;
 
@@ -31,7 +32,7 @@ bitfield! {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+#[derive(Clone, Copy, Pod, Zeroable)]
 pub struct INesHeader {
     pub header: [u8; 4],
     pub prg_rom_banks: u8,
@@ -41,6 +42,24 @@ pub struct INesHeader {
     pub flags_9: u8,
     pub flags_10: u8,
     pub _padding: [u8; 5],
+}
+
+impl Debug for INesHeader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("INesHeader")
+            .field(
+                "header",
+                &str::from_utf8(&self.header).unwrap_or("<invalid>"),
+            )
+            .field("prg_rom_banks", &self.prg_rom_banks)
+            .field("chr_rom_banks", &self.chr_rom_banks)
+            .field("flags", &self.flags)
+            .field("prg_ram_size", &self.prg_ram_size)
+            .field("flags_9", &self.flags_9)
+            .field("flags_10", &self.flags_10)
+            .field("_padding", &self._padding)
+            .finish()
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
