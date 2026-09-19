@@ -1,5 +1,3 @@
-use bytemuck::{Pod, Zeroable};
-
 use crate::{
     arch::{mappers::mapper::Mapper, rom_structs::MirroringType},
     renderer::Renderer,
@@ -7,16 +5,40 @@ use crate::{
         BitCount as BC, BitIndex as BI, extract_bits_shift, extract_flag, set_flag,
     },
 };
+use bitfield::bitfield;
+use bytemuck::{Pod, Zeroable};
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
+
+bitfield! {
+    #[derive(Clone, Copy, Pod, Zeroable)]
+    #[repr(C)]
+    struct SpriteAttr(u8);
+    impl Debug;
+    u8;
+    /** 7 -> Vertical flip */
+    pub vertical_flip, _: 7;
+    /** 6 -> Horizontal flip */
+    pub horizontal_flip, _: 6;
+    /** 5  -> Priority (0: in front of background; 1: behind background) */
+    pub behind, _: 5;
+    /** 0,1 -> Palette (4 to 7) of sprite */
+    pub palette, _: 0, 1;
+}
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct Sprite {
     y: u8,
     tile: u8,
-    attr: u8,
+    attr: SpriteAttr,
     x: u8,
+}
+
+impl Sprite {
+    pub fn table(&self) -> bool {
+        extract_flag(self.tile, BI::_0)
+    }
 }
 
 impl From<[u8; 4]> for Sprite {
@@ -25,21 +47,100 @@ impl From<[u8; 4]> for Sprite {
     }
 }
 
+bitfield! {
+    #[derive(Clone, Copy)]
+    struct PPUCTRL(u8);
+    impl Debug;
+    u8;
+    /** 7 -> Vblank NMI enable (0: off, 1: on) */
+    pub vblank_nmi_enable, _: 7;
+    /** 6 -> PPU master/slave select (0: read backdrop from EXT pins; 1: output color on EXT pins) */
+    pub ppu_master_slave, _: 6;
+    /** 5  -> Sprite size (0: 8x8 pixels; 1: 8x16 pixels – see PPU OAM#Byte 1) */
+    pub sprite_size, _: 5;
+    /** 4 -> Background pattern table address (0: $0000; 1: $1000) */
+    pub bg_pattern_table, _: 4;
+    /** 3 -> Sprite pattern table address for 8x8 sprites (0: $0000; 1: $1000; ignored in 8x16 mode) */
+    pub sprite_pattern_table, _: 3;
+    /** 2 -> VRAM address increment per CPU read/write of PPUDATA (0: add 1, going across; 1: add 32, going down) */
+    pub vram_address_incr, _: 2;
+    /** 10 -> Base nametable address (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00) */
+    pub nametable_addr, _: 0, 1;
+}
+
+bitfield! {
+    #[derive(Clone, Copy)]
+    struct PPUMASK(u8);
+    impl Debug;
+    u8;
+    /** 7 -> Emphasize blue */
+    pub emphasis_blue, set_emphasis_blue: 7;
+    /** 6 -> Emphasize green (red on PAL/Dendy) */
+    pub emphasis_green, set_emphasis_green: 6;
+    /** 5 -> Emphasize red (green on PAL/Dendy) */
+    pub emphasis_red, set_emphasis_red: 5;
+    /** 4 -> 1: Enable sprite rendering */
+    pub show_sprites, set_show_sprites: 4;
+    /** 3 -> 1: Enable background rendering */
+    pub show_background, set_show_background: 3;
+    /** 2 -> 1: Show sprites in leftmost 8 pixels of screen, 0: Hide */
+    pub show_sprites_leftmost, set_show_sprites_leftmost: 2;
+    /** 1 -> 1: Show background in leftmost 8 pixels of screen, 0: Hide */
+    pub show_background_leftmost, set_show_background_leftmost: 1;
+    /** 0 -> Greyscale (0: normal color, 1: greyscale) */
+    pub grayscale, set_grayscale: 0;
+}
+
+bitfield! {
+    #[derive(Clone, Copy)]
+    struct PPUSTATUS(u8);
+    impl Debug;
+    u8;
+    /** 7 -> Vblank flag, cleared on read. Unreliable. */
+    pub vblank_started, set_vblank_started: 7;
+    /** 6 -> Sprite 0 hit flag */
+    pub sprite_zero_hit, set_sprite_zero_hit: 6;
+    /** 5 -> Sprite overflow flag */
+    pub sprite_overflow, set_sprite_overflow: 5;
+    /** 4-0 -> (PPU open bus or 2C05 PPU identifier) */
+    pub open_bus, _: 0, 4;
+}
+
 pub struct Ppu {
     nametables: [u8; 2048],
     palette_table: [u8; 32],
     oam_data: [u8; 256],
 
-    ctrl: u8,
-    mask: u8,
-    status: u8,
+    ctrl: PPUCTRL,
+    /**
+    ```markdown
+    7 -> Emphasize blue
+    6 -> Emphasize green (red on PAL/Dendy)
+    5 -> Emphasize red (green on PAL/Dendy)
+    4 -> 1: Enable sprite rendering
+    3 -> 1: Enable background rendering
+    2 -> 1: Show sprites in leftmost 8 pixels of screen, 0: Hide
+    1 -> 1: Show background in leftmost 8 pixels of screen, 0: Hide
+    0 -> Greyscale (0: normal color, 1: greyscale)
+    ```
+    */
+    mask: PPUMASK,
+    /**
+    ```markdown
+    7   -> Vblank flag, cleared on read. Unreliable.
+    6   -> Sprite 0 hit flag
+    5   -> Sprite overflow flag
+    4-0 -> (PPU open bus or 2C05 PPU identifier)
+    ```
+    */
+    status: PPUSTATUS,
     open_bus_value: u8,
     open_bus_decay_timer: u8,
 
     vram_address: u16,
     temp_address: u16,
     oam_addr: u8,
-    fine_x: u8,
+    end_x: u8,
     address_latch: u8,
     data_buffer: u8,
 
@@ -60,16 +161,16 @@ impl Ppu {
             palette_table: [0; 32],
             oam_data: [0; 256],
 
-            ctrl: 0,
-            mask: 0,
-            status: 0,
+            ctrl: PPUCTRL(0),
+            mask: PPUMASK(0),
+            status: PPUSTATUS(0),
             open_bus_value: 0,
             open_bus_decay_timer: 0,
 
             vram_address: 0,
             temp_address: 0,
             oam_addr: 0,
-            fine_x: 0,
+            end_x: 0,
             address_latch: 0,
             data_buffer: 0,
 
@@ -110,7 +211,7 @@ impl Ppu {
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.cycle += 1;
 
-        let rendering_enabled = (self.mask & 0b0001_1000) != 0;
+        let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
 
         if rendering_enabled && self.scanline == -1 {
             if self.cycle == 256 {
@@ -156,18 +257,19 @@ impl Ppu {
         }
 
         if self.scanline == 241 && self.cycle == 1 {
-            self.status |= 0b1000_0000;
-            if (self.ctrl & 0b1000_0000) != 0 {
+            self.status.set_vblank_started(true);
+            if self.ctrl.vblank_nmi_enable() {
                 self.nmi_interrupt = true;
             }
         }
 
         if self.scanline == -1 && self.cycle == 1 {
-            self.status &= 0b0011_1111;
+            self.status.set_vblank_started(false);
+            self.status.set_sprite_zero_hit(false);
             self.nmi_interrupt = false;
         }
         if !rendering_enabled {
-            self.status &= 0b1011_1111;
+            self.status.set_sprite_zero_hit(false);
         }
     }
 
@@ -175,12 +277,13 @@ impl Ppu {
         self.write_open_bus(value);
         match reg_index {
             0 => {
-                if extract_flag(value, BI::_6) {
+                let ctrl = PPUCTRL(value);
+                if ctrl.ppu_master_slave() {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
-                self.ctrl = value;
+                self.ctrl = ctrl;
             }
-            1 => self.mask = value,
+            1 => self.mask = PPUMASK(value),
             2 => {}
             3 => {
                 self.oam_addr = value;
@@ -191,7 +294,7 @@ impl Ppu {
             }
             5 => {
                 if self.address_latch == 0 {
-                    self.fine_x = value & 0b0000_0111;
+                    self.end_x = value & 0b0000_0111;
                     self.temp_address =
                         (self.temp_address & 0b1111_1111_1110_0000) | ((value >> 3) as u16);
                     self.address_latch = 1;
@@ -222,11 +325,7 @@ impl Ppu {
                     self.vram_write(current_addr - 0x1000, value, mapper);
                 }
 
-                let increment = if (self.ctrl & 0b0000_0100) != 0 {
-                    32
-                } else {
-                    1
-                };
+                let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
                 self.vram_address = self.vram_address.wrapping_add(increment);
             }
             _ => unreachable!(),
@@ -251,7 +350,7 @@ impl Ppu {
                     }
                 }
 
-                self.status &= 0b0111_1111;
+                self.status.set_vblank_started(false);
                 self.address_latch = 0;
 
                 if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
@@ -269,7 +368,7 @@ impl Ppu {
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
                     // if bit 0 of mask is 0, greyscale mode is enabled, mask the lower bits
-                    if (self.mask & 0b0000_0001) != 0 {
+                    if self.mask.grayscale() {
                         data &= 0b0011_0000;
                     }
                     // when reading palette data, the upper two bits of the open bus are preserved
@@ -279,11 +378,7 @@ impl Ppu {
                     self.data_buffer = self.vram_read(current_addr, mapper);
                 }
 
-                self.vram_address += if (self.ctrl & 0b0000_0100) != 0 {
-                    32
-                } else {
-                    1
-                };
+                self.vram_address += if self.ctrl.vram_address_incr() { 32 } else { 1 };
                 self.write_open_bus(data);
                 data
             }
@@ -346,8 +441,8 @@ impl Ppu {
         //     return;
         // }
 
-        let bg_enabled = (self.mask & 0b0000_1000) != 0;
-        let sprites_enabled = (self.mask & 0b0001_0000) != 0;
+        let bg_enabled = self.mask.show_background();
+        let sprites_enabled = self.mask.show_sprites();
         if !bg_enabled && !sprites_enabled {
             return;
         }
@@ -356,14 +451,12 @@ impl Ppu {
         let tile_y = (y / 8) as u16;
         let pixel_y = (y % 8) as u16;
 
-        let base_nametable_addr = 0x2000 + ((self.ctrl & 0b0000_0011) as u16 * 0x0400);
+        let base_nametable_addr = 0x2000 + (self.ctrl.nametable_addr() as u16 * 0x0400);
 
         let visible_sprites = self.get_sprites_on_scanline();
 
-        let bg_enabled = extract_flag(self.mask, BI::_3);
-        let sprites_enabled = extract_flag(self.mask, BI::_4);
-        let bg_clip_left_8 = extract_flag(self.mask, BI::_1);
-        let sprite_clip_left_8 = extract_flag(self.mask, BI::_2);
+        let bg_clip_left_8 = self.mask.show_background_leftmost();
+        let sprite_clip_left_8 = self.mask.show_sprites_leftmost();
 
         for x in 0..=255 {
             let tile_x = (x / 8) as u16;
@@ -380,7 +473,7 @@ impl Ppu {
             let shift = ((tile_y & 2) << 1) | (tile_x & 2);
             let palette_index = ((attribute_byte >> shift) & 0b0000_0011) as u16;
 
-            let pattern_table_base = if extract_flag(self.ctrl, BI::_4) {
+            let pattern_table_base = if self.ctrl.bg_pattern_table() {
                 0x1000
             } else {
                 0x0000
@@ -409,19 +502,15 @@ impl Ppu {
                     let mut pixel_x = (x - sprite.x as usize) as u16;
                     let mut pixel_y = (y - sprite.y as usize) as u16;
 
-                    if extract_flag(sprite.attr, BI::_6) {
+                    if sprite.attr.horizontal_flip() {
                         pixel_x = 7 - pixel_x;
                     }
-                    if extract_flag(sprite.attr, BI::_7) {
+                    if sprite.attr.vertical_flip() {
                         pixel_y = 7 - pixel_y;
                     }
 
-                    let tile_addr = if extract_flag(self.ctrl, BI::_5) {
-                        let table = if extract_flag(sprite.tile, BI::_0) {
-                            0x1000
-                        } else {
-                            0
-                        };
+                    let tile_addr = if self.ctrl.sprite_size() {
+                        let table = if sprite.table() { 0x1000 } else { 0 };
                         let mut tile = set_flag(sprite.tile, BI::_0, false) as u16;
                         let mut s_y = pixel_y;
                         if s_y >= 8 {
@@ -430,10 +519,10 @@ impl Ppu {
                         }
                         table + (tile * 16) + s_y
                     } else {
-                        let table = if extract_flag(self.ctrl, BI::_3) {
+                        let table = if self.ctrl.sprite_pattern_table() {
                             0x1000
                         } else {
-                            0x0000
+                            0
                         };
                         table + (sprite.tile as u16 * 16) + pixel_y
                     };
@@ -450,14 +539,13 @@ impl Ppu {
                             && x < 255
                             && (x >= 8 || !(bg_clip_left_8 || sprite_clip_left_8))
                         {
-                            self.status = set_flag(self.status, BI::_6, true);
+                            self.status.set_sprite_zero_hit(true);
                         }
 
-                        let palette_num = (sprite.attr & 0b0000_0011) as u16;
+                        let palette_num = sprite.attr.palette() as u16;
                         let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
                         let color_id = self.vram_read(palette_addr, mapper);
-                        let is_behind = extract_flag(sprite.attr, BI::_5);
-                        if !is_behind || color_index == 0 {
+                        if !sprite.attr.behind() || color_index == 0 {
                             pixel_color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
                             break;
                         }
@@ -537,7 +625,7 @@ impl Ppu {
     }
 
     pub(crate) fn status_bits_shadow(&self) -> u8 {
-        (self.status & 0b1110_0000) | (self.open_bus_value & 0b0001_1111)
+        (self.status.0 & 0b1110_0000) | (self.open_bus_value & 0b0001_1111)
     }
 
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {

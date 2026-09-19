@@ -1,7 +1,48 @@
+use bitfield::bitfield;
 use paste::paste;
 use std::fmt;
 
-use crate::utils::bit_utils::{BitIndex, extract_flag, set_flag};
+use crate::utils::bit_utils::{BitIndex, extract_flag};
+
+bitfield! {
+    #[derive(Clone, Copy)]
+    #[repr(C)]
+    struct P_Register(u8);
+    impl Debug;
+    u8;
+    pub get_n, set_n: 7;
+    pub get_v, set_v: 6;
+    pub get_u, set_u: 5;
+    pub get_b, set_b: 4;
+    pub get_d, set_d: 3;
+    pub get_i, set_i: 2;
+    pub get_z, set_z: 1;
+    pub get_c, set_c: 0;
+}
+
+impl P_Register {
+    fn stringify(&self) -> String {
+        let mut buf = String::with_capacity(8);
+
+        for (mut letter, value) in "NVUBDIZC".chars().zip([
+            self.get_n(),
+            self.get_v(),
+            self.get_u(),
+            self.get_b(),
+            self.get_d(),
+            self.get_i(),
+            self.get_z(),
+            self.get_c(),
+        ]) {
+            if !value {
+                letter = letter.to_lowercase().next().unwrap();
+            }
+            buf.push(letter);
+        }
+
+        buf
+    }
+}
 
 pub struct Registers {
     pub pc: u16,
@@ -9,27 +50,18 @@ pub struct Registers {
     pub a_reg: u8,
     pub x_reg: u8,
     pub y_reg: u8,
-    p_reg: u8,
+    p_reg: P_Register,
 }
 
-pub const C_INDEX: BitIndex = BitIndex::_0;
-pub const Z_INDEX: BitIndex = BitIndex::_1;
-pub const I_INDEX: BitIndex = BitIndex::_2;
-pub const D_INDEX: BitIndex = BitIndex::_3;
-pub const B_INDEX: BitIndex = BitIndex::_4;
-pub const U_INDEX: BitIndex = BitIndex::_5;
-pub const V_INDEX: BitIndex = BitIndex::_6;
-pub const N_INDEX: BitIndex = BitIndex::_7;
-
 macro_rules! gen_methods {
-    ($name: ident, $index: expr) => {
+    ($name: ident) => {
         paste! {
             pub fn [<get_ $name>](&self) -> bool {
-                extract_flag(self.p_reg, $index)
+                self.p_reg.[<get_ $name>]()
             }
 
             pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
-                self.p_reg = set_flag(self.p_reg, $index, val);
+                self.p_reg.[<set_ $name>](val);
             }
 
             pub fn [<set_ $name>](&mut self) {
@@ -45,13 +77,16 @@ macro_rules! gen_methods {
 
 impl Registers {
     pub fn new() -> Registers {
+        let mut p_reg = P_Register(0);
+        p_reg.set_u(true);
+
         Registers {
             pc: 0,
             sp: 0xFF,
             a_reg: 0,
             x_reg: 0,
             y_reg: 0,
-            p_reg: set_flag(0, U_INDEX, true),
+            p_reg,
         }
     }
 
@@ -61,49 +96,32 @@ impl Registers {
     }
 
     pub fn get_p(&self) -> u8 {
-        self.p_reg
+        self.p_reg.0
     }
 
     pub fn get_p_force_b(&self, value: bool) -> u8 {
-        let mut p = self.get_p();
-        p = set_flag(p, B_INDEX, value);
-        p
+        let mut p = self.p_reg;
+        p.set_b(value);
+        p.0
     }
 
     pub fn set_p(&mut self, p: u8) {
-        let mut p = set_flag(p, B_INDEX, false);
-        p = set_flag(p, U_INDEX, true);
-        self.p_reg = p;
+        let mut p_reg = P_Register(p);
+        p_reg.set_b(false);
+        p_reg.set_u(true);
+        self.p_reg = p_reg;
     }
 
     pub fn p_to_str(&self) -> String {
-        let mut buf = String::with_capacity(8);
-
-        for (mut letter, value) in "NV1BDIZC".chars().zip([
-            self.get_n(),
-            self.get_v(),
-            true,
-            true,
-            self.get_d(),
-            self.get_i(),
-            self.get_z(),
-            self.get_c(),
-        ]) {
-            if !value {
-                letter = letter.to_lowercase().next().unwrap();
-            }
-            buf.push(letter);
-        }
-
-        buf
+        self.p_reg.stringify()
     }
 
-    gen_methods!(z, Z_INDEX);
-    gen_methods!(n, N_INDEX);
-    gen_methods!(v, V_INDEX);
-    gen_methods!(c, C_INDEX);
-    gen_methods!(d, D_INDEX);
-    gen_methods!(i, I_INDEX);
+    gen_methods!(z);
+    gen_methods!(n);
+    gen_methods!(v);
+    gen_methods!(c);
+    gen_methods!(d);
+    gen_methods!(i);
 }
 
 impl Default for Registers {
@@ -120,13 +138,7 @@ impl fmt::Debug for Registers {
             .field("a_reg", &format!("{:#04x}", self.a_reg))
             .field("x_reg", &format!("{:#04x}", self.x_reg))
             .field("y_reg", &format!("{:#04x}", self.y_reg))
-            .field("p_reg", &format!("{:#04x}", self.p_reg))
-            .field("z_flag", &self.get_z())
-            .field("n_flag", &self.get_n())
-            .field("v_flag", &self.get_v())
-            .field("c_flag", &self.get_c())
-            .field("d_flag", &self.get_d())
-            .field("i_flag", &self.get_i())
+            .field("p_reg", &format!("{:?}", self.p_reg))
             .finish()
     }
 }

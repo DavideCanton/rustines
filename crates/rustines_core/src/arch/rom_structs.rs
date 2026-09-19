@@ -1,11 +1,34 @@
+use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{
-    arch::mappers::mapper::MapperBox,
-    utils::bit_utils::{
-        BitCount, BitIndex, extract_bits_mask_msb, extract_bits_shift, extract_flag,
-    },
-};
+use crate::arch::mappers::mapper::MapperBox;
+
+bitfield! {
+    #[derive(Clone, Copy, Pod, Zeroable)]
+    #[repr(C)]
+    struct HeaderFlags(u16);
+    impl Debug;
+    u16;
+
+    /** 7 / 0 -> VS Unisystem */
+    pub vs_unisystem, _: 0;
+    /** 7 / 1 -> PlayChoice-10 (8 KB of Hint Screen data stored after CHR data) */
+    pub play_choice_10, _: 1;
+    /** 7 / 2-3 -> If equal to 2, flags 8-15 are in NES 2.0 format */
+    pub nes_2, _: 2, 3;
+    /** 7 / 4-7 -> Upper nybble of mapper number */
+    pub u8, mapper_number_upper, _: 4, 7;
+    /** 6 / 0 -> Nametable arrangement: 0: horizontal mirrored, 1: vertically mirrored */
+    pub mirroring, _: 8;
+    /** 6 / 1 -> Cartridge contains battery-backed PRG RAM ($6000-7FFF) or other persistent memory */
+    pub battery_backed_prg_ram, _: 9;
+    /** 6 / 2 -> 512-byte trainer at $7000-$71FF (stored before PRG data) */
+    pub has_trainer, _: 10;
+    /** 6 / 3 -> Alternative nametable layout */
+    pub alt_nametable_layout, _: 11;
+    /** 6 / 4-7 -> Lower nybble of mapper number */
+    pub u8, mapper_number_lower, _: 12, 15;
+}
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -13,8 +36,7 @@ pub struct INesHeader {
     pub header: [u8; 4],
     pub prg_rom_size: u8,
     pub chr_rom_size: u8,
-    pub flags_6: u8,
-    pub flags_7: u8,
+    flags: HeaderFlags,
     pub prg_ram_size: u8,
     pub flags_9: u8,
     pub flags_10: u8,
@@ -53,7 +75,7 @@ impl INesHeader {
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
-        if extract_flag(self.flags_6, BitIndex::_0) {
+        if self.flags.mirroring() {
             MirroringType::Vertical
         } else {
             MirroringType::Horizontal
@@ -61,21 +83,19 @@ impl INesHeader {
     }
 
     pub fn has_other_memory(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::_1)
+        self.flags.battery_backed_prg_ram()
     }
 
     pub fn has_trainer(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::_2)
+        self.flags.has_trainer()
     }
 
     pub fn ignore_mirroring(&self) -> bool {
-        extract_flag(self.flags_6, BitIndex::_3)
+        self.flags.alt_nametable_layout()
     }
 
     pub fn mapping_number(&self) -> u8 {
-        let low = extract_bits_shift(self.flags_6, BitIndex::_4, BitCount::_4);
-        let high = extract_bits_mask_msb(self.flags_7, BitCount::_4);
-        high | low
+        (self.flags.mapper_number_upper() << 4) | self.flags.mapper_number_lower()
     }
 }
 
@@ -113,8 +133,7 @@ mod tests {
         assert_eq!(header.header, [1u8, 2, 3, 4]);
         assert_eq!(header.prg_rom_size, 5);
         assert_eq!(header.chr_rom_size, 6);
-        assert_eq!(header.flags_6, 7);
-        assert_eq!(header.flags_7, 8);
+        assert_eq!(header.flags.0, 0x0807);
         assert_eq!(header.prg_ram_size, 9);
         assert_eq!(header.flags_9, 10);
         assert_eq!(header.flags_10, 11);
