@@ -143,7 +143,6 @@ impl Ppu {
                 self.scanline = -1;
                 self.frame_ready = true;
                 self.is_odd_frame = !self.is_odd_frame;
-                self.renderer.draw();
 
                 if self.open_bus_decay_timer > 0 {
                     self.open_bus_decay_timer -= 1;
