@@ -93,9 +93,10 @@ pub fn debug_dump_palette(bus: &Bus) {
 
 pub fn debug_dump_oam(bus: &Bus) {
     println!("=== DUMP OAM ===");
-    let oam = bus.ppu().oam_data();
-    for i in 0..64 {
-        let sprite = Sprite::from_oam_index(oam, i);
+    // SAFETY: self.oam_data has always a length multiple of 4
+    let oam = unsafe { bus.ppu().oam_data().as_chunks_unchecked::<4>() };
+    for (i, chunk) in oam.iter().enumerate() {
+        let sprite: Sprite = (*chunk).into();
         println!("Sprite {} = {:?}", i, sprite);
     }
     println!("\n===============\n");

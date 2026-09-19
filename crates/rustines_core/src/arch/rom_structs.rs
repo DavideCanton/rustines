@@ -1,4 +1,4 @@
-use std::mem;
+use bytemuck::{Pod, Zeroable};
 
 use crate::{
     arch::mappers::mapper::MapperBox,
@@ -7,8 +7,8 @@ use crate::{
     },
 };
 
-#[repr(C, packed)]
-#[derive(Debug)]
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct INesHeader {
     pub header: [u8; 4],
     pub prg_rom_size: u8,
@@ -36,10 +36,6 @@ pub const TRAINER_SIZE: usize = 1 << 9;
 pub const HEADER: &[u8; 4] = b"NES\x1A";
 
 impl INesHeader {
-    pub fn from_bytes(buf: &[u8; 16]) -> Self {
-        unsafe { mem::transmute_copy(buf) }
-    }
-
     pub fn prg_rom_size(&self) -> usize {
         (self.prg_rom_size as usize) * PRG_ROM_BANK_SIZE
     }
@@ -83,6 +79,12 @@ impl INesHeader {
     }
 }
 
+impl From<&[u8; 16]> for INesHeader {
+    fn from(value: &[u8; 16]) -> Self {
+        bytemuck::cast(*value)
+    }
+}
+
 pub struct NesRom {
     pub header: INesHeader,
     pub mapper: MapperBox,
@@ -107,7 +109,7 @@ mod tests {
 
     #[test]
     fn test_header() {
-        let header = INesHeader::from_bytes(&DEFAULT);
+        let header: INesHeader = (&DEFAULT).into();
         assert_eq!(header.header, [1u8, 2, 3, 4]);
         assert_eq!(header.prg_rom_size, 5);
         assert_eq!(header.chr_rom_size, 6);
@@ -128,7 +130,7 @@ mod tests {
         let mut bytes = DEFAULT;
         bytes[5] = chr_rom_size;
 
-        let header = INesHeader::from_bytes(&bytes);
+        let header: INesHeader = (&bytes).into();
         assert_eq!(
             header.chr_rom_size(),
             (chr_rom_size as usize) * CHR_ROM_BANK_SIZE
@@ -144,7 +146,7 @@ mod tests {
         let mut bytes = DEFAULT;
         bytes[6] = val;
 
-        let header = INesHeader::from_bytes(&bytes);
+        let header: INesHeader = (&bytes).into();
         assert_eq!(header.mirroring_type(), mirroring);
     }
 
@@ -156,7 +158,7 @@ mod tests {
         let mut bytes = DEFAULT;
         bytes[6] = val;
 
-        let header = INesHeader::from_bytes(&bytes);
+        let header: INesHeader = (&bytes).into();
         assert_eq!(header.has_other_memory(), has_other);
     }
 
@@ -168,7 +170,7 @@ mod tests {
         let mut bytes = DEFAULT;
         bytes[6] = val;
 
-        let header = INesHeader::from_bytes(&bytes);
+        let header: INesHeader = (&bytes).into();
         assert_eq!(header.ignore_mirroring(), ignore);
     }
 
@@ -179,7 +181,7 @@ mod tests {
         bytes[6] = flag_6;
         bytes[7] = flag_7;
 
-        let header = INesHeader::from_bytes(&bytes);
+        let header: INesHeader = (&bytes).into();
         assert_eq!(header.mapping_number(), map);
     }
 }

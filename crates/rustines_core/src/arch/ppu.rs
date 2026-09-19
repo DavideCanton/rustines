@@ -1,29 +1,27 @@
+use bytemuck::{Pod, Zeroable};
+
 use crate::{
     arch::{mappers::mapper::Mapper, rom_structs::MirroringType},
     renderer::Renderer,
-    utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, extract_flag},
+    utils::bit_utils::{
+        BitCount as BC, BitIndex as BI, extract_bits_shift, extract_flag, set_flag,
+    },
 };
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
 pub struct Sprite {
-    x: u8,
     y: u8,
     tile: u8,
     attr: u8,
-    is_sprite_0: bool,
+    x: u8,
 }
 
-impl Sprite {
-    pub fn from_oam_index(oam_data: &[u8], i: usize) -> Self {
-        Self {
-            y: oam_data[i * 4],
-            tile: oam_data[i * 4 + 1],
-            attr: oam_data[i * 4 + 2],
-            x: oam_data[i * 4 + 3],
-            is_sprite_0: i == 0,
-        }
+impl From<[u8; 4]> for Sprite {
+    fn from(value: [u8; 4]) -> Self {
+        bytemuck::cast(value)
     }
 }
 
@@ -406,7 +404,7 @@ impl Ppu {
 
             let mut pixel_color = background_rgb;
 
-            for sprite in &visible_sprites {
+            for (sprite_index, sprite) in visible_sprites.iter().enumerate() {
                 if x >= sprite.x as usize && x < sprite.x as usize + 8 {
                     let mut pixel_x = (x - sprite.x as usize) as u16;
                     let mut pixel_y = (y - sprite.y as usize) as u16;
@@ -419,8 +417,12 @@ impl Ppu {
                     }
 
                     let tile_addr = if extract_flag(self.ctrl, BI::_5) {
-                        let table = ((sprite.tile & 1) as u16) * 0x1000;
-                        let mut tile = (sprite.tile & 0xFE) as u16;
+                        let table = if extract_flag(sprite.tile, BI::_0) {
+                            0x1000
+                        } else {
+                            0
+                        };
+                        let mut tile = set_flag(sprite.tile, BI::_0, false) as u16;
                         let mut s_y = pixel_y;
                         if s_y >= 8 {
                             tile += 1;
@@ -428,7 +430,7 @@ impl Ppu {
                         }
                         table + (tile * 16) + s_y
                     } else {
-                        let table = if (self.ctrl & 0b0000_1000) != 0 {
+                        let table = if extract_flag(self.ctrl, BI::_3) {
                             0x1000
                         } else {
                             0x0000
@@ -441,23 +443,20 @@ impl Ppu {
                     let sprite_pixel_bits = get_color_index(byte_low, byte_high, pixel_x as u8);
 
                     if sprite_pixel_bits != 0 {
-                        if sprite.is_sprite_0
+                        if sprite_index == 0
                             && bg_enabled
                             && sprites_enabled
                             && color_index != 0
                             && x < 255
+                            && (x >= 8 || !(bg_clip_left_8 || sprite_clip_left_8))
                         {
-                            let in_clipped_left_zone =
-                                x < 8 && (bg_clip_left_8 || sprite_clip_left_8);
-                            if !in_clipped_left_zone {
-                                self.status |= 0b0100_0000;
-                            }
+                            self.status = set_flag(self.status, BI::_6, true);
                         }
 
                         let palette_num = (sprite.attr & 0b0000_0011) as u16;
                         let palette_addr = 0x3F10 + (palette_num * 4) + sprite_pixel_bits as u16;
                         let color_id = self.vram_read(palette_addr, mapper);
-                        let is_behind = (sprite.attr & 0b0010_0000) != 0;
+                        let is_behind = extract_flag(sprite.attr, BI::_5);
                         if !is_behind || color_index == 0 {
                             pixel_color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
                             break;
@@ -512,12 +511,14 @@ impl Ppu {
 
     fn get_sprites_on_scanline(&self) -> Vec<Sprite> {
         let mut sprites = Vec::new();
-        for i in 0..64 {
-            let sprite = Sprite::from_oam_index(&self.oam_data, i);
-            let height = 8;
+
+        // SAFETY: self.oam_data has always a length multiple of 4
+        for chunk in unsafe { self.oam_data.as_chunks_unchecked::<4>() } {
+            let sprite: Sprite = (*chunk).into();
+
             let sprite_y = sprite.y as i16 + 1;
 
-            if self.scanline >= sprite_y && self.scanline < sprite_y + height {
+            if self.scanline >= sprite_y && self.scanline < sprite_y + 8 {
                 sprites.push(sprite);
                 if sprites.len() == 8 {
                     break;

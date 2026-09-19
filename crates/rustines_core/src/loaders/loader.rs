@@ -13,8 +13,8 @@ use crate::utils::named::Named;
 pub trait Loader: Named {
     fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
 
-    fn load_header(&self, buf: &[u8]) -> anyhow::Result<INesHeader> {
-        let header = INesHeader::from_bytes(array_ref![buf, 0, 16]);
+    fn load_header(&self, buf: &[u8; 16]) -> anyhow::Result<INesHeader> {
+        let header: INesHeader = buf.into();
 
         if &header.header != HEADER {
             error!("Found unexpected {:?} header", header.header);
@@ -33,7 +33,7 @@ pub trait Loader: Named {
             .load_rom(file)
             .map_err(|e| anyhow::anyhow!(format!("Error during load: {}", e)))?;
 
-        let header = self.load_header(&buf[0..16])?;
+        let header = self.load_header(array_ref![buf, 0, 16])?;
 
         let _: Vec<u8> = buf.drain(0..16).collect();
 

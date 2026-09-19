@@ -8,6 +8,7 @@ edition = "2024"
 zip = "8.6"
 arrayref = "0.3"
 paste = "1.0"
+bytemuck = "1.25"
 anyhow = { workspace = true }
 log = { workspace = true }
 rustines-macro = { path = "../rustines_macro" }
@@ -15,3 +16,6 @@ rustines-macro = { path = "../rustines_macro" }
 [dev-dependencies]
 rand = "0.10"
 test-case = "3.1"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "warn"

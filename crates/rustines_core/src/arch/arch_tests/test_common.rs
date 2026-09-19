@@ -1,5 +1,7 @@
 #[cfg(test)]
 pub mod tests {
+    use bytemuck::Zeroable;
+
     use crate::arch::apu::Apu;
     use crate::arch::bus::Bus;
     use crate::arch::cpu::Cpu;
@@ -11,7 +13,7 @@ pub mod tests {
     use crate::renderer::NoopRenderer;
 
     pub fn setup_tests() -> (Cpu, Bus) {
-        let mut header = INesHeader::from_bytes(&[0; 16]);
+        let mut header = INesHeader::zeroed();
         header.header = *HEADER;
         header.prg_rom_size = 1;
         header.chr_rom_size = 1;
