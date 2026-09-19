@@ -8,8 +8,8 @@ use rustines_core::renderer::Renderer;
 
 const FRAME_INTERVAL: Option<usize> = None;
 
-pub struct PixelsRenderer<'a> {
-    pixels: Pixels<'a>,
+pub struct PixelsRenderer {
+    pixels: Pixels<'static>,
     width: usize,
     #[allow(unused)]
     height: usize,
@@ -17,8 +17,8 @@ pub struct PixelsRenderer<'a> {
     frame_interval: Option<usize>,
 }
 
-impl<'a> PixelsRenderer<'a> {
-    pub(crate) fn new(pixels: Pixels<'a>, width: usize, height: usize) -> Self {
+impl PixelsRenderer {
+    pub(crate) fn new(pixels: Pixels<'static>, width: usize, height: usize) -> Self {
         if FRAME_INTERVAL.is_some() {
             let _ = remove_dir_all("frames");
             let _ = create_dir("frames");
@@ -34,7 +34,7 @@ impl<'a> PixelsRenderer<'a> {
     }
 }
 
-impl<'a> Renderer for PixelsRenderer<'a> {
+impl Renderer for PixelsRenderer {
     fn render_pixel(&mut self, x: usize, y: usize, rgba: u32) {
         let i = (y * self.width + x) * 4;
         let buf = self.pixels.frame_mut();

@@ -1,16 +1,22 @@
 mod context;
+mod pattern_window;
 mod renderer;
+mod utils;
 
-use crate::{context::RustinesArgs, renderer::PixelsRenderer};
+use crate::{
+    context::RustinesArgs,
+    pattern_window::PatternTableWindow,
+    renderer::PixelsRenderer,
+    utils::{init_logger, read_file},
+};
 use clap::Parser;
-use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
-use log::{LevelFilter, Record, info};
-use pixels::{Pixels, ScalingMode, SurfaceTexture};
-use rustines_core::{self as core, Mapper, arch::debug_utils::dump_pattern_tables};
+use log::info;
+use pixels::{Pixels, SurfaceTexture};
+use rustines_core as core;
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
-use std::{collections::HashMap, fs, io, path, sync::Arc};
+use std::{collections::HashMap, path, sync::Arc};
 use winit::{
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::LogicalSize,
     event::{Event, WindowEvent},
     event_loop::{EventLoop, EventLoopWindowTarget},
     keyboard::KeyCode,
@@ -18,75 +24,32 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-#[must_use]
-fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
-    let mut log_spec_builder = LogSpecBuilder::new();
-
-    log_spec_builder
-        .default(LevelFilter::Debug)
-        .module("wgpu", LevelFilter::Warn)
-        .module("winit", LevelFilter::Warn)
-        .module("naga", LevelFilter::Warn);
-
-    if trace > 0 {
-        log_spec_builder.module("rustines_core::arch::instr_tracer", LevelFilter::Trace);
-    }
-    if trace > 1 {
-        log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
-        log_spec_builder.module("rustines_core::arch::controller", LevelFilter::Trace);
-    }
-
-    let log_spec = log_spec_builder.build();
-
-    let mut logger_builder = Logger::with(log_spec);
-
-    if let Some(file) = file {
-        logger_builder = logger_builder.log_to_file(
-            FileSpec::try_from(file)
-                .expect("Cannot create filespec")
-                .suppress_timestamp(),
-        );
-    }
-
-    logger_builder
-        .write_mode(WriteMode::Async)
-        .format(my_format)
-        .start()
-        .expect("Failed to start logger")
-}
-
-fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
-    let ext = match file_path.extension() {
-        Some(ext) => ext.to_str().unwrap_or(""),
-        None => "",
-    };
-
-    let mut file = fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
-
-    let loader = core::decode_loader(ext);
-
-    let rom = loader
-        .load_rom_struct(&mut file)
-        .map_err(|e| format!("Failed to load ROM: {}", e))?;
-
-    Ok(rom)
-}
-
 const WIDTH: u32 = 1024;
 const HEIGHT: u32 = 768;
 
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
 
+type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
+
+struct AppState {
+    bus: core::Bus,
+    cpu: core::Cpu,
+
+    limiter: FpsLimiter,
+    counter: FpsCounter,
+    logpoint: u32,
+
+    key_map1: KeyMap,
+    key_map2: KeyMap,
+
+    pattern_window: Option<PatternTableWindow>,
+}
+
 pub fn main() {
     let args = RustinesArgs::parse();
 
-    let _logger_handle = if let Some(log_file_name) = args.log_file {
-        println!("Logging to file: {}", log_file_name);
-        init_logger(Some(log_file_name), args.trace_level)
-    } else {
-        init_logger(None, args.trace_level)
-    };
+    let _logger_handle = init_logger(args.log_file, args.trace_level);
 
     let file_path = path::PathBuf::from(&args.file_path);
 
@@ -95,9 +58,6 @@ pub fn main() {
     let rom = read_file(&file_path).unwrap();
 
     let event_loop = EventLoop::new().unwrap();
-    let mut input = WinitInputHelper::new();
-
-    let mut pattern_window = None;
 
     let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
     let window = Arc::new(
@@ -109,29 +69,31 @@ pub fn main() {
             .unwrap(),
     );
 
-    let window_size = window.inner_size();
-    let surface_texture =
-        SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-    let pixels =
-        Pixels::new(INNER_W, INNER_H, surface_texture).expect("Cannot create pixels buffer");
-
-    let renderer = PixelsRenderer::new(pixels, INNER_W as usize, INNER_H as usize);
+    let renderer = create_renderer(Arc::clone(&window)).unwrap();
 
     let ppu = core::Ppu::new(Box::new(renderer));
     let apu = core::Apu::default();
+
     let mut bus = core::Bus::new(rom.mapper, ppu, apu);
     let mut cpu = core::Cpu::new();
+
     if args.trace_boot {
         cpu.enable_tracing(true);
         bus.enable_tracing(true);
     }
 
-    let mut limiter = FpsLimiter::new(60.0);
-    let mut counter = FpsCounter::new();
-    let mut logpoint = 1;
+    let mut app_state = AppState {
+        bus,
+        counter: FpsCounter::new(),
+        cpu,
+        key_map1: build_keymap_c1(),
+        key_map2: build_keymap_c2(),
+        limiter: FpsLimiter::new(60.0),
+        logpoint: 1,
+        pattern_window: None,
+    };
 
-    let key_map1 = build_keymap_c1();
-    let key_map2 = build_keymap_c2();
+    let mut input = WinitInputHelper::new();
 
     let _ = event_loop.run(|event, elwt| {
         if input.update(&event) {
@@ -142,20 +104,19 @@ pub fn main() {
                 return;
             }
 
-            debug_keys(&input, &mut bus, &mut cpu, &mut logpoint);
-            if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
-                pattern_window = Some(PatternTableWindow::create(bus.mapper_ref(), elwt, 4));
-            }
+            map_debug_keys(&input, &mut app_state, elwt);
 
-            map_inputs(&input, bus.controller1_mut(), &key_map1);
-            map_inputs(&input, bus.controller2_mut(), &key_map2);
+            let bus = &mut app_state.bus;
+
+            map_inputs(&input, bus.controller1_mut(), &app_state.key_map1);
+            map_inputs(&input, bus.controller2_mut(), &app_state.key_map2);
 
             while !bus.ppu_mut().frame_ready() {
-                cpu.tick(&mut bus);
+                app_state.cpu.tick(bus);
             }
             bus.ppu_mut().clear_frame_ready();
 
-            limiter.update();
+            app_state.limiter.update();
 
             window.request_redraw();
         }
@@ -164,7 +125,7 @@ pub fn main() {
             window_id,
             event: WindowEvent::Resized(size),
         } = &event
-            && let Some(pattern_window) = pattern_window.as_mut()
+            && let Some(pattern_window) = app_state.pattern_window.as_mut()
             && *window_id == pattern_window.window.id()
         {
             pattern_window.resize(*size);
@@ -176,90 +137,100 @@ pub fn main() {
             ..
         } = event
         {
-            bus.ppu_mut().renderer().draw();
-            if let Some(pattern_window) = pattern_window.as_ref() {
+            app_state.bus.ppu_mut().renderer().draw();
+
+            if let Some(pattern_window) = app_state.pattern_window.as_ref() {
                 pattern_window.draw();
             }
 
-            if let Some(fps) = counter.drawn() {
+            if let Some(fps) = app_state.counter.drawn() {
                 window.set_title(&format!("Rustines | FPS: {:.1}", fps));
             }
         }
     });
 }
 
-#[allow(dead_code)]
-struct PatternTableWindow<'a> {
-    window: Arc<Window>,
-    pixels: Pixels<'a>,
-}
-
-impl<'a> PatternTableWindow<'a> {
-    fn create(mapper: &dyn Mapper, target: &EventLoopWindowTarget<()>, scale: usize) -> Self {
-        let pattern_width = 256 * scale;
-        let pattern_height = 128 * scale;
-        let buf = dump_pattern_tables(mapper, scale);
-
-        let size = LogicalSize::new(pattern_width as f64, pattern_height as f64);
-
-        let window = Arc::new(
-            WindowBuilder::new()
-                .with_title("Pattern tables")
-                .with_inner_size(size)
-                .with_min_inner_size(size)
-                .with_resizable(true)
-                .build(target)
-                .unwrap(),
-        );
-
-        let window_size = window.inner_size();
-        let surface_texture =
-            SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-        let mut pixels = Pixels::new(pattern_width as u32, pattern_height as u32, surface_texture)
-            .expect("Cannot create pixels buffer");
-        pixels.set_scaling_mode(ScalingMode::Fill);
-
-        pixels.frame_mut().copy_from_slice(&buf);
-
-        PatternTableWindow { window, pixels }
-    }
-
-    fn draw(&self) {
-        self.pixels.render().expect("Failed to draw");
-    }
-
-    fn resize(&mut self, size: PhysicalSize<u32>) {
-        self.pixels
-            .resize_surface(size.width, size.height)
-            .expect("Failed to resize pattern table surface");
-    }
-}
-
-fn debug_keys(
+fn map_debug_keys(
     input: &WinitInputHelper,
-    bus: &mut core::Bus,
-    cpu: &mut core::Cpu,
-    logpoint: &mut u8,
+    app_state: &mut AppState,
+    elwt: &EventLoopWindowTarget<()>,
 ) {
-    if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
+    let debug_keys_state = debug_keys(input);
+
+    let bus = &mut app_state.bus;
+    let cpu = &mut app_state.cpu;
+
+    if debug_keys_state.dump_nametables {
         core::debug_dump_nametable(bus);
     }
 
-    if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
+    if debug_keys_state.dump_palette {
         core::debug_dump_palette(bus);
     }
 
-    if input.key_pressed(KeyCode::KeyO) && input.held_shift() {
+    if debug_keys_state.dump_oam {
         core::debug_dump_oam(bus);
     }
 
-    if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
+    if debug_keys_state.logpoint {
+        let logpoint = &mut app_state.logpoint;
         println!("LOGPOINT {}", logpoint);
         info!("LOGPOINT {}", logpoint);
         *logpoint += 1;
         cpu.enable_tracing(true);
         bus.enable_tracing(true);
     }
+
+    if debug_keys_state.show_pattern_window & app_state.pattern_window.is_none() {
+        app_state.pattern_window = Some(PatternTableWindow::create(bus.mapper_ref(), elwt, 4));
+    }
+}
+
+fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
+    let window_size = window.inner_size();
+    let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, window);
+    let pixels = Pixels::new(INNER_W, INNER_H, surface_texture).map_err(|e| format!("{}", e))?;
+
+    Ok(PixelsRenderer::new(
+        pixels,
+        INNER_W as usize,
+        INNER_H as usize,
+    ))
+}
+
+#[derive(Default)]
+struct DebugKeyResult {
+    dump_nametables: bool,
+    dump_palette: bool,
+    dump_oam: bool,
+    logpoint: bool,
+    show_pattern_window: bool,
+}
+
+fn debug_keys(input: &WinitInputHelper) -> DebugKeyResult {
+    let mut r = DebugKeyResult::default();
+
+    if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
+        r.dump_nametables = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
+        r.dump_palette = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyO) && input.held_shift() {
+        r.dump_oam = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
+        r.logpoint = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
+        r.show_pattern_window = true;
+    }
+
+    r
 }
 
 fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
@@ -277,7 +248,7 @@ fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
     key_map
 }
 
-fn build_keymap_c2() -> HashMap<KeyCode, core::NesKey> {
+fn build_keymap_c2() -> KeyMap {
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -305,13 +276,4 @@ fn map_inputs(
             ctrl.released(*key_map.get(k).unwrap());
         }
     }
-}
-
-fn my_format(
-    w: &mut dyn io::Write,
-    _now: &mut DeferredNow,
-    record: &Record,
-) -> Result<(), io::Error> {
-    let first = record.level().to_string().chars().next().unwrap_or(' ');
-    write!(w, "[{}]{}", first, record.args())
 }
