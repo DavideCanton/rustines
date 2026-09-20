@@ -166,19 +166,23 @@ fn map_debug_keys(
     let cpu = &mut app_state.cpu;
 
     if debug_keys_state.dump_nametables {
-        core::debug_dump_nametable(bus);
+        core::debug_utils::debug_dump_nametable(bus);
     }
 
     if debug_keys_state.dump_palette {
-        core::debug_dump_palette(bus);
+        core::debug_utils::debug_dump_palette(bus);
     }
 
     if debug_keys_state.dump_oam {
-        core::debug_dump_oam(bus);
+        core::debug_utils::debug_dump_oam(bus);
     }
 
     if debug_keys_state.toggle_pause {
         app_state.pause = !app_state.pause;
+    }
+
+    if debug_keys_state.dump_state {
+        core::debug_utils::debug_dump_state(bus, cpu);
     }
 
     if debug_keys_state.logpoint {
@@ -212,6 +216,7 @@ struct DebugKeyResult {
     dump_nametables: bool,
     dump_palette: bool,
     dump_oam: bool,
+    dump_state: bool,
     logpoint: bool,
     show_pattern_window: bool,
     toggle_pause: bool,
@@ -242,6 +247,10 @@ fn debug_keys(input: &WinitInputHelper) -> DebugKeyResult {
 
     if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
         r.show_pattern_window = true;
+    }
+
+    if input.key_pressed(KeyCode::KeyQ) && input.held_shift() {
+        r.dump_state = true;
     }
 
     r

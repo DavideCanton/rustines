@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{self, BufWriter, Write};
 
 use crate::arch::bus::Bus;
+use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{Ppu, Sprite, get_color_index};
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
@@ -105,6 +106,35 @@ pub fn debug_dump_oam(bus: &Bus) {
         println!("Sprite {} = {:?}", i, sprite);
     }
     println!("\n===============\n");
+}
+
+pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
+    // CPU
+    println!("--- CPU ---");
+    println!("A = {:#04X}", cpu.registers.a_reg);
+    println!("X = {:#04X}", cpu.registers.x_reg);
+    println!("Y = {:#04X}", cpu.registers.y_reg);
+    println!("P = {}", cpu.registers.p_to_str());
+    println!("PC = {:#04X}", cpu.registers.pc);
+    println!("SP = {:#04X}", cpu.registers.sp);
+    println!(
+        "INT = {}",
+        vec![
+            if cpu.pending_irq_execution { "IRQ" } else { "" },
+            if cpu.pending_nmi_execution { "NMI" } else { "" },
+            if cpu.pending_rst_execution { "RST" } else { "" }
+        ]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ")
+    );
+    // PPU
+    println!("--- PPU ---");
+    let ppu = bus.ppu();
+    println!("PPUCTRL = {:?}", ppu.ctrl);
+    println!("PPUMASK = {:?}", ppu.mask);
+    println!("PPUSTATUS = {:?}", ppu.status);
 }
 
 pub fn generate_ppm(width: usize, height: usize, data: &[u8], skip_fourth: bool) -> Vec<u8> {

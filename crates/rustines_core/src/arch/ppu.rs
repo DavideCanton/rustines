@@ -48,7 +48,7 @@ impl From<[u8; 4]> for Sprite {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PpuCtrl(u8);
+    pub(crate) struct PpuCtrl(u8);
     impl Debug;
     /** 7 -> Vblank NMI enable (0: off, 1: on) */
     pub vblank_nmi_enable, _: 7;
@@ -68,7 +68,7 @@ bitfield! {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PpuMask(u8);
+    pub(crate) struct PpuMask(u8);
     impl Debug;
     /** 7 -> Emphasize blue */
     pub emphasis_blue, set_emphasis_blue: 7;
@@ -90,7 +90,7 @@ bitfield! {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    struct PpuStatus(u8);
+    pub(crate) struct PpuStatus(u8);
     impl Debug;
     /** 7 -> Vblank flag, cleared on read. Unreliable. */
     pub vblank_started, set_vblank_started: 7;
@@ -107,25 +107,25 @@ pub struct Ppu {
     palette_table: [u8; 32],
     oam_data: [u8; 256],
 
-    ctrl: PpuCtrl,
-    mask: PpuMask,
-    status: PpuStatus,
-    open_bus_value: u8,
+    pub(crate) ctrl: PpuCtrl,
+    pub(crate) mask: PpuMask,
+    pub(crate) status: PpuStatus,
+    pub(crate) open_bus_value: u8,
     open_bus_decay_timer: u8,
 
-    vram_address: u16,
-    temp_address: u16,
-    oam_addr: u8,
-    end_x: u8,
-    data_buffer: u8,
+    pub(crate) vram_address: u16,
+    pub(crate) temp_address: u16,
+    pub(crate) oam_addr: u8,
+    pub(crate) end_x: u8,
+    pub(crate) data_buffer: u8,
 
-    scanline: i16,
-    cycle: u16,
+    pub(crate) scanline: i16,
+    pub(crate) cycle: u16,
 
-    nmi_interrupt: bool,
-    frame_ready: bool,
-    is_odd_frame: bool,
-    address_latch: bool,
+    pub(crate) nmi_interrupt: bool,
+    pub(crate) frame_ready: bool,
+    pub(crate) is_odd_frame: bool,
+    pub(crate) address_latch: bool,
 
     renderer: Box<dyn Renderer>,
 }

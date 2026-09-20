@@ -13,9 +13,9 @@ use crate::{
 pub struct Cpu {
     pub(crate) registers: Registers,
     clock: u64,
-    pending_irq_execution: bool,
+    pub(crate) pending_irq_execution: bool,
     pub(crate) pending_nmi_execution: bool,
-    pending_rst_execution: bool,
+    pub(crate) pending_rst_execution: bool,
     tracer: InstructionTracer,
 }
 

@@ -7,7 +7,7 @@ pub use arch::apu::Apu;
 pub use arch::bus::Bus;
 pub use arch::controller::{NesController, NesKey};
 pub use arch::cpu::Cpu;
-pub use arch::debug_utils::{debug_dump_nametable, debug_dump_oam, debug_dump_palette};
+pub use arch::debug_utils;
 pub use arch::mappers::mapper::Mapper;
 pub use arch::ppu::Ppu;
 pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
