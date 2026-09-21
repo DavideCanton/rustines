@@ -478,6 +478,7 @@ impl Ppu {
 
             let pixel_color = visible_sprites
                 .iter()
+                .flatten()
                 .enumerate()
                 .filter(|&(_, s)| s.in_bound_x(x))
                 .find_map(|(sprite_index, sprite)| {
@@ -600,14 +601,21 @@ impl Ppu {
         }
     }
 
-    fn get_sprites_on_scanline(&self) -> Vec<Sprite> {
+    fn get_sprites_on_scanline(&self) -> [Option<Sprite>; 8] {
+        let mut array = [None; 8];
+
         // SAFETY: self.oam_data has always a length multiple of 4
-        unsafe { self.oam_data.as_chunks_unchecked::<4>() }
+        for (ind, sprite) in unsafe { self.oam_data.as_chunks_unchecked::<4>() }
             .iter()
             .map(|&c| Sprite::from(c))
             .filter(|s| s.in_bound_y(self.scanline))
             .take(8)
-            .collect()
+            .enumerate()
+        {
+            array[ind] = Some(sprite);
+        }
+
+        array
     }
 
     pub(crate) fn dma_copy(&mut self, buf: &[u8]) {
