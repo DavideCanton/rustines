@@ -28,6 +28,7 @@ bitfield! {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct Sprite {
+    // NOTE keep the attributes in this order since they are casted using bytemuck!
     y: u8,
     tile: u8,
     attr: SpriteAttr,
@@ -37,6 +38,16 @@ pub struct Sprite {
 impl Sprite {
     pub fn pattern_table(&self) -> bool {
         extract_flag(self.tile, BI::_0)
+    }
+
+    pub fn in_bound_x(&self, x: usize) -> bool {
+        let sprite_x = self.x as usize;
+        (sprite_x..sprite_x + 8).contains(&x)
+    }
+
+    pub fn in_bound_y(&self, y: i16) -> bool {
+        let sprite_y = self.y as i16 + 1;
+        (sprite_y..sprite_y + 8).contains(&y)
     }
 }
 
@@ -86,6 +97,12 @@ bitfield! {
     pub show_background_leftmost, set_show_background_leftmost: 1;
     /** 0 -> Greyscale (0: normal color, 1: greyscale) */
     pub grayscale, set_grayscale: 0;
+}
+
+impl PpuMask {
+    pub fn show_leftmost(&self) -> bool {
+        self.show_background_leftmost() || self.show_sprites_leftmost()
+    }
 }
 
 bitfield! {
@@ -219,12 +236,7 @@ impl Ppu {
                 self.frame_ready = true;
                 self.is_odd_frame = !self.is_odd_frame;
 
-                if self.open_bus_decay_timer > 0 {
-                    self.open_bus_decay_timer -= 1;
-                    if self.open_bus_decay_timer == 0 {
-                        self.open_bus_value = 0;
-                    }
-                }
+                self.handle_open_bus_decay();
             }
         }
 
@@ -246,6 +258,15 @@ impl Ppu {
         }
         if !rendering_enabled {
             self.status.set_sprite_zero_hit(false);
+        }
+    }
+
+    fn handle_open_bus_decay(&mut self) {
+        if self.open_bus_decay_timer > 0 {
+            self.open_bus_decay_timer -= 1;
+            if self.open_bus_decay_timer == 0 {
+                self.open_bus_value = 0;
+            }
         }
     }
 
@@ -320,9 +341,9 @@ impl Ppu {
 
                 if self.cycle == 1 {
                     if self.scanline == 241 {
-                        data &= 0b0111_1111;
+                        data = set_flag(data, BI::_7, false);
                     } else if self.scanline == -1 {
-                        data |= 0b1000_0000;
+                        data = set_flag(data, BI::_7, true);
                     }
                 }
 
@@ -372,12 +393,7 @@ impl Ppu {
                 self.nametables[idx]
             }
             0x3F00..=0x3FFF => {
-                let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
-
-                if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
-                    palette_addr -= 0x10;
-                }
-
+                let palette_addr = read_palette_addr(addr);
                 self.palette_table[palette_addr]
             }
             _ => 0,
@@ -399,12 +415,7 @@ impl Ppu {
                 self.nametables[idx] = value;
             }
             0x3F00..=0x3FFF => {
-                let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
-
-                if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
-                    palette_addr -= 0x10;
-                }
-
+                let palette_addr = read_palette_addr(addr);
                 self.palette_table[palette_addr] = value;
             }
             _ => {}
@@ -417,9 +428,7 @@ impl Ppu {
         //     return;
         // }
 
-        let bg_enabled = self.mask.show_background();
-        let sprites_enabled = self.mask.show_sprites();
-        if !bg_enabled && !sprites_enabled {
+        if !self.mask.show_background() && !self.mask.show_sprites() {
             return;
         }
 
@@ -430,9 +439,6 @@ impl Ppu {
         let base_nametable_addr = 0x2000 + (self.ctrl.nametable_addr() as u16 * 0x0400);
 
         let visible_sprites = self.get_sprites_on_scanline();
-
-        let bg_clip_left_8 = self.mask.show_background_leftmost();
-        let sprite_clip_left_8 = self.mask.show_sprites_leftmost();
 
         for x in 0..=255 {
             let tile_x = (x / 8) as u16;
@@ -459,80 +465,99 @@ impl Ppu {
             let byte_low = mapper.fetch_chr_rom(tile_addr);
             let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
 
-            let color_index = get_color_index(byte_low, byte_high, pixel_x as u8);
+            let bg_color_index = get_color_index(byte_low, byte_high, pixel_x as u8);
 
-            let palette_offset = if color_index == 0 {
+            let palette_offset = if bg_color_index == 0 {
                 0
             } else {
                 palette_index * 4
             };
 
-            let palette_color_id =
-                self.vram_read(0x3F00 + palette_offset + color_index as u16, mapper);
-            let background_rgb = NES_PALETTE[(palette_color_id & 0b0011_1111) as usize];
+            // background palette starts at 0x3F00
+            let color_id = self.vram_read(0x3F00 + palette_offset + bg_color_index as u16, mapper);
 
-            let mut pixel_color = background_rgb;
-
-            for (sprite_index, sprite) in visible_sprites.iter().enumerate() {
-                if x >= sprite.x as usize && x < sprite.x as usize + 8 {
-                    let mut pixel_x = (x - sprite.x as usize) as u16;
-                    // sprite y is delayed by 1 scanline
-                    let mut pixel_y = (y as i16 - sprite.y as i16 - 1) as u16;
-
-                    if sprite.attr.horizontal_flip() {
-                        pixel_x = 7 - pixel_x;
-                    }
-                    if sprite.attr.vertical_flip() {
-                        pixel_y = 7 - pixel_y;
-                    }
-
-                    let tile_addr = sprite_tile_addr(
-                        sprite,
-                        self.ctrl.sprite_size(),
-                        self.ctrl.sprite_pattern_table(),
-                    );
-                    let tile_addr = if self.ctrl.sprite_size() {
-                        let mut s_y = pixel_y;
-                        let mut offset = 0;
-                        if s_y >= 8 {
-                            offset = 16;
-                            s_y -= 8;
-                        }
-                        tile_addr + offset + s_y
-                    } else {
-                        tile_addr + pixel_y
-                    };
-
-                    let byte_low = mapper.fetch_chr_rom(tile_addr);
-                    let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
-                    let sprite_pixel_bits = get_color_index(byte_low, byte_high, pixel_x as u8);
-
-                    if sprite_pixel_bits != 0 {
-                        if sprite_index == 0
-                            && bg_enabled
-                            && sprites_enabled
-                            && color_index != 0
-                            && x < 255
-                            && (x >= 8 || !(bg_clip_left_8 || sprite_clip_left_8))
-                        {
-                            self.status.set_sprite_zero_hit(true);
-                        }
-
-                        let palette_num = sprite.attr.palette() as u16;
-                        // sprite palettes are at address 0x3F10
-                        let palette_addr = 0x3F10 + (palette_num << 2) + sprite_pixel_bits as u16;
-                        let color_id = self.vram_read(palette_addr, mapper);
-
-                        if !sprite.attr.behind() || color_index == 0 {
-                            pixel_color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
-                            break;
-                        }
-                    }
-                }
-            }
+            let pixel_color = visible_sprites
+                .iter()
+                .enumerate()
+                .filter(|&(_, s)| s.in_bound_x(x))
+                .find_map(|(sprite_index, sprite)| {
+                    self.get_sprite_color(mapper, x, y, bg_color_index, sprite_index, sprite)
+                })
+                .unwrap_or_else(|| self.read_palette_by_color_id(color_id));
 
             self.renderer.render_pixel(x, y, pixel_color);
         }
+    }
+
+    fn get_sprite_color(
+        &mut self,
+        mapper: &dyn Mapper,
+        x: usize,
+        y: usize,
+        bg_color_index: u8,
+        sprite_index: usize,
+        sprite: &Sprite,
+    ) -> Option<u32> {
+        let mut pixel_x = (x - sprite.x as usize) as u16;
+        // sprite y is delayed by 1 scanline
+        let mut pixel_y = (y as i16 - sprite.y as i16 - 1) as u16;
+
+        if sprite.attr.horizontal_flip() {
+            pixel_x = 7 - pixel_x;
+        }
+        if sprite.attr.vertical_flip() {
+            pixel_y = 7 - pixel_y;
+        }
+
+        let tile_addr = sprite_tile_addr(
+            sprite,
+            self.ctrl.sprite_size(),
+            self.ctrl.sprite_pattern_table(),
+        );
+        let tile_addr = if self.ctrl.sprite_size() {
+            let mut s_y = pixel_y;
+            let mut offset = 0;
+            if s_y >= 8 {
+                offset = 16;
+                s_y -= 8;
+            }
+            tile_addr + offset + s_y
+        } else {
+            tile_addr + pixel_y
+        };
+        let byte_low = mapper.fetch_chr_rom(tile_addr);
+        let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
+        let sprite_pixel_bits = get_color_index(byte_low, byte_high, pixel_x as u8);
+
+        if sprite_pixel_bits != 0 {
+            if sprite_index == 0
+                && self.mask.show_background()
+                && self.mask.show_sprites()
+                && bg_color_index != 0
+                && x < 255
+                && (x >= 8 || !self.mask.show_leftmost())
+            {
+                self.status.set_sprite_zero_hit(true);
+            }
+
+            let palette_num = sprite.attr.palette() as u16;
+
+            // sprite palettes are at address 0x3F10
+            let palette_addr = 0x3F10 + (palette_num << 2) + sprite_pixel_bits as u16;
+            let color_id = self.vram_read(palette_addr, mapper);
+
+            if !sprite.attr.behind() || bg_color_index == 0 {
+                let color = self.read_palette_by_color_id(color_id);
+                return Some(color);
+            }
+        }
+
+        None
+    }
+
+    fn read_palette_by_color_id(&self, color_id: u8) -> u32 {
+        let color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
+        apply_emphasis(color, &self.mask)
     }
 
     fn increment_vram_address_y(&mut self) {
@@ -576,22 +601,13 @@ impl Ppu {
     }
 
     fn get_sprites_on_scanline(&self) -> Vec<Sprite> {
-        let mut sprites = Vec::new();
-
         // SAFETY: self.oam_data has always a length multiple of 4
-        for chunk in unsafe { self.oam_data.as_chunks_unchecked::<4>() } {
-            let sprite: Sprite = (*chunk).into();
-
-            let sprite_y = sprite.y as i16 + 1;
-
-            if self.scanline >= sprite_y && self.scanline < sprite_y + 8 {
-                sprites.push(sprite);
-                if sprites.len() == 8 {
-                    break;
-                }
-            }
-        }
-        sprites
+        unsafe { self.oam_data.as_chunks_unchecked::<4>() }
+            .iter()
+            .map(|&c| Sprite::from(c))
+            .filter(|s| s.in_bound_y(self.scanline))
+            .take(8)
+            .collect()
     }
 
     pub(crate) fn dma_copy(&mut self, buf: &[u8]) {
@@ -634,6 +650,45 @@ pub fn sprite_tile_addr(sprite: &Sprite, sprite_size: bool, sprite_pattern_table
         let table = if sprite_pattern_table { 0x1000 } else { 0 };
         table + (sprite.tile as u16 * 16)
     }
+}
+
+fn read_palette_addr(addr: u16) -> usize {
+    let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
+
+    // 0x3F0x is equal to 0x3F1x for x in [0, 4, 8, C]
+    // these 4 values have the two lower bits equal to 0, so in these cases apply mirroring by
+    // mapping 0x3F1x to 0x3F0x
+    if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
+        palette_addr -= 0x10;
+    }
+
+    palette_addr
+}
+
+fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
+    let r = (color >> 24) & 0xFF;
+    let g = (color >> 16) & 0xFF;
+    let b = (color >> 8) & 0xFF;
+
+    let mut r2 = r;
+    let mut g2 = g;
+    let mut b2 = b;
+
+    fn emphasize(col: u32) -> u32 {
+        (col + 0x55).min(0xFF)
+    }
+
+    if mask.emphasis_red() {
+        r2 = emphasize(r2);
+    }
+    if mask.emphasis_green() {
+        g2 = emphasize(g2);
+    }
+    if mask.emphasis_blue() {
+        b2 = emphasize(b2);
+    }
+
+    (r2 << 24) | (g2 << 16) | (b2 << 8) | 0xFF
 }
 
 const NES_PALETTE: [u32; 64] = [
