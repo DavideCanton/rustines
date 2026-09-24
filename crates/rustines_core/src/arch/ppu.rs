@@ -148,6 +148,14 @@ pub struct Ppu {
     renderer: Box<dyn Renderer>,
 }
 
+struct BackgroundTileForPixelResult {
+    base_nametable_addr: u16,
+    tile_x: u16,
+    tile_y: u16,
+    pixel_x: u16,
+    pixel_y: u16,
+}
+
 impl Ppu {
     pub fn new(renderer: Box<dyn Renderer>) -> Self {
         Self {
@@ -448,18 +456,17 @@ impl Ppu {
         let visible_sprites = self.get_sprites_on_scanline();
 
         for x in 0..=255 {
-            let (base_nametable_addr, tile_x, tile_y, pixel_x, pixel_y) =
-                self.background_tile_for_pixel(x, y);
+            let res = self.background_tile_for_pixel(x, y);
 
-            let nametable_index = tile_y * 32 + tile_x;
-            let tile_id = self.vram_read(base_nametable_addr + nametable_index, mapper) as u16;
+            let nametable_index = res.tile_y * 32 + res.tile_x;
+            let tile_id = self.vram_read(res.base_nametable_addr + nametable_index, mapper) as u16;
 
-            let attribute_table_base = base_nametable_addr + 0x03C0;
+            let attribute_table_base = res.base_nametable_addr + 0x03C0;
 
-            let attr_addr = attribute_table_base + ((tile_y / 4) * 8) + (tile_x / 4);
+            let attr_addr = attribute_table_base + ((res.tile_y / 4) * 8) + (res.tile_x / 4);
             let attribute_byte = self.vram_read(attr_addr, mapper);
 
-            let shift = ((tile_y & 2) << 1) | (tile_x & 2);
+            let shift = ((res.tile_y & 2) << 1) | (res.tile_x & 2);
             let palette_index = ((attribute_byte >> shift) & 0b0000_0011) as u16;
 
             let pattern_table_base = if self.ctrl.bg_pattern_table() {
@@ -468,12 +475,12 @@ impl Ppu {
                 0x0000
             };
 
-            let tile_addr = pattern_table_base + (tile_id * 16) + pixel_y;
+            let tile_addr = pattern_table_base + (tile_id * 16) + res.pixel_y;
 
             let byte_low = mapper.fetch_chr_rom(tile_addr);
             let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
 
-            let bg_color_index = get_color_index(byte_low, byte_high, pixel_x as u8);
+            let bg_color_index = get_color_index(byte_low, byte_high, res.pixel_x as u8);
 
             let palette_offset = if bg_color_index == 0 {
                 0
@@ -498,7 +505,7 @@ impl Ppu {
         }
     }
 
-    fn background_tile_for_pixel(&self, x: usize, y: usize) -> (u16, u16, u16, u16, u16) {
+    fn background_tile_for_pixel(&self, x: usize, y: usize) -> BackgroundTileForPixelResult {
         let scroll_x = (self.t_reg & 0x001F) * 8 + self.x_reg as u16;
         let scroll_y = ((self.t_reg >> 5) & 0x001F) * 8 + ((self.t_reg >> 12) & 0x0007);
 
@@ -516,13 +523,13 @@ impl Ppu {
 
         let base_nametable_addr = 0x2000 + (mirrored_nametable * 0x0400);
 
-        (
+        BackgroundTileForPixelResult {
             base_nametable_addr,
-            tile_x % 32,
-            tile_y % 30,
-            abs_x % 8,
-            abs_y % 8,
-        )
+            tile_x: tile_x % 32,
+            tile_y: tile_y % 30,
+            pixel_x: abs_x % 8,
+            pixel_y: abs_y % 8,
+        }
     }
 
     fn get_sprite_color(
