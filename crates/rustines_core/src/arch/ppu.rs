@@ -130,10 +130,12 @@ pub struct Ppu {
     pub(crate) open_bus_value: u8,
     open_bus_decay_timer: u8,
 
-    pub(crate) vram_address: u16,
-    pub(crate) temp_address: u16,
+    pub(crate) v_reg: u16,
+    pub(crate) t_reg: u16,
+    pub(crate) x_reg: u8,
+    pub(crate) w_toggle: bool,
+
     pub(crate) oam_addr: u8,
-    pub(crate) end_x: u8,
     pub(crate) data_buffer: u8,
 
     pub(crate) scanline: i16,
@@ -142,7 +144,6 @@ pub struct Ppu {
     pub(crate) nmi_interrupt: bool,
     pub(crate) frame_ready: bool,
     pub(crate) is_odd_frame: bool,
-    pub(crate) address_latch: bool,
 
     renderer: Box<dyn Renderer>,
 }
@@ -160,11 +161,11 @@ impl Ppu {
             open_bus_value: 0,
             open_bus_decay_timer: 0,
 
-            vram_address: 0,
-            temp_address: 0,
+            v_reg: 0,
+            t_reg: 0,
             oam_addr: 0,
-            end_x: 0,
-            address_latch: false,
+            x_reg: 0,
+            w_toggle: false,
             data_buffer: 0,
 
             scanline: -1,
@@ -204,19 +205,30 @@ impl Ppu {
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.cycle += 1;
 
-        let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
+        let rendering_enabled = self.rendering_enabled();
 
-        if rendering_enabled && self.scanline == -1 {
-            if self.cycle == 256 {
-                self.increment_vram_address_y();
+        if rendering_enabled {
+            if (0..=239).contains(&self.scanline) || self.scanline == -1 {
+                if self.cycle > 0 && self.cycle <= 256 && self.cycle.is_multiple_of(8) {
+                    self.increment_vram_address_x();
+                }
+
+                if self.cycle == 256 {
+                    self.increment_vram_address_y();
+                }
+
+                if self.cycle == 257 {
+                    self.v_reg =
+                        (self.v_reg & 0b1111_1011_1110_0000) | (self.t_reg & 0b0000_0100_0001_1111);
+                }
             }
-            if self.cycle == 257 {
-                self.vram_address = (self.vram_address & 0b1111_1011_1110_0000)
-                    | (self.temp_address & 0b0000_0100_0001_1111);
-            }
-            if self.cycle == 304 {
-                self.vram_address = (self.vram_address & 0b1000_0100_0001_1111)
-                    | (self.temp_address & 0b0111_1011_1110_0000);
+
+            if self.scanline == -1 {
+                // Reset verticale totale prima che inizi il nuovo frame
+                if self.cycle == 304 {
+                    self.v_reg =
+                        (self.v_reg & 0b1000_0100_0001_1111) | (self.t_reg & 0b0111_1011_1110_0000);
+                }
             }
         }
 
@@ -261,6 +273,10 @@ impl Ppu {
         }
     }
 
+    fn rendering_enabled(&self) -> bool {
+        self.mask.show_background() || self.mask.show_sprites()
+    }
+
     fn handle_open_bus_decay(&mut self) {
         if self.open_bus_decay_timer > 0 {
             self.open_bus_decay_timer -= 1;
@@ -279,6 +295,8 @@ impl Ppu {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
                 self.ctrl = ctrl;
+                self.t_reg =
+                    (self.t_reg & !0b0000_1100_0000_0000) | (((value & 0b0000_0011) as u16) << 10);
             }
             1 => self.mask = PpuMask(value),
             2 => {}
@@ -290,40 +308,33 @@ impl Ppu {
                 self.oam_addr = self.oam_addr.wrapping_add(1);
             }
             5 => {
-                if self.address_latch {
-                    self.temp_address = (self.temp_address & 0b1000_1100_0001_1111)
+                if self.w_toggle {
+                    self.t_reg = (self.t_reg & 0b0000_1100_0001_1111)
                         | (((value & 0b0000_0111) as u16) << 12)
                         | (((value & 0b1111_1000) as u16) << 2);
-                    self.address_latch = false;
                 } else {
-                    self.end_x = value & 0b0000_0111;
-                    self.temp_address =
-                        (self.temp_address & 0b1111_1111_1110_0000) | ((value >> 3) as u16);
-                    self.address_latch = true;
+                    self.x_reg = value & 0b0000_0111;
+                    self.t_reg = (self.t_reg & !0b0000_0000_0001_1111) | ((value >> 3) as u16);
                 }
+                self.w_toggle = !self.w_toggle;
             }
             6 => {
-                if self.address_latch {
-                    self.temp_address =
-                        (self.temp_address & 0b1111_1111_0000_0000) | (value as u16);
-                    self.vram_address = self.temp_address & 0b0011_1111_1111_1111;
-                    self.address_latch = false;
+                if self.w_toggle {
+                    self.t_reg = (self.t_reg & 0b0111_1111_0000_0000) | (value as u16);
+                    self.v_reg = self.t_reg;
                 } else {
-                    self.temp_address = (self.temp_address & 0b0000_0000_1111_1111)
+                    self.t_reg = (self.t_reg & 0b0000_0000_1111_1111)
                         | (((value & 0b0011_1111) as u16) << 8);
-                    self.address_latch = true;
                 }
+                self.w_toggle = !self.w_toggle;
             }
             7 => {
-                let current_addr = self.vram_address & 0b0011_1111_1111_1111;
+                let current_addr = self.v_reg & 0x3FFF;
+
                 self.vram_write(current_addr, value, mapper);
 
-                if current_addr >= 0x3F00 {
-                    self.vram_write(current_addr - 0x1000, value, mapper);
-                }
-
                 let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
-                self.vram_address = self.vram_address.wrapping_add(increment);
+                self.v_reg = (self.v_reg.wrapping_add(increment)) & 0x7FFF;
             }
             _ => unreachable!(),
         }
@@ -348,7 +359,7 @@ impl Ppu {
                 }
 
                 self.status.set_vblank_started(false);
-                self.address_latch = false;
+                self.w_toggle = false;
 
                 if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
                     self.nmi_interrupt = false;
@@ -360,7 +371,7 @@ impl Ppu {
             7 => {
                 let mut data = self.vram_buffer_shadow(mapper);
 
-                let current_addr = self.vram_address & 0b0011_1111_1111_1111;
+                let current_addr = self.v_reg & 0b0011_1111_1111_1111;
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
@@ -375,7 +386,7 @@ impl Ppu {
                     self.data_buffer = self.vram_read(current_addr, mapper);
                 }
 
-                self.vram_address += if self.ctrl.vram_address_incr() { 32 } else { 1 };
+                self.v_reg += if self.ctrl.vram_address_incr() { 32 } else { 1 };
                 self.write_open_bus(data);
                 data
             }
@@ -433,16 +444,12 @@ impl Ppu {
         }
 
         let y = self.scanline as usize;
-        let tile_y = (y / 8) as u16;
-        let pixel_y = (y % 8) as u16;
-
-        let base_nametable_addr = 0x2000 + (self.ctrl.nametable_addr() as u16 * 0x0400);
 
         let visible_sprites = self.get_sprites_on_scanline();
 
         for x in 0..=255 {
-            let tile_x = (x / 8) as u16;
-            let pixel_x = (x % 8) as u16;
+            let (base_nametable_addr, tile_x, tile_y, pixel_x, pixel_y) =
+                self.background_tile_for_pixel(x, y);
 
             let nametable_index = tile_y * 32 + tile_x;
             let tile_id = self.vram_read(base_nametable_addr + nametable_index, mapper) as u16;
@@ -460,6 +467,7 @@ impl Ppu {
             } else {
                 0x0000
             };
+
             let tile_addr = pattern_table_base + (tile_id * 16) + pixel_y;
 
             let byte_low = mapper.fetch_chr_rom(tile_addr);
@@ -488,6 +496,33 @@ impl Ppu {
 
             self.renderer.render_pixel(x, y, pixel_color);
         }
+    }
+
+    fn background_tile_for_pixel(&self, x: usize, y: usize) -> (u16, u16, u16, u16, u16) {
+        let scroll_x = (self.t_reg & 0x001F) * 8 + self.x_reg as u16;
+        let scroll_y = ((self.t_reg >> 5) & 0x001F) * 8 + ((self.t_reg >> 12) & 0x0007);
+
+        let abs_x = x as u16 + scroll_x;
+        let abs_y = y as u16 + scroll_y;
+
+        let tile_x = abs_x / 8;
+        let tile_y = abs_y / 8;
+
+        let nt_x = (tile_x / 32) % 2;
+        let nt_y = (tile_y / 30) % 2;
+        let logical_nametable = nt_x + nt_y * 2; // Può essere 0, 1, 2, 3
+
+        let mirrored_nametable = logical_nametable % 2;
+
+        let base_nametable_addr = 0x2000 + (mirrored_nametable * 0x0400);
+
+        (
+            base_nametable_addr,
+            tile_x % 32,
+            tile_y % 30,
+            abs_x % 8,
+            abs_y % 8,
+        )
     }
 
     fn get_sprite_color(
@@ -561,21 +596,30 @@ impl Ppu {
         apply_emphasis(color, &self.mask)
     }
 
-    fn increment_vram_address_y(&mut self) {
-        if (self.vram_address & 0b0111_0000_0000_0000) != 0x7000 {
-            self.vram_address += 0x1000;
+    fn increment_vram_address_x(&mut self) {
+        if (self.v_reg & 0x001F) == 31 {
+            self.v_reg &= !0x001F;
+            self.v_reg ^= 0x0400;
         } else {
-            self.vram_address &= 0b1000_1111_1111_1111;
-            let mut y = (self.vram_address & 0b0000_0011_1110_0000) >> 5;
+            self.v_reg += 1;
+        }
+    }
+
+    fn increment_vram_address_y(&mut self) {
+        if (self.v_reg & 0b0111_0000_0000_0000) != 0x7000 {
+            self.v_reg += 0x1000;
+        } else {
+            self.v_reg &= 0b1000_1111_1111_1111;
+            let mut y = (self.v_reg & 0b0000_0011_1110_0000) >> 5;
             if y == 29 {
                 y = 0;
-                self.vram_address ^= 0x0800;
+                self.v_reg ^= 0x0800;
             } else if y == 31 {
                 y = 0;
             } else {
                 y += 1;
             }
-            self.vram_address = (self.vram_address & 0b1111_1100_0001_1111) | (y << 5);
+            self.v_reg = (self.v_reg & 0b1111_1100_0001_1111) | (y << 5);
         }
     }
 
@@ -631,7 +675,7 @@ impl Ppu {
     }
 
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
-        let current_addr = self.vram_address & 0b0011_1111_1111_1111;
+        let current_addr = self.v_reg & 0b0011_1111_1111_1111;
         if current_addr >= 0x3F00 {
             self.vram_read(current_addr, mapper)
         } else {
@@ -709,3 +753,109 @@ const NES_PALETTE: [u32; 64] = [
     0xECEEECFF, 0xA8CCF4FF, 0xBCC4F4FF, 0xD4B4F4FF, 0xECB0ECFF, 0xF4B0D4FF, 0xF4B8B4FF, 0xECC490FF,
     0xE4D080FF, 0xCCDC80FF, 0xBCE290FF, 0xACE2B4FF, 0xACDAECFF, 0xA8A8A8FF, 0x000000FF, 0x000000FF,
 ];
+
+#[cfg(test)]
+mod tests {
+    use crate::{Mapper, MirroringType, NoopRenderer, Ppu, utils::named::Named};
+
+    struct FakeMapper;
+
+    impl Named for FakeMapper {
+        fn name(&self) -> &str {
+            "foo"
+        }
+    }
+
+    impl Mapper for FakeMapper {
+        fn prg_rom(&self) -> &[u8] {
+            todo!()
+        }
+
+        fn chr_rom(&self) -> &[u8] {
+            todo!()
+        }
+
+        fn fetch_prg_rom(&self, _addr: u16) -> u8 {
+            todo!()
+        }
+
+        fn store_prg_rom(&mut self, _addr: u16, _val: u8) {
+            todo!()
+        }
+
+        fn fetch_chr_rom(&self, _addr: u16) -> u8 {
+            todo!()
+        }
+
+        fn store_chr_rom(&mut self, _addr: u16, _val: u8) {
+            todo!()
+        }
+
+        fn fetch_prg_ram(&self, _addr: u16) -> u8 {
+            todo!()
+        }
+
+        fn store_prg_ram(&mut self, _addr: u16, _val: u8) {
+            todo!()
+        }
+
+        fn mirroring_mode(&self) -> MirroringType {
+            todo!()
+        }
+    }
+
+    #[test]
+    fn test_sequence() {
+        let renderer = NoopRenderer;
+        let mut ppu = Ppu::new(Box::new(renderer));
+
+        ppu.t_reg = 0b0111_1111_1111_1111;
+        ppu.v_reg = 0b0111_1111_1111_1111;
+        ppu.x_reg = 0b1111_1111;
+        ppu.w_toggle = true;
+
+        let mapper = FakeMapper;
+
+        ppu.cpu_write(0, 0, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.x_reg, 0b1111_1111);
+        assert!(ppu.w_toggle);
+
+        ppu.cpu_read(2, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.x_reg, 0b1111_1111);
+        assert!(!ppu.w_toggle);
+
+        ppu.cpu_write(5, 0b0111_1101, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0111_0011_1110_1111);
+        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.x_reg, 0b0000_0101);
+        assert!(ppu.w_toggle);
+
+        ppu.cpu_write(5, 0b0101_1110, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0110_0001_0110_1111);
+        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.x_reg, 0b0000_0101);
+        assert!(!ppu.w_toggle);
+
+        ppu.cpu_write(6, 0b0011_1101, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0011_1101_0110_1111);
+        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.x_reg, 0b0000_0101);
+        assert!(ppu.w_toggle);
+
+        ppu.cpu_write(6, 0b11110000, &mapper);
+
+        assert_eq!(ppu.t_reg, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.v_reg, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.x_reg, 0b0000_0101);
+        assert!(!ppu.w_toggle);
+    }
+}
