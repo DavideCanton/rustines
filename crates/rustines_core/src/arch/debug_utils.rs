@@ -52,38 +52,33 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
     buf
 }
 
-pub fn debug_dump_nametable(bus: &Bus) {
-    println!("\n=== DUMP NAMETABLE 0 (0x2000) ===");
+pub fn debug_dump_nametables(bus: &Bus) {
+    for nt in 0..=3 {
+        let base = 0x2000 + 0x0400 * nt;
+        println!("\n=== DUMP NAMETABLE {nt} (0x{base:04X}) ===");
 
-    print!("    ");
-    for col in 0..32 {
-        print!("{:02X} ", col);
-    }
-    println!("\n----{}", "---".repeat(32));
-
-    let ppu = bus.ppu();
-    let mapper: &dyn Mapper = bus.mapper_ref();
-
-    for row in 0..30 {
-        print!("{:02X} | ", row);
-
+        print!("    ");
         for col in 0..32 {
-            let rel_addr = row * 32 + col;
-            let ppu_address = 0x2000 + rel_addr;
+            print!("{:02X} ", col);
+        }
+        println!("\n----{}", "---".repeat(32));
 
-            let cleared_addr = (ppu_address - 0x2000) & 0b0000_1111_1111_1111;
-            let vram_index = cleared_addr & 0b0000_0111_1111_1111;
-            let tile_index = ppu.vram_read(vram_index, mapper);
+        let ppu = bus.ppu();
+        let mapper: &dyn Mapper = bus.mapper_ref();
 
-            if tile_index == 0x00 || tile_index == 0x20 {
-                print!(".. ");
-            } else {
+        for row in 0..30 {
+            print!("{:02X} | ", row);
+
+            for col in 0..32 {
+                let rel_addr = row * 32 + col;
+                let ppu_address = base + rel_addr;
+                let tile_index = ppu.vram_read(ppu_address, mapper);
                 print!("{:02X} ", tile_index);
             }
+            println!();
         }
-        println!();
+        println!("=================================\n");
     }
-    println!("=================================\n");
 }
 
 pub fn debug_dump_palette(bus: &Bus) {

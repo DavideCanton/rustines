@@ -148,6 +148,7 @@ pub struct Ppu {
     renderer: Box<dyn Renderer>,
 }
 
+#[derive(Debug)]
 struct BackgroundTileForPixelResult {
     base_nametable_addr: u16,
     tile_x: u16,
