@@ -15,6 +15,6 @@ anyhow = "1.0"
 thiserror = "2.0"
 log = "0.4"
 flexi_logger = { version = "0.31", features = ["async"] }
-winit = "0.29"
+winit = "0.30"
 pixels = "0.17"
-winit_input_helper = "0.16"
+winit_input_helper = "0.17"
