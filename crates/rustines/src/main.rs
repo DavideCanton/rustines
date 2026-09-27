@@ -1,10 +1,10 @@
-mod context;
+mod args;
 mod pattern_window;
 mod renderer;
 mod utils;
 
 use crate::{
-    context::RustinesArgs,
+    args::RustinesArgs,
     pattern_window::PatternTableWindow,
     renderer::PixelsRenderer,
     utils::{init_logger, read_file},
