@@ -669,10 +669,6 @@ impl Ppu {
         array
     }
 
-    pub(crate) fn dma_copy(&mut self, buf: &[u8]) {
-        self.oam_data.copy_from_slice(buf);
-    }
-
     pub(crate) fn oam_data(&self) -> &[u8] {
         &self.oam_data
     }

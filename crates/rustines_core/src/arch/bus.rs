@@ -17,8 +17,9 @@ pub struct Bus {
     controller2: NesController,
     open_bus_value: u8,
     cycles_cnt: usize,
+    total_cycles: usize,
     tracing_enabled: bool,
-    dma_in_progress: bool,
+    oam_dma_state: OamDmaState,
 }
 
 impl Bus {
@@ -32,8 +33,9 @@ impl Bus {
             controller2: NesController::new(2),
             open_bus_value: 0,
             cycles_cnt: 0,
+            total_cycles: 0,
             tracing_enabled: false,
-            dma_in_progress: false,
+            oam_dma_state: OamDmaState::NotRunning,
         }
     }
 
@@ -45,7 +47,7 @@ impl Bus {
         self.cycles_cnt = 0;
     }
 
-    pub fn check_tick_end(&self, exp: u8) -> Option<usize> {
+    pub fn tick_ended(&mut self, exp: u8) -> Option<usize> {
         let exp = exp as usize;
 
         if self.cycles_cnt != exp {
@@ -106,9 +108,8 @@ impl Bus {
     }
 
     fn do_internal_cycle(&mut self) {
-        if !self.dma_in_progress {
-            self.cycles_cnt += 1;
-        }
+        self.cycles_cnt += 1;
+        self.total_cycles += 1;
 
         let mapper = self.mapper.as_mut();
         if self.tracing_enabled {
@@ -219,15 +220,16 @@ impl Bus {
                     self.controller1.write(val);
                     self.controller2.write(val);
                 } else if address == 0x4014 {
+                    let address = (val as u16) << 8;
                     // DMA implementation
-                    // TODO stall?
-                    let mut buf = vec![0; 256];
-                    let start = (val as u16) << 8;
-                    self.dma_in_progress = true;
-                    self.read_many(start, &mut buf);
-                    self.dma_in_progress = false;
-                    self.open_bus_value = buf[255];
-                    self.ppu_mut().dma_copy(&buf);
+
+                    let state = OamDmaState::Starting {
+                        cnt: 255,
+                        address,
+                        needs_alignment: !self.total_cycles.is_multiple_of(2),
+                    };
+
+                    self.oam_dma_state = state;
                 } else {
                     let ind = address & 0b1111_1111;
                     self.apu.cpu_write(ind as u8, val);
@@ -290,6 +292,41 @@ impl Bus {
         }
         DummyReadResult::new(raw_addr, boundary_crossed)
     }
+
+    pub fn oam_dma_state(&self) -> OamDmaState {
+        self.oam_dma_state
+    }
+
+    pub fn is_oam_dma_state_running(&self) -> bool {
+        !matches!(self.oam_dma_state, OamDmaState::NotRunning)
+    }
+
+    pub(crate) fn set_dma_state(&mut self, next_state: OamDmaState) {
+        self.oam_dma_state = next_state;
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum OamDmaState {
+    NotRunning,
+    Starting {
+        cnt: usize,
+        address: u16,
+        needs_alignment: bool,
+    },
+    Aligning {
+        cnt: usize,
+        address: u16,
+    },
+    Reading {
+        cnt: usize,
+        address: u16,
+    },
+    Writing {
+        cnt: usize,
+        address: u16,
+        data: u8,
+    },
 }
 
 pub struct DummyReadResult {

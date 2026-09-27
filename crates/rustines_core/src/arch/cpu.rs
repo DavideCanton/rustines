@@ -2,7 +2,7 @@ use log::warn;
 
 use crate::{
     arch::{
-        bus::{Bus, DummyReadResult},
+        bus::{Bus, DummyReadResult, OamDmaState},
         instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
         registers::*,
@@ -32,10 +32,15 @@ impl Cpu {
         }
     }
 
-    pub fn tick(&mut self, bus: &mut Bus) -> u8 {
+    pub fn tick(&mut self, bus: &mut Bus) {
+        if bus.is_oam_dma_state_running() {
+            self.run_oam_dma_cycle(bus);
+            return;
+        }
+
         if let Some(value) = self.handle_interrupts(bus) {
             self.clock += value as u64;
-            return value;
+            return;
         }
 
         bus.tick_started();
@@ -56,7 +61,7 @@ impl Cpu {
 
         self.clock += cycles as u64;
 
-        if let Some(cnt) = bus.check_tick_end(cycles) {
+        if let Some(cnt) = bus.tick_ended(cycles) {
             warn!(
                 "Bus tick count mismatch: expected {}, got {}, pc = {:#06X}, opcode = {:#04X}, instr = {}",
                 cycles, cnt, pc, opcode, instr.fname,
@@ -64,8 +69,6 @@ impl Cpu {
         }
 
         self.poll_non_maskable_interrupts(bus);
-
-        cycles
     }
 
     pub fn burn_internal_cycle(&mut self, bus: &mut Bus) {
@@ -272,5 +275,48 @@ impl Cpu {
         if irq_line_low && !irq_masked {
             self.pending_irq_execution = true;
         }
+    }
+
+    fn run_oam_dma_cycle(&mut self, bus: &mut Bus) {
+        use OamDmaState::*;
+
+        let next_state = match bus.oam_dma_state() {
+            Starting {
+                cnt,
+                address,
+                needs_alignment,
+            } => {
+                bus.read(self.registers.pc);
+                if needs_alignment {
+                    Aligning { cnt, address }
+                } else {
+                    Reading { cnt, address }
+                }
+            }
+            Aligning { cnt, address } => {
+                bus.read(self.registers.pc);
+                Reading { cnt, address }
+            }
+            Reading { address, cnt } => Writing {
+                cnt,
+                address,
+                data: bus.read(address),
+            },
+            Writing { cnt, address, data } => {
+                bus.write(0x2004, data);
+                if cnt == 0 {
+                    NotRunning
+                } else {
+                    Reading {
+                        cnt: cnt - 1,
+                        address: address.wrapping_add(1),
+                    }
+                }
+            }
+            NotRunning => unreachable!(),
+        };
+
+        bus.set_dma_state(next_state);
+        self.clock += 1;
     }
 }
