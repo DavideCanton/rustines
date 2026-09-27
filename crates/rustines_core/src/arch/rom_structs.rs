@@ -2,8 +2,6 @@ use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 use std::fmt::Debug;
 
-use crate::arch::mappers::mapper::MapperBox;
-
 bitfield! {
     #[derive(Clone, Copy, Pod, Zeroable)]
     #[repr(C)]
@@ -126,12 +124,11 @@ impl From<&[u8; 16]> for INesHeader {
 
 pub struct NesRom {
     pub header: INesHeader,
-    pub mapper: MapperBox,
 }
 
 impl NesRom {
-    pub fn new(header: INesHeader, mapper: MapperBox) -> Self {
-        NesRom { header, mapper }
+    pub fn new(header: INesHeader) -> Self {
+        NesRom { header }
     }
 }
 

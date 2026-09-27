@@ -1712,7 +1712,6 @@ dependencies = [
  "pixels",
  "rustines-gui-utils",
  "winit",
- "winit_input_helper",
 ]
 
 [[package]]

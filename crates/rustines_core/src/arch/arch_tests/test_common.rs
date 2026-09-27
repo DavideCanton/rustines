@@ -7,9 +7,7 @@ pub mod tests {
     use crate::arch::cpu::Cpu;
     use crate::arch::mappers::mapper_0::Mapper0;
     use crate::arch::ppu::Ppu;
-    use crate::arch::rom_structs::{
-        CHR_ROM_BANK_SIZE, HEADER, INesHeader, NesRom, PRG_ROM_BANK_SIZE,
-    };
+    use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, INesHeader, PRG_ROM_BANK_SIZE};
     use crate::renderer::NoopRenderer;
 
     pub fn setup_tests() -> (Cpu, Bus) {
@@ -22,8 +20,7 @@ pub mod tests {
             Mapper0::new(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap(),
         );
 
-        let rom = NesRom::new(header, mapper);
-        let bus = Bus::new(rom.mapper, Ppu::new(Box::new(NoopRenderer)), Apu::default());
+        let bus = Bus::new(mapper, Ppu::new(Box::new(NoopRenderer)), Apu::default());
         let mut cpu = Cpu::new();
 
         cpu.registers.pc = 0x100;

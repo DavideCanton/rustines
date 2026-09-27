@@ -8,7 +8,7 @@ pub use arch::bus::Bus;
 pub use arch::controller::{NesController, NesKey};
 pub use arch::cpu::Cpu;
 pub use arch::debug_utils;
-pub use arch::mappers::mapper::Mapper;
+pub use arch::mappers::mapper::{Mapper, MapperBox};
 pub use arch::ppu::Ppu;
 pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
 pub use loaders::loader::Loader;
