@@ -12,7 +12,7 @@ bytemuck = { version = "1.25", features = ["derive"] }
 anyhow = { workspace = true }
 log = { workspace = true }
 rustines-macro = { path = "../rustines_macro" }
-bitfield = "0.19.5"
+bitfield = "0.19"
 
 [dev-dependencies]
 rand = "0.10"

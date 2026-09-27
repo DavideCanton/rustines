@@ -16,11 +16,12 @@ use rustines_core as core;
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 use std::{collections::HashMap, path, sync::Arc};
 use winit::{
+    application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{Event, WindowEvent},
-    event_loop::{EventLoop, EventLoopWindowTarget},
+    event::{StartCause, WindowEvent},
+    event_loop::{ActiveEventLoop, EventLoop},
     keyboard::KeyCode,
-    window::{Window, WindowBuilder},
+    window::{Window, WindowAttributes},
 };
 use winit_input_helper::WinitInputHelper;
 
@@ -38,15 +39,117 @@ struct AppState {
 
     limiter: FpsLimiter,
     counter: FpsCounter,
-    logpoint: u32,
+    log_point: u32,
 
     key_map1: KeyMap,
     key_map2: KeyMap,
 
     pattern_window: PatternTableWindow,
+
     main_window: Arc<Window>,
+    main_window_helper: WinitInputHelper,
 
     pause: bool,
+}
+
+struct App {
+    app_state: Option<AppState>,
+    mapper: Option<core::MapperBox>,
+    trace_boot: bool,
+}
+
+impl App {
+    fn new(mapper: core::MapperBox, trace_boot: bool) -> Self {
+        App {
+            app_state: None,
+            mapper: Some(mapper),
+            trace_boot,
+        }
+    }
+
+    fn init_app_state(&mut self, main_window: Arc<Window>, renderer: PixelsRenderer) -> AppState {
+        let ppu = core::Ppu::new(Box::new(renderer));
+        let apu = core::Apu::default();
+
+        let mut bus = core::Bus::new(self.mapper.take().unwrap(), ppu, apu);
+        let mut cpu = core::Cpu::new();
+
+        if self.trace_boot {
+            cpu.enable_tracing(true);
+            bus.enable_tracing(true);
+        }
+
+        AppState {
+            bus,
+            counter: FpsCounter::new(),
+            cpu,
+            key_map1: build_keymap_c1(),
+            key_map2: build_keymap_c2(),
+            limiter: FpsLimiter::new(60.0),
+            log_point: 1,
+            pattern_window: PatternTableWindow::new(),
+            main_window,
+            pause: false,
+            main_window_helper: WinitInputHelper::new(),
+        }
+    }
+}
+
+impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let main_window = Arc::new(
+            event_loop
+                .create_window(
+                    WindowAttributes::default()
+                        .with_title("Rustines")
+                        .with_inner_size(size)
+                        .with_min_inner_size(size),
+                )
+                .unwrap(),
+        );
+
+        let renderer = create_renderer(Arc::clone(&main_window)).unwrap();
+
+        self.app_state = Some(self.init_app_state(main_window, renderer));
+    }
+
+    fn new_events(&mut self, _: &ActiveEventLoop, _: StartCause) {
+        if let Some(app_state) = self.app_state.as_mut() {
+            app_state.main_window_helper.step();
+            app_state.pattern_window.step();
+        }
+    }
+
+    fn window_event(
+        &mut self,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        if let Some(app_state) = self.app_state.as_mut() {
+            if window_id == app_state.main_window.id() {
+                if app_state.main_window_helper.process_window_event(&event) {
+                    // Draw the current frame
+                    app_state.bus.ppu_mut().renderer().draw();
+
+                    if let Some(fps) = app_state.counter.drawn() {
+                        app_state
+                            .main_window
+                            .set_title(&format!("Rustines | FPS: {:.1}", fps));
+                    }
+                }
+            } else if app_state.pattern_window.owns_window_event(window_id) {
+                app_state.pattern_window.window_event(&event);
+            }
+        }
+    }
+
+    fn about_to_wait(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if let Some(app_state) = self.app_state.as_mut() {
+            update_logic(app_state, event_loop);
+        }
+    }
 }
 
 pub fn main() {
@@ -58,90 +161,27 @@ pub fn main() {
 
     info!("Using input file: {}", args.file_path);
 
-    let rom = read_file(&file_path).unwrap();
+    let (_, mapper) = read_file(&file_path).unwrap();
 
     let event_loop = EventLoop::new().unwrap();
 
-    let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-    let main_window = Arc::new(
-        WindowBuilder::new()
-            .with_title("Rustines")
-            .with_inner_size(size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap(),
-    );
+    let mut app = App::new(mapper, args.trace_boot);
 
-    let renderer = create_renderer(Arc::clone(&main_window)).unwrap();
-
-    let mut app_state = init_app_state(rom, main_window, renderer, args.trace_boot);
-
-    let mut input = WinitInputHelper::new();
-
-    let _ = event_loop.run(|event, elwt| {
-        // update logic
-        if input.update(&event) {
-            update_logic(&input, elwt, &mut app_state);
-        }
-
-        // dispatch events to windows
-        match event {
-            Event::WindowEvent { window_id, event } if window_id == app_state.main_window.id() => {
-                main_window_event(&mut app_state, event)
-            }
-            Event::WindowEvent { window_id, event }
-                if app_state.pattern_window.is_event(window_id) =>
-            {
-                pattern_window_event(&mut app_state.pattern_window, event)
-            }
-
-            _ => {}
-        }
-    });
+    let _ = event_loop.run_app(&mut app);
 }
 
-fn init_app_state(
-    rom: rustines_core::NesRom,
-    main_window: Arc<Window>,
-    renderer: PixelsRenderer,
-    trace_boot: bool,
-) -> AppState {
-    let ppu = core::Ppu::new(Box::new(renderer));
-    let apu = core::Apu::default();
+fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+    let input = &mut app_state.main_window_helper;
 
-    let mut bus = core::Bus::new(rom.mapper, ppu, apu);
-    let mut cpu = core::Cpu::new();
+    input.end_step();
 
-    if trace_boot {
-        cpu.enable_tracing(true);
-        bus.enable_tracing(true);
-    }
-
-    AppState {
-        bus,
-        counter: FpsCounter::new(),
-        cpu,
-        key_map1: build_keymap_c1(),
-        key_map2: build_keymap_c2(),
-        limiter: FpsLimiter::new(60.0),
-        logpoint: 1,
-        pattern_window: PatternTableWindow::new(),
-        main_window,
-        pause: false,
-    }
-}
-
-fn update_logic(
-    input: &WinitInputHelper,
-    elwt: &EventLoopWindowTarget<()>,
-    app_state: &mut AppState,
-) {
-    // Close events
     if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-        // this closes everything, don't really care
-        elwt.exit();
+        event_loop.exit();
     } else {
-        map_debug_keys(input, app_state, elwt);
+        map_debug_keys(app_state, event_loop);
+
+        // reborrow
+        let input = &app_state.main_window_helper;
 
         let bus = &mut app_state.bus;
 
@@ -158,74 +198,53 @@ fn update_logic(
 
         app_state.main_window.request_redraw();
     }
+
+    app_state.pattern_window.update();
 }
 
-fn pattern_window_event(pattern_window: &mut PatternTableWindow, event: WindowEvent) {
-    match event {
-        WindowEvent::RedrawRequested => {
-            pattern_window.draw();
-        }
-        WindowEvent::Resized(size) => {
-            pattern_window.resize(size);
-        }
-        _ => {}
-    }
-}
-
-fn main_window_event(app_state: &mut AppState, event: WindowEvent) {
-    if event == WindowEvent::RedrawRequested {
-        // Draw the current frame
-        app_state.bus.ppu_mut().renderer().draw();
-
-        if let Some(fps) = app_state.counter.drawn() {
-            app_state
-                .main_window
-                .set_title(&format!("Rustines | FPS: {:.1}", fps));
-        }
-    }
-}
-
-fn map_debug_keys(
-    input: &WinitInputHelper,
-    app_state: &mut AppState,
-    elwt: &EventLoopWindowTarget<()>,
-) {
-    let debug_keys_state = debug_keys(input);
+fn map_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+    let input = &app_state.main_window_helper;
 
     let bus = &mut app_state.bus;
     let cpu = &mut app_state.cpu;
 
-    if debug_keys_state.dump_nametables {
-        core::debug_utils::debug_dump_nametable(bus);
-    }
+    if input.held_shift() {
+        if input.key_pressed(KeyCode::KeyD) {
+            core::debug_utils::debug_dump_nametable(bus);
+        }
 
-    if debug_keys_state.dump_palette {
-        core::debug_utils::debug_dump_palette(bus);
-    }
+        if input.key_pressed(KeyCode::KeyP) {
+            core::debug_utils::debug_dump_palette(bus);
+        }
 
-    if debug_keys_state.dump_oam {
-        core::debug_utils::debug_dump_oam(bus);
-    }
+        if input.key_pressed(KeyCode::KeyO) {
+            core::debug_utils::debug_dump_oam(bus);
+        }
 
-    if debug_keys_state.toggle_pause {
-        app_state.pause = !app_state.pause;
-    }
+        if input.key_pressed(KeyCode::KeyX) {
+            app_state.pause = !app_state.pause;
+        }
 
-    if debug_keys_state.dump_state {
-        core::debug_utils::debug_dump_state(bus, cpu);
-    }
+        if input.key_pressed(KeyCode::KeyQ) {
+            core::debug_utils::debug_dump_state(bus, cpu);
+        }
 
-    if debug_keys_state.logpoint {
-        let logpoint = &mut app_state.logpoint;
-        println!("LOGPOINT {}", logpoint);
-        info!("LOGPOINT {}", logpoint);
-        *logpoint += 1;
-        cpu.enable_tracing(true);
-        bus.enable_tracing(true);
-    }
+        if input.key_pressed(KeyCode::KeyT) {
+            let log_point = app_state.log_point;
+            println!("LOG_POINT {}", log_point);
+            info!("LOG_POINT {}", log_point);
 
-    if debug_keys_state.show_pattern_window && !app_state.pattern_window.is_displayed() {
-        app_state.pattern_window.show(bus.mapper_ref(), elwt, 4);
+            app_state.log_point += 1;
+
+            cpu.enable_tracing(true);
+            bus.enable_tracing(true);
+        }
+
+        if input.key_pressed(KeyCode::KeyS) {
+            app_state
+                .pattern_window
+                .show(bus.mapper_ref(), event_loop, 4);
+        }
     }
 }
 
@@ -239,51 +258,6 @@ fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
         INNER_W as usize,
         INNER_H as usize,
     ))
-}
-
-#[derive(Default)]
-struct DebugKeyResult {
-    dump_nametables: bool,
-    dump_palette: bool,
-    dump_oam: bool,
-    dump_state: bool,
-    logpoint: bool,
-    show_pattern_window: bool,
-    toggle_pause: bool,
-}
-
-fn debug_keys(input: &WinitInputHelper) -> DebugKeyResult {
-    let mut r = DebugKeyResult::default();
-
-    if input.key_pressed(KeyCode::KeyD) && input.held_shift() {
-        r.dump_nametables = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyP) && input.held_shift() {
-        r.dump_palette = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyX) && input.held_shift() {
-        r.toggle_pause = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyO) && input.held_shift() {
-        r.dump_oam = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyT) && input.held_shift() {
-        r.logpoint = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyS) && input.held_shift() {
-        r.show_pattern_window = true;
-    }
-
-    if input.key_pressed(KeyCode::KeyQ) && input.held_shift() {
-        r.dump_state = true;
-    }
-
-    r
 }
 
 fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {

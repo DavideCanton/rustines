@@ -1,6 +1,6 @@
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
 use log::{LevelFilter, Record};
-use rustines_core as core;
+use rustines_core::{self as core, arch::mappers::mapper::MapperBox};
 use std::{fs, io, path};
 
 #[must_use]
@@ -42,7 +42,7 @@ pub fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
         .expect("Failed to start logger")
 }
 
-pub fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
+pub fn read_file(file_path: &path::Path) -> Result<(core::NesRom, MapperBox), String> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
@@ -52,11 +52,11 @@ pub fn read_file(file_path: &path::Path) -> Result<core::NesRom, String> {
 
     let loader = core::decode_loader(ext);
 
-    let rom = loader
+    let loaded = loader
         .load_rom_struct(&mut file)
         .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
-    Ok(rom)
+    Ok(loaded)
 }
 
 fn my_format(

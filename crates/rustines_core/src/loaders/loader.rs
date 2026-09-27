@@ -5,7 +5,7 @@ use arrayref::array_ref;
 use log::{debug, error, info};
 
 use crate::arch::{
-    mappers::mapper_factory::instantiate_mapper,
+    mappers::{mapper::MapperBox, mapper_factory::instantiate_mapper},
     rom_structs::{HEADER, INesHeader, NesRom},
 };
 use crate::utils::named::Named;
@@ -28,7 +28,7 @@ pub trait Loader: Named {
         Ok(header)
     }
 
-    fn load_rom_struct(&self, file: &mut File) -> anyhow::Result<NesRom> {
+    fn load_rom_struct(&self, file: &mut File) -> anyhow::Result<(NesRom, MapperBox)> {
         let mut buf = self
             .load_rom(file)
             .map_err(|e| anyhow::anyhow!(format!("Error during load: {}", e)))?;
@@ -45,6 +45,6 @@ pub trait Loader: Named {
             ))
         })?;
 
-        Ok(NesRom::new(header, mapper))
+        Ok((NesRom::new(header), mapper))
     }
 }

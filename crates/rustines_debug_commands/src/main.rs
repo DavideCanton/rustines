@@ -15,8 +15,8 @@ fn init_logger() -> LoggerHandle {
     builder.start().expect("Failed to start logger")
 }
 
-fn disassemble_rom(rom: core::NesRom) {
-    let data = rom.mapper.prg_rom();
+fn disassemble_rom(mapper: core::MapperBox) {
+    let data = mapper.prg_rom();
     let mut cnt: usize = 0;
 
     while cnt < data.len() {
@@ -27,15 +27,17 @@ fn disassemble_rom(rom: core::NesRom) {
 }
 
 #[allow(unused)]
-fn execute_rom(rom: core::NesRom, verbose: bool) {
+fn execute_rom(mapper: core::MapperBox, verbose: bool) {
     let ppu = core::Ppu::new(Box::new(core::NoopRenderer));
     let apu = core::Apu::default();
-    let mem = core::Bus::new(rom.mapper, ppu, apu);
+    let mem = core::Bus::new(mapper, ppu, apu);
     let mut cpu = core::Cpu::new();
     todo!()
 }
 
-fn read_file(file_path: &path::Path) -> Result<core::NesRom, RustinesDebugError> {
+fn read_file(
+    file_path: &path::Path,
+) -> Result<(core::NesRom, core::MapperBox), RustinesDebugError> {
     let ext = match file_path.extension() {
         Some(ext) => ext.to_str().unwrap_or(""),
         None => "",
@@ -45,22 +47,25 @@ fn read_file(file_path: &path::Path) -> Result<core::NesRom, RustinesDebugError>
 
     let loader = core::decode_loader(ext);
 
-    let rom = loader
+    let (rom, mapper) = loader
         .load_rom_struct(&mut file)
         .map_err(|e| RustinesDebugError::FileFormatError(e.to_string()))?;
 
-    Ok(rom)
+    Ok((rom, mapper))
 }
 
-fn process_file(buf: core::NesRom, context: &context::Context) -> Result<(), RustinesDebugError> {
+fn process_file(
+    mapper: core::MapperBox,
+    context: &context::Context,
+) -> Result<(), RustinesDebugError> {
     use context::Commands;
 
     match &context.subcommand {
         Commands::Dis => {
-            disassemble_rom(buf);
+            disassemble_rom(mapper);
         }
         Commands::Ex(args) => {
-            execute_rom(buf, args.verbose);
+            execute_rom(mapper, args.verbose);
         }
     };
     Ok(())
@@ -77,7 +82,7 @@ pub fn main() -> anyhow::Result<()> {
     info!("Subcommand: {:?}", context.subcommand);
     info!("Using input file: {}", context.rom_name);
 
-    let rom = read_file(&file_path)?;
-    process_file(rom, &context)?;
+    let (_, mapper) = read_file(&file_path)?;
+    process_file(mapper, &context)?;
     Ok(())
 }

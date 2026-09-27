@@ -7,13 +7,13 @@ use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::LevelFilter;
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
+    application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{Event, WindowEvent},
-    event_loop::EventLoop,
-    keyboard::KeyCode,
-    window::WindowBuilder,
+    event::{ElementState, KeyEvent, WindowEvent},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    keyboard::{Key, NamedKey},
+    window::{Window, WindowAttributes, WindowId},
 };
-use winit_input_helper::WinitInputHelper;
 
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 
@@ -30,60 +30,107 @@ const HEIGHT: u32 = 768;
 const INNER_WIDTH: u32 = 256;
 const INNER_HEIGHT: u32 = 192;
 
+struct AppState {
+    window: Arc<Window>,
+    pixels: Pixels<'static>,
+    world: World,
+    limiter: FpsLimiter,
+    counter: FpsCounter,
+}
+
+#[derive(Default)]
+struct App {
+    state: Option<AppState>,
+}
+
+impl ApplicationHandler for App {
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        if let Some(state) = self.state.as_mut() {
+            state.world.update();
+            state.limiter.update();
+            state.window.request_redraw();
+        }
+    }
+
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+
+        let window = Arc::new(
+            event_loop
+                .create_window(
+                    WindowAttributes::default()
+                        .with_title("Try")
+                        .with_inner_size(size)
+                        .with_min_inner_size(size),
+                )
+                .unwrap(),
+        );
+
+        let window_size = window.inner_size();
+
+        let surface_texture =
+            SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
+
+        let pixels = Pixels::new(INNER_WIDTH, INNER_HEIGHT, surface_texture).unwrap();
+
+        let world = World::new(1, 1, 20, 3, INNER_WIDTH, INNER_HEIGHT);
+
+        let limiter = FpsLimiter::new(60.0);
+        let counter = FpsCounter::new();
+
+        let state = AppState {
+            counter,
+            limiter,
+            pixels,
+            window,
+            world,
+        };
+        self.state = Some(state);
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _window_id: WindowId,
+        event: WindowEvent,
+    ) {
+        if let Some(state) = self.state.as_mut() {
+            match event {
+                WindowEvent::RedrawRequested => {
+                    state.world.draw(state.pixels.frame_mut());
+                    state.pixels.render().unwrap();
+
+                    if let Some(fps) = state.counter.drawn() {
+                        state.window.set_title(&format!("Try | FPS: {:.1}", fps));
+                    }
+                }
+                WindowEvent::CloseRequested => event_loop.exit(),
+                WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            logical_key: Key::Named(NamedKey::Escape),
+                            state: ElementState::Pressed,
+                            ..
+                        },
+                    ..
+                } => {
+                    event_loop.exit();
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
 pub fn main() {
     let _logger = init_logger();
 
     let event_loop = EventLoop::new().unwrap();
-    let mut input = WinitInputHelper::new();
 
-    let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-    let window = Arc::new(
-        WindowBuilder::new()
-            .with_title("Try")
-            .with_inner_size(size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap(),
-    );
+    event_loop.set_control_flow(ControlFlow::Poll);
 
-    let window_size = window.inner_size();
-    let surface_texture =
-        SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-    let mut pixels = Pixels::new(INNER_WIDTH, INNER_HEIGHT, surface_texture).unwrap();
-
-    let mut world = World::new(1, 1, 20, 3, INNER_WIDTH, INNER_HEIGHT);
-
-    let mut limiter = FpsLimiter::new(60.0);
-    let mut counter = FpsCounter::new();
-
-    let _ = event_loop.run(|event, elwt| {
-        if input.update(&event) {
-            // Close events
-            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-                elwt.exit();
-                return;
-            }
-
-            limiter.update();
-
-            world.update();
-            window.request_redraw();
-        }
-
-        // Draw the current frame
-        if let Event::WindowEvent {
-            event: WindowEvent::RedrawRequested,
-            ..
-        } = event
-        {
-            world.draw(pixels.frame_mut());
-            pixels.render().unwrap();
-
-            if let Some(fps) = counter.drawn() {
-                window.set_title(&format!("Try | FPS: {:.1}", fps));
-            }
-        }
-    });
+    let mut app = App::default();
+    let _ = event_loop.run_app(&mut app);
 }
 
 struct World {
