@@ -99,12 +99,6 @@ bitfield! {
     pub grayscale, set_grayscale: 0;
 }
 
-impl PpuMask {
-    pub fn show_leftmost(&self) -> bool {
-        self.show_background_leftmost() || self.show_sprites_leftmost()
-    }
-}
-
 bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuStatus(u8);
@@ -487,26 +481,34 @@ impl Ppu {
             let byte_low = mapper.fetch_chr_rom(tile_addr);
             let byte_high = mapper.fetch_chr_rom(tile_addr + 8);
 
-            let bg_color_index = get_color_index(byte_low, byte_high, res.pixel_x as u8);
+            let raw_bg_color_index = get_color_index(byte_low, byte_high, res.pixel_x as u8);
+            let bg_enabled =
+                self.mask.show_background() && (x >= 8 || self.mask.show_background_leftmost());
+            let bg_color_index = if bg_enabled { raw_bg_color_index } else { 0 };
 
-            let palette_offset = if bg_color_index == 0 {
-                0
-            } else {
-                palette_index * 4
-            };
+            let bg_off = bg_color_index == 0;
+
+            let palette_offset = if bg_off { 0 } else { palette_index * 4 };
 
             // background palette starts at 0x3F00
-            let color_id = self.vram_read(0x3F00 + palette_offset + bg_color_index as u16, mapper);
+            let bg_color_id =
+                self.vram_read(0x3F00 + palette_offset + bg_color_index as u16, mapper);
 
-            let pixel_color = visible_sprites
-                .iter()
-                .flatten()
-                .enumerate()
-                .filter(|&(_, s)| s.in_bound_x(x))
-                .find_map(|(sprite_index, sprite)| {
-                    self.get_sprite_color(mapper, x, y, bg_color_index, sprite_index, sprite)
-                })
-                .unwrap_or_else(|| self.read_palette_by_color_id(color_id));
+            let sprite_color =
+                if self.mask.show_sprites() && (x >= 8 || self.mask.show_sprites_leftmost()) {
+                    visible_sprites
+                        .iter()
+                        .flatten()
+                        .enumerate()
+                        .filter(|&(_, s)| s.in_bound_x(x))
+                        .find_map(|(sprite_index, sprite)| {
+                            self.get_sprite_color(mapper, x, y, bg_off, sprite_index, sprite)
+                        })
+                } else {
+                    None
+                };
+            let pixel_color =
+                sprite_color.unwrap_or_else(|| self.read_palette_by_color_id(bg_color_id));
 
             self.renderer.render_pixel(x, y, pixel_color);
         }
@@ -544,7 +546,7 @@ impl Ppu {
         mapper: &dyn Mapper,
         x: usize,
         y: usize,
-        bg_color_index: u8,
+        bg_off: bool,
         sprite_index: usize,
         sprite: &Sprite,
     ) -> Option<u32> {
@@ -583,9 +585,10 @@ impl Ppu {
             if sprite_index == 0
                 && self.mask.show_background()
                 && self.mask.show_sprites()
-                && bg_color_index != 0
+                && !bg_off
                 && x < 255
-                && (x >= 8 || !self.mask.show_leftmost())
+                && (x >= 8
+                    || (self.mask.show_background_leftmost() && self.mask.show_sprites_leftmost()))
             {
                 self.status.set_sprite_zero_hit(true);
             }
@@ -596,7 +599,7 @@ impl Ppu {
             let palette_addr = 0x3F10 + (palette_num << 2) + sprite_pixel_bits as u16;
             let color_id = self.vram_read(palette_addr, mapper);
 
-            if !sprite.attr.behind() || bg_color_index == 0 {
+            if !sprite.attr.behind() || bg_off {
                 let color = self.read_palette_by_color_id(color_id);
                 return Some(color);
             }
@@ -611,9 +614,9 @@ impl Ppu {
     }
 
     fn increment_vram_address_x(&mut self) {
-        if (self.v_reg & 0x001F) == 31 {
-            self.v_reg &= !0x001F;
-            self.v_reg ^= 0x0400;
+        if (self.v_reg & 0b0001_1111) == 0b0001_1111 {
+            self.v_reg &= 0b1110_0000;
+            self.v_reg ^= 0b0100_0000_0000;
         } else {
             self.v_reg += 1;
         }
@@ -715,12 +718,12 @@ pub fn sprite_tile_addr(sprite: &Sprite, sprite_size: bool, sprite_pattern_table
 }
 
 fn read_palette_addr(addr: u16) -> usize {
-    let mut palette_addr = (addr & 0b0000_0000_0001_1111) as usize;
+    let mut palette_addr = (addr & 0b1_1111) as usize;
 
     // 0x3F0x is equal to 0x3F1x for x in [0, 4, 8, C]
     // these 4 values have the two lower bits equal to 0, so in these cases apply mirroring by
     // mapping 0x3F1x to 0x3F0x
-    if palette_addr >= 0x10 && (palette_addr & 0b0000_0011) == 0 {
+    if palette_addr >= 0x10 && (palette_addr & 0b11) == 0 {
         palette_addr -= 0x10;
     }
 
