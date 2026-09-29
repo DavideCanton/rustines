@@ -211,13 +211,24 @@ impl Ppu {
         &self.palette_table
     }
 
-    pub fn tick(&mut self, mapper: &mut dyn Mapper) {
-        self.cycle += 1;
+    fn is_visible_scanline(&self) -> bool {
+        (0..=239).contains(&self.scanline)
+    }
 
+    fn max_cycles_for_this_scanline(&self) -> u16 {
+        let offset = if self.scanline == -1 && self.rendering_enabled() && self.is_odd_frame {
+            0
+        } else {
+            1
+        };
+        340 + offset
+    }
+
+    pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         let rendering_enabled = self.rendering_enabled();
 
         if rendering_enabled {
-            if (0..=239).contains(&self.scanline) || self.scanline == -1 {
+            if self.is_visible_scanline() || self.scanline == -1 {
                 if self.cycle > 0 && self.cycle <= 256 && self.cycle.is_multiple_of(8) {
                     self.increment_vram_address_x();
                 }
@@ -238,27 +249,7 @@ impl Ppu {
             }
         }
 
-        let max_cycles_for_this_scanline = 340
-            + if self.scanline == -1 && rendering_enabled && self.is_odd_frame {
-                0
-            } else {
-                1
-            };
-
-        if self.cycle >= max_cycles_for_this_scanline {
-            self.cycle = 0;
-            self.scanline += 1;
-
-            if self.scanline > 260 {
-                self.scanline = -1;
-                self.frame_ready = true;
-                self.is_odd_frame = !self.is_odd_frame;
-
-                self.handle_open_bus_decay();
-            }
-        }
-
-        if self.scanline >= 0 && self.scanline <= 239 && self.cycle == 256 {
+        if self.is_visible_scanline() && self.cycle == 256 {
             self.render_scanline(mapper);
         }
 
@@ -276,6 +267,24 @@ impl Ppu {
         }
         if !rendering_enabled {
             self.status.set_sprite_zero_hit(false);
+        }
+
+        self.increase_cycle();
+    }
+
+    fn increase_cycle(&mut self) {
+        if self.cycle + 1 >= self.max_cycles_for_this_scanline() {
+            self.cycle = 0;
+            self.scanline += 1;
+
+            if self.scanline == 261 {
+                self.scanline = -1;
+                self.frame_ready = true;
+                self.is_odd_frame = !self.is_odd_frame;
+                self.handle_open_bus_decay();
+            }
+        } else {
+            self.cycle += 1;
         }
     }
 
