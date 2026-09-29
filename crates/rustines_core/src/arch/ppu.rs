@@ -524,13 +524,11 @@ impl Ppu {
         let tile_x = abs_x / 8;
         let tile_y = abs_y / 8;
 
-        let nt_x = (tile_x / 32) % 2;
-        let nt_y = (tile_y / 30) % 2;
-        let logical_nametable = nt_x + nt_y * 2; // Può essere 0, 1, 2, 3
+        let nt_x = (((self.t_reg >> 10) & 1) + tile_x / 32) % 2;
+        let nt_y = (((self.t_reg >> 11) & 1) + tile_y / 30) % 2;
+        let logical_nametable = nt_x + nt_y * 2;
 
-        let mirrored_nametable = logical_nametable % 2;
-
-        let base_nametable_addr = 0x2000 + (mirrored_nametable * 0x0400);
+        let base_nametable_addr = 0x2000 + (logical_nametable * 0x0400);
 
         BackgroundTileForPixelResult {
             base_nametable_addr,
@@ -870,5 +868,24 @@ mod tests {
         assert_eq!(ppu.v_reg, 0b0011_1101_1111_0000);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(!ppu.w_toggle);
+    }
+
+    #[test]
+    fn background_scroll_wraps_into_adjacent_nametable() {
+        let renderer = NoopRenderer;
+        let mut ppu = Ppu::new(Box::new(renderer));
+        ppu.t_reg = 31;
+
+        let before_wrap = ppu.background_tile_for_pixel(0, 0);
+        let after_wrap = ppu.background_tile_for_pixel(8, 0);
+
+        assert_eq!(before_wrap.base_nametable_addr, 0x2000);
+        assert_eq!(before_wrap.tile_x, 31);
+        assert_eq!(after_wrap.base_nametable_addr, 0x2400);
+        assert_eq!(after_wrap.tile_x, 0);
+
+        ppu.t_reg |= 0b0000_1000_0000_0000;
+        let vertical_nametable = ppu.background_tile_for_pixel(0, 0);
+        assert_eq!(vertical_nametable.base_nametable_addr, 0x2800);
     }
 }
