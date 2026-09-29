@@ -227,17 +227,14 @@ impl Ppu {
                 }
 
                 if self.cycle == 257 {
-                    self.v_reg =
-                        (self.v_reg & 0b1111_1011_1110_0000) | (self.t_reg & 0b0000_0100_0001_1111);
+                    let mask = 0b1111_1011_1110_0000;
+                    self.v_reg = (self.v_reg & mask) | (self.t_reg & !mask);
                 }
             }
 
-            if self.scanline == -1 {
-                // Reset verticale totale prima che inizi il nuovo frame
-                if self.cycle == 304 {
-                    self.v_reg =
-                        (self.v_reg & 0b1000_0100_0001_1111) | (self.t_reg & 0b0111_1011_1110_0000);
-                }
+            if self.scanline == -1 && self.cycle == 304 {
+                let mask = 0b1000_0100_0001_1111;
+                self.v_reg = (self.v_reg & mask) | (self.t_reg & !mask);
             }
         }
 
