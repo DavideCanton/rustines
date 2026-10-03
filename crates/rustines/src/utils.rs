@@ -1,10 +1,11 @@
+use crate::args::TraceLevel;
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
 use log::{LevelFilter, Record};
 use rustines_core::{self as core, arch::mappers::mapper::MapperBox};
 use std::{fs, io, path};
 
 #[must_use]
-pub fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
+pub fn init_logger(file: Option<String>, trace: Option<TraceLevel>) -> LoggerHandle {
     let mut log_spec_builder = LogSpecBuilder::new();
 
     log_spec_builder
@@ -13,12 +14,14 @@ pub fn init_logger(file: Option<String>, trace: u8) -> LoggerHandle {
         .module("winit", LevelFilter::Warn)
         .module("naga", LevelFilter::Warn);
 
-    if trace > 0 {
-        log_spec_builder.module("rustines_core::arch::instr_tracer", LevelFilter::Trace);
-    }
-    if trace > 1 {
-        log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
-        log_spec_builder.module("rustines_core::arch::controller", LevelFilter::Trace);
+    if let Some(trace) = trace {
+        if trace.trace_cpu() {
+            log_spec_builder.module("rustines_core::arch::instr_tracer", LevelFilter::Trace);
+        }
+        if trace.trace_bus() {
+            log_spec_builder.module("rustines_core::arch::bus", LevelFilter::Trace);
+            log_spec_builder.module("rustines_core::arch::controller", LevelFilter::Trace);
+        }
     }
 
     let log_spec = log_spec_builder.build();
