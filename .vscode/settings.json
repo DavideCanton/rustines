@@ -12,5 +12,6 @@
         "editor.formatOnSave": true
     },
     "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.cargo.buildScripts.useRustcWrapper": false,
     "rust-analyzer.checkOnSave": true
 }

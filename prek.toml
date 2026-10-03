@@ -6,4 +6,11 @@ hooks = [{ id = "end-of-file-fixer" }, { id = "check-toml" }]
 [[repos]]
 repo = "https://github.com/AndrejOrsula/pre-commit-cargo"
 rev = "0.4.0"
-hooks = [{ id = "cargo-fmt", "args" = ["--check"] }]
+hooks = [
+    { id = "cargo-fmt", "args" = ["--check"] },
+    { id = "cargo-clippy", "language" = "system", "args" = [
+        "--",
+        "-D",
+        "warnings"
+    ], "always_run" = true },
+]
