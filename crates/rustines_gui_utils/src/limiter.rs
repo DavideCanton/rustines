@@ -10,8 +10,8 @@ use std::{
 /// - create a new `FpsLimiter` using `FpsLimiter::new(target_fps)`
 /// - call its `update` method everytime the application is updated. This sleeps if the application is faster than the target fps.
 pub struct FpsLimiter {
-    pub(super) frame_target_duration: Duration,
-    pub(super) last_frame_time: Instant,
+    frame_target_duration: Duration,
+    last_frame_time: Instant,
 }
 
 impl FpsLimiter {
@@ -26,7 +26,7 @@ impl FpsLimiter {
     /// Callback that should be invoked everytime the application logic is updated.
     ///
     /// Sleeps if the elapsed time since the last invocation is less than `1 / target_fps`, to ensure the
-    /// application doesn't run too much fast.
+    /// application doesn't run too fast.
     pub fn update(&mut self) {
         let elapsed = self.last_frame_time.elapsed();
         if elapsed < self.frame_target_duration {

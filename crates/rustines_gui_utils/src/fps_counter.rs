@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 /// - create a new instance of `FpsCounter` using `FpsCounter::new`
 /// - call the `drawn` method every time the window is drawn. The return value, if not `None`, is the number of frames rendered since the last call.
 pub struct FpsCounter {
-    pub(super) last_fps_check: Instant,
-    pub(super) frame_count: u64,
+    last_fps_check: Instant,
+    frame_count: u64,
 }
 
 impl FpsCounter {
