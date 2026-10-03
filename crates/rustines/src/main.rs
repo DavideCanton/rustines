@@ -11,7 +11,7 @@ use crate::{
 };
 use clap::Parser;
 use log::info;
-use pixels::{Pixels, SurfaceTexture};
+use pixels::{Pixels, ScalingMode, SurfaceTexture};
 use rustines_core as core;
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 use std::{collections::HashMap, path, sync::Arc};
@@ -25,11 +25,11 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 768;
-
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
+const RATIO: f64 = (INNER_H as f64) / (INNER_W as f64);
+const WIDTH: u32 = 1024;
+const HEIGHT: u32 = ((WIDTH as f64) * RATIO) as u32;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 
@@ -251,7 +251,9 @@ fn map_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
     let window_size = window.inner_size();
     let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, window);
-    let pixels = Pixels::new(INNER_W, INNER_H, surface_texture).map_err(|e| format!("{}", e))?;
+    let mut pixels =
+        Pixels::new(INNER_W, INNER_H, surface_texture).map_err(|e| format!("{}", e))?;
+    pixels.set_scaling_mode(ScalingMode::Fill);
 
     Ok(PixelsRenderer::new(
         pixels,
