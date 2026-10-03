@@ -27,9 +27,9 @@ use winit_input_helper::WinitInputHelper;
 
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
-const RATIO: f64 = (INNER_H as f64) / (INNER_W as f64);
 const WIDTH: u32 = 1024;
-const HEIGHT: u32 = ((WIDTH as f64) * RATIO) as u32;
+const RATIO: f64 = INNER_H as f64 / INNER_W as f64;
+const HEIGHT: u32 = (WIDTH as f64 * RATIO) as u32;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 
@@ -178,18 +178,18 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     if input.key_pressed(KeyCode::Escape) || input.close_requested() {
         event_loop.exit();
     } else {
-        map_debug_keys(app_state, event_loop);
+        handle_debug_keys(app_state, event_loop);
 
         // reborrow
         let input = &app_state.main_window_helper;
 
         let bus = &mut app_state.bus;
 
-        map_inputs(input, bus.controller1_mut(), &app_state.key_map1);
-        map_inputs(input, bus.controller2_mut(), &app_state.key_map2);
+        handle_inputs(input, bus.controller1_mut(), &app_state.key_map1);
+        handle_inputs(input, bus.controller2_mut(), &app_state.key_map2);
 
         if !app_state.pause {
-            while !bus.ppu_mut().frame_ready() {
+            while !bus.ppu().frame_ready() {
                 app_state.cpu.tick(bus);
             }
             bus.ppu_mut().clear_frame_ready();
@@ -202,7 +202,7 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     app_state.pattern_window.update();
 }
 
-fn map_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     let input = &app_state.main_window_helper;
 
     let bus = &mut app_state.bus;
@@ -263,6 +263,7 @@ fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
 }
 
 fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
+    // TODO read from config file
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -278,6 +279,7 @@ fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
 }
 
 fn build_keymap_c2() -> KeyMap {
+    // TODO read from config file
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -292,7 +294,7 @@ fn build_keymap_c2() -> KeyMap {
     key_map
 }
 
-fn map_inputs(
+fn handle_inputs(
     input: &WinitInputHelper,
     ctrl: &mut core::NesController,
     key_map: &HashMap<KeyCode, core::NesKey>,

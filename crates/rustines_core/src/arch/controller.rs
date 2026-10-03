@@ -12,13 +12,13 @@ pub struct NesController {
 #[derive(Clone, Copy, Debug)]
 pub enum NesKey {
     A = 0,
-    B,
-    Select,
-    Start,
-    Up,
-    Down,
-    Left,
-    Right,
+    B = 1,
+    Select = 2,
+    Start = 3,
+    Up = 4,
+    Down = 5,
+    Left = 6,
+    Right = 7,
 }
 
 impl NesController {
