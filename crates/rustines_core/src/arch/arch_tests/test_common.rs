@@ -10,12 +10,13 @@ use crate::renderer::NoopRenderer;
 
 pub fn setup_tests() -> (Cpu, Bus) {
     let mut header = INesHeader::zeroed();
+
     header.header = *HEADER;
     header.prg_rom_banks = 1;
     header.chr_rom_banks = 1;
 
-    let mapper =
-        Box::new(Mapper0::new(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap());
+    let mapper = Mapper0::new(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap();
+    let mapper = Box::new(mapper);
 
     let bus = Bus::new(mapper, Ppu::new(Box::new(NoopRenderer)), Apu::default());
     let mut cpu = Cpu::new();
