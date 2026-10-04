@@ -1,5 +1,4 @@
 use bitfield::bitfield;
-use paste::paste;
 use std::fmt;
 
 use crate::utils::bit_utils::{BitIndex, extract_flag};
@@ -54,23 +53,13 @@ pub struct Registers {
 }
 
 macro_rules! gen_methods {
-    ($name: ident) => {
-        paste! {
-            pub fn [<get_ $name>](&self) -> bool {
-                self.p_reg.[<get_ $name>]()
-            }
+    ($getter:ident, $setter:ident) => {
+        pub fn $getter(&self) -> bool {
+            self.p_reg.$getter()
+        }
 
-            pub fn [<set_ $name _from_bool>](&mut self, val: bool) {
-                self.p_reg.[<set_ $name>](val);
-            }
-
-            pub fn [<set_ $name>](&mut self) {
-                self.[<set_ $name _from_bool>](true);
-            }
-
-            pub fn [<clear_ $name>](&mut self) {
-                self.[<set_ $name _from_bool>](false);
-            }
+        pub fn $setter(&mut self, val: bool) {
+            self.p_reg.$setter(val);
         }
     };
 }
@@ -91,8 +80,8 @@ impl Registers {
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n_from_bool(extract_flag(value, BitIndex::_7));
-        self.set_z_from_bool(value == 0);
+        self.set_n(extract_flag(value, BitIndex::_7));
+        self.set_z(value == 0);
     }
 
     pub fn get_p(&self) -> u8 {
@@ -116,12 +105,12 @@ impl Registers {
         self.p_reg.stringify()
     }
 
-    gen_methods!(z);
-    gen_methods!(n);
-    gen_methods!(v);
-    gen_methods!(c);
-    gen_methods!(d);
-    gen_methods!(i);
+    gen_methods!(get_z, set_z);
+    gen_methods!(get_n, set_n);
+    gen_methods!(get_v, set_v);
+    gen_methods!(get_c, set_c);
+    gen_methods!(get_d, set_d);
+    gen_methods!(get_i, set_i);
 }
 
 impl Default for Registers {
@@ -140,5 +129,120 @@ impl fmt::Debug for Registers {
             .field("y_reg", &format!("{:#04x}", self.y_reg))
             .field("p_reg", &format!("{:?}", self.p_reg))
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Registers;
+
+    #[test]
+    fn test_num_n() {
+        let mut reg = Registers::default();
+        assert!(!reg.get_n());
+
+        reg.update_nz_flags(0xFF);
+        assert!(reg.get_n());
+
+        reg.update_nz_flags(0x01);
+        assert!(!reg.get_n());
+    }
+
+    #[test]
+    fn test_num_z() {
+        let mut reg = Registers::default();
+        assert!(!reg.get_z());
+
+        reg.update_nz_flags(0x0);
+        assert!(reg.get_z());
+
+        reg.update_nz_flags(0x01);
+        assert!(!reg.get_z());
+    }
+
+    #[test]
+    fn test_z() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_z,
+            Registers::set_z,
+        );
+    }
+
+    #[test]
+    fn test_n() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_n,
+            Registers::set_n,
+        );
+    }
+
+    #[test]
+    fn test_c() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_c,
+            Registers::set_c,
+        );
+    }
+
+    #[test]
+    fn test_v() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_v,
+            Registers::set_v,
+        );
+    }
+
+    #[test]
+    fn test_i() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_i,
+            Registers::set_i,
+        );
+    }
+
+    #[test]
+    fn test_d() {
+        _run_test(
+            &mut Registers::default(),
+            Registers::get_d,
+            Registers::set_d,
+        );
+    }
+
+    #[test]
+    fn test_b_is_synthesized_when_exporting_p() {
+        let mut registers = Registers::default();
+        registers.set_c(true);
+
+        assert_eq!(registers.get_p(), 0x21);
+        assert_eq!(registers.get_p_force_b(true), 0x31);
+        assert_eq!(registers.get_p_force_b(false), 0x21);
+        assert_eq!(registers.get_p(), 0x21);
+    }
+
+    #[test]
+    fn test_b_is_not_persisted_when_importing_p() {
+        let mut registers = Registers::default();
+        registers.set_p(0xFF);
+
+        assert_eq!(registers.get_p(), 0xEF);
+        assert_eq!(registers.get_p_force_b(true), 0xFF);
+    }
+
+    fn _run_test(
+        reg: &mut Registers,
+        get: impl Fn(&Registers) -> bool,
+        set: impl Fn(&mut Registers, bool),
+    ) {
+        assert!(!get(reg));
+        set(reg, true);
+        assert!(get(reg));
+        set(reg, false);
+        assert!(!get(reg));
     }
 }

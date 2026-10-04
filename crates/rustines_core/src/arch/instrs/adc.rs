@@ -1,4 +1,7 @@
-use crate::arch::{bus::Bus, cpu::Cpu};
+use crate::{
+    arch::{bus::Bus, cpu::Cpu},
+    utils::bit_utils::{BitIndex, extract_flag},
+};
 
 pub fn immediate(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let val = cpu.decode_immediate(bus);
@@ -63,13 +66,13 @@ pub(crate) fn do_adc(cpu: &mut Cpu, val: u8) {
     let res_a = (res & 0b1111_1111) as u8;
     let old_a = cpu.registers.a_reg;
     cpu.registers.update_nz_flags(res_a);
-    cpu.registers.set_v_from_bool(compute_v(old_a, res_a, val));
-    cpu.registers.set_c_from_bool(compute_c(res));
+    cpu.registers.set_v(compute_v(old_a, res_a, val));
+    cpu.registers.set_c(compute_c(res));
     cpu.registers.a_reg = res_a;
 }
 
 fn compute_v(a: u8, res_a: u8, m: u8) -> bool {
-    ((a ^ res_a) & (m ^ res_a) & 0b1000_0000) != 0
+    extract_flag((a ^ res_a) & (m ^ res_a), BitIndex::_7)
 }
 
 fn compute_c(res: u16) -> bool {

@@ -1,4 +1,7 @@
-use crate::arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write};
+use crate::{
+    arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write},
+    utils::bit_utils::{BitIndex, extract_flag},
+};
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_zeropage(bus);
@@ -61,7 +64,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_sre(cpu: &mut Cpu, val: u8) -> u8 {
-    cpu.registers.set_c_from_bool(val & 0b0000_0001 != 0);
+    cpu.registers.set_c(extract_flag(val, BitIndex::_0));
     let res = val >> 1;
     let res_a = cpu.registers.a_reg ^ res;
     cpu.registers.a_reg = res_a;

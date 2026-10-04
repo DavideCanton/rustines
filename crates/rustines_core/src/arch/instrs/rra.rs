@@ -1,7 +1,10 @@
-use crate::arch::{
-    bus::Bus,
-    cpu::Cpu,
-    instrs::{adc::do_adc, utils::store_with_dummy_write},
+use crate::{
+    arch::{
+        bus::Bus,
+        cpu::Cpu,
+        instrs::{adc::do_adc, utils::store_with_dummy_write},
+    },
+    utils::bit_utils::{BitIndex, extract_flag},
 };
 
 pub fn accumulator(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
@@ -74,7 +77,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_rra(cpu: &mut Cpu, val: u8) -> u8 {
     let old_c = cpu.registers.get_c() as u8;
-    cpu.registers.set_c_from_bool(val & 0b0000_0001 != 0);
+    cpu.registers.set_c(extract_flag(val, BitIndex::_0));
     let res = (val >> 1) | (old_c << 7);
     do_adc(cpu, res);
     res

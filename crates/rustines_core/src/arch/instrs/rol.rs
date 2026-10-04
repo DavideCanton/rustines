@@ -1,4 +1,7 @@
-use crate::arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write};
+use crate::{
+    arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write},
+    utils::bit_utils::{BitIndex, extract_flag},
+};
 
 pub fn accumulator(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);
@@ -44,7 +47,7 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 
 fn do_rol(cpu: &mut Cpu, val: u8) -> u8 {
     let old_c = cpu.registers.get_c() as u8;
-    cpu.registers.set_c_from_bool(val & 0b1000_0000 != 0);
+    cpu.registers.set_c(extract_flag(val, BitIndex::_7));
     let res = (val << 1) & 0b1111_1110 | old_c;
     cpu.registers.update_nz_flags(res);
     res

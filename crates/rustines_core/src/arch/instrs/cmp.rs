@@ -62,7 +62,7 @@ pub(crate) fn do_cmp(cpu: &mut Cpu, val: u8) {
     let a_reg = cpu.registers.a_reg;
     let res = (a_reg as u16).wrapping_sub(val as u16);
 
-    cpu.registers.set_c_from_bool(a_reg >= val);
-    cpu.registers.set_n_from_bool((res & 0b1000_0000) != 0);
-    cpu.registers.set_z_from_bool(a_reg == val);
+    cpu.registers.set_c(a_reg >= val);
+    cpu.registers.set_n((res & 0b1000_0000) != 0);
+    cpu.registers.set_z(a_reg == val);
 }

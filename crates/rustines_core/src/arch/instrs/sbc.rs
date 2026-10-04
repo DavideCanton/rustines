@@ -73,7 +73,7 @@ pub(crate) fn do_sbc(cpu: &mut Cpu, val: u8) {
     let res_a = (res & 0b1111_1111) as u8;
     cpu.registers.update_nz_flags(res_a);
     cpu.registers
-        .set_v_from_bool(compute_v(cpu.registers.a_reg, val, res_a));
-    cpu.registers.set_c_from_bool(compute_c(res));
+        .set_v(compute_v(cpu.registers.a_reg, val, res_a));
+    cpu.registers.set_c(compute_c(res));
     cpu.registers.a_reg = res_a;
 }

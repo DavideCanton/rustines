@@ -25,7 +25,7 @@ pub fn implied(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let h = bus.read(address.wrapping_add(1));
 
     cpu.registers.pc = to_u16(l, h);
-    cpu.registers.set_i();
+    cpu.registers.set_i(true);
 
     7
 }
