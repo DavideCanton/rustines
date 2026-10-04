@@ -77,6 +77,7 @@ impl App {
         if self.trace_boot {
             cpu.enable_tracing(true);
             bus.enable_tracing(true);
+            bus.ppu_mut().enable_tracing(true);
         }
 
         AppState {
@@ -238,6 +239,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
             cpu.enable_tracing(true);
             bus.enable_tracing(true);
+            bus.ppu_mut().enable_tracing(true);
         }
 
         if input.key_pressed(KeyCode::KeyS) {
