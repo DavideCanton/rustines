@@ -4,10 +4,10 @@ An (ambitious) project aimed to develop a NES emulator written in Rust.
 
 Stuff implemented:
 
-- [x] run simple roms (not perfectly)
-- [x] ppu (kinda)
+- [x] run roms (only Mapper 0 implemented)
+- [x] ppu
 - [ ] audio
-- [x] input handling (not the zapper)
+- [x] input handling (~~not the zapper~~ zapper too!)
 
 The code is poorly documented at the moment.
 
