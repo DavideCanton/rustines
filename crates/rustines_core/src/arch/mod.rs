@@ -7,6 +7,7 @@ pub mod mappers;
 pub mod ppu;
 pub mod registers;
 pub mod rom_structs;
+pub mod zapper;
 
 #[allow(unused)]
 #[macro_use]

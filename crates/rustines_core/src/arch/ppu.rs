@@ -253,9 +253,16 @@ pub struct Ppu {
     pub(crate) frame_ready: bool,
     pub(crate) is_odd_frame: bool,
 
+    zapper_position: Option<(usize, usize)>,
+    zapper_light_timer: usize,
+
     renderer: Box<dyn Renderer>,
     tracing_enabled: bool,
 }
+
+const ZAPPER_LIGHT_PERSISTENCE: usize = 26 * 341;
+const ZAPPER_SENSOR_RADIUS: usize = 4;
+const ZAPPER_LIGHT_THRESHOLD: u32 = 128;
 
 impl Ppu {
     pub fn new(renderer: Box<dyn Renderer>) -> Self {
@@ -289,6 +296,10 @@ impl Ppu {
             nmi_interrupt: false,
             frame_ready: false,
             is_odd_frame: false,
+
+            zapper_position: None,
+            zapper_light_timer: 0,
+
             renderer,
             tracing_enabled: false,
         }
@@ -318,6 +329,17 @@ impl Ppu {
         self.renderer.as_mut()
     }
 
+    pub fn set_zapper_position(&mut self, position: Option<(usize, usize)>) {
+        if self.zapper_position != position {
+            self.zapper_light_timer = 0;
+        }
+        self.zapper_position = position;
+    }
+
+    pub fn zapper_light_detected(&self) -> bool {
+        self.zapper_light_timer > 0
+    }
+
     pub fn palette_table(&self) -> &[u8; 32] {
         &self.palette_table
     }
@@ -336,6 +358,7 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
+        self.zapper_light_timer = self.zapper_light_timer.saturating_sub(1);
         let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
 
         if self.is_visible_scanline() && self.cycle >= 1 && self.cycle <= 256 {
@@ -735,6 +758,14 @@ impl Ppu {
 
         let rgb_color = read_palette_by_color_id(&self.mask, color_index);
 
+        if self.zapper_position.is_some_and(|(aim_x, aim_y)| {
+            x_pos.abs_diff(aim_x) <= ZAPPER_SENSOR_RADIUS
+                && y_pos.abs_diff(aim_y) <= ZAPPER_SENSOR_RADIUS
+                && is_zapper_light(rgb_color)
+        }) {
+            self.zapper_light_timer = ZAPPER_LIGHT_PERSISTENCE;
+        }
+
         self.renderer.render_pixel(x_pos, y_pos, rgb_color);
     }
 
@@ -907,6 +938,13 @@ fn normalize_palette_address(addr: u16) -> usize {
 fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
     let color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
     apply_emphasis(color, mask)
+}
+
+fn is_zapper_light(rgba: u32) -> bool {
+    let red = (rgba >> 24) & 0xFF;
+    let green = (rgba >> 16) & 0xFF;
+    let blue = (rgba >> 8) & 0xFF;
+    (red * 299 + green * 587 + blue * 114) / 1000 >= ZAPPER_LIGHT_THRESHOLD
 }
 
 fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {

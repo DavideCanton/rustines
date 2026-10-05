@@ -6,7 +6,23 @@ use crate::arch::mappers::mapper::{Mapper, MapperBox};
 
 use crate::arch::common::replace;
 use crate::arch::ppu::Ppu;
+use crate::arch::zapper::Zapper;
 use crate::utils::bit_utils::to_u16;
+
+pub enum Controller2 {
+    NesController(NesController),
+    Zapper(Zapper),
+}
+
+impl Controller2 {
+    pub fn nes_controller() -> Self {
+        Controller2::NesController(NesController::new(2))
+    }
+
+    pub fn zapper() -> Self {
+        Controller2::Zapper(Zapper::new())
+    }
+}
 
 pub struct Bus {
     nes_ram: [u8; 2048],
@@ -14,7 +30,7 @@ pub struct Bus {
     apu: Apu,
     mapper: MapperBox,
     controller1: NesController,
-    controller2: NesController,
+    controller2: Controller2,
     open_bus_value: u8,
     cycles_cnt: usize,
     total_cycles: usize,
@@ -23,14 +39,14 @@ pub struct Bus {
 }
 
 impl Bus {
-    pub fn new(mapper: MapperBox, ppu: Ppu, apu: Apu) -> Self {
+    pub fn new(mapper: MapperBox, ppu: Ppu, apu: Apu, controller2: Controller2) -> Self {
         Self {
             nes_ram: [0; 2048],
             ppu,
             apu,
             mapper,
             controller1: NesController::new(1),
-            controller2: NesController::new(2),
+            controller2,
             open_bus_value: 0,
             cycles_cnt: 0,
             total_cycles: 0,
@@ -91,8 +107,24 @@ impl Bus {
         &mut self.controller1
     }
 
-    pub fn controller2_mut(&mut self) -> &mut NesController {
-        &mut self.controller2
+    pub fn controller2_mut(&mut self) -> Option<&mut NesController> {
+        match &mut self.controller2 {
+            Controller2::NesController(ctrl) => Some(ctrl),
+            Controller2::Zapper(_) => None,
+        }
+    }
+    pub fn zapper_mut(&mut self) -> Option<&mut Zapper> {
+        match &mut self.controller2 {
+            Controller2::Zapper(zapper) => Some(zapper),
+            Controller2::NesController(_) => None,
+        }
+    }
+
+    pub fn set_zapper_input(&mut self, position: Option<(usize, usize)>, trigger_pressed: bool) {
+        if let Controller2::Zapper(zapper) = &mut self.controller2 {
+            zapper.set_input(position, trigger_pressed);
+            self.ppu.set_zapper_position(position);
+        }
     }
 
     pub fn open_bus_value(&self) -> u8 {
@@ -131,8 +163,10 @@ impl Bus {
             0x2002 => self.ppu.status_bits_shadow(),
             0x2007 => self.ppu.vram_buffer_shadow(self.mapper.as_ref()),
             0x4016 => self.controller1.peek_state(),
-            0x4017 => self.controller2.peek_state(),
-
+            0x4017 => match &self.controller2 {
+                Controller2::NesController(ctrl) => ctrl.peek_state(),
+                Controller2::Zapper(zapper) => zapper.read(self.ppu.zapper_light_detected()),
+            },
             _ => self.open_bus_value,
         }
     }
@@ -155,7 +189,12 @@ impl Bus {
                     let data = self.controller1.read();
                     (data & 0b0001_1111) | (self.open_bus_value & 0b1110_0000)
                 } else if address == 0x4017 {
-                    let data = self.controller2.read();
+                    let data = match &mut self.controller2 {
+                        Controller2::NesController(ctrl) => ctrl.read(),
+                        Controller2::Zapper(zapper) => {
+                            zapper.read(self.ppu.zapper_light_detected())
+                        }
+                    };
                     (data & 0b0001_1111) | (self.open_bus_value & 0b1110_0000)
                 } else if address == 0x4015 {
                     update_open_bus = false;
@@ -218,7 +257,9 @@ impl Bus {
             0x4000..=0x4017 => {
                 if address == 0x4016 {
                     self.controller1.write(val);
-                    self.controller2.write(val);
+                    if let Some(ctrl) = self.controller2_mut() {
+                        ctrl.write(val)
+                    };
                 } else if address == 0x4014 {
                     let address = (val as u16) << 8;
                     // DMA implementation

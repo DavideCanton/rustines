@@ -63,6 +63,8 @@ pub struct RustinesArgs {
     pub trace_level: HashSet<TraceTargets>,
     #[clap(short = 'b', long = "trace_boot", help = "Trace boot")]
     pub trace_boot: bool,
+    #[clap(short = 'z', long = "zapper", help = "Zapper in port 2")]
+    pub zapper: bool,
 }
 
 #[cfg(test)]
@@ -79,6 +81,7 @@ mod tests {
         let args = RustinesArgs::try_parse_from(["rustines", "game.nes"]).unwrap();
         assert_eq!(args.log_file, None);
         assert!(!args.trace_boot);
+        assert!(!args.zapper);
         assert!(args.trace_level.is_empty());
     }
 

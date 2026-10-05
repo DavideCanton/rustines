@@ -5,7 +5,10 @@ use crate::{context::Args, types::RustinesDebugError};
 use clap::Parser;
 use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::{LevelFilter, info};
-use rustines_core::{self as core, arch::instrs::instr_table::disassemble_instr};
+use rustines_core::{
+    self as core,
+    arch::{bus::Controller2, instrs::instr_table::disassemble_instr},
+};
 use std::{fs, path};
 
 #[must_use]
@@ -30,7 +33,7 @@ fn disassemble_rom(mapper: core::MapperBox) {
 fn execute_rom(mapper: core::MapperBox, verbose: bool) {
     let ppu = core::Ppu::new(Box::new(core::NoopRenderer));
     let apu = core::Apu::default();
-    let mem = core::Bus::new(mapper, ppu, apu);
+    let mem = core::Bus::new(mapper, ppu, apu, Controller2::nes_controller());
     let mut cpu = core::Cpu::new();
     todo!()
 }

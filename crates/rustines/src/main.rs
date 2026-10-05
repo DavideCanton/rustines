@@ -12,13 +12,13 @@ use crate::{
 use clap::Parser;
 use log::info;
 use pixels::{Pixels, ScalingMode, SurfaceTexture};
-use rustines_core as core;
+use rustines_core::{self as core, arch::bus::Controller2};
 use rustines_gui_utils::{FpsCounter, FpsLimiter};
 use std::{collections::HashMap, path, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::{StartCause, WindowEvent},
+    event::{ElementState, MouseButton, StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::KeyCode,
     window::{Window, WindowAttributes},
@@ -48,6 +48,8 @@ struct AppState {
 
     main_window: Arc<Window>,
     main_window_helper: WinitInputHelper,
+    cursor_position: Option<(f64, f64)>,
+    zapper_trigger_pressed: bool,
 
     pause: bool,
 }
@@ -56,14 +58,16 @@ struct App {
     app_state: Option<AppState>,
     mapper: Option<core::MapperBox>,
     trace_boot: bool,
+    zapper: bool,
 }
 
 impl App {
-    fn new(mapper: core::MapperBox, trace_boot: bool) -> Self {
+    fn new(mapper: core::MapperBox, trace_boot: bool, zapper: bool) -> Self {
         App {
             app_state: None,
             mapper: Some(mapper),
             trace_boot,
+            zapper,
         }
     }
 
@@ -71,7 +75,13 @@ impl App {
         let ppu = core::Ppu::new(Box::new(renderer));
         let apu = core::Apu::default();
 
-        let mut bus = core::Bus::new(self.mapper.take().unwrap(), ppu, apu);
+        let ctrl2 = if self.zapper {
+            Controller2::zapper()
+        } else {
+            Controller2::nes_controller()
+        };
+
+        let mut bus = core::Bus::new(self.mapper.take().unwrap(), ppu, apu, ctrl2);
         let mut cpu = core::Cpu::new();
 
         if self.trace_boot {
@@ -92,6 +102,8 @@ impl App {
             main_window,
             pause: false,
             main_window_helper: WinitInputHelper::new(),
+            cursor_position: None,
+            zapper_trigger_pressed: false,
         }
     }
 }
@@ -130,6 +142,26 @@ impl ApplicationHandler for App {
     ) {
         if let Some(app_state) = self.app_state.as_mut() {
             if window_id == app_state.main_window.id() {
+                match &event {
+                    WindowEvent::CursorMoved { position, .. } => {
+                        app_state.cursor_position = Some((position.x, position.y));
+                        update_zapper_input(app_state);
+                    }
+                    WindowEvent::CursorLeft { .. } => {
+                        app_state.cursor_position = None;
+                        update_zapper_input(app_state);
+                    }
+                    WindowEvent::MouseInput {
+                        state,
+                        button: MouseButton::Left,
+                        ..
+                    } => {
+                        app_state.zapper_trigger_pressed = *state == ElementState::Pressed;
+                        update_zapper_input(app_state);
+                    }
+                    _ => {}
+                }
+
                 if app_state.main_window_helper.process_window_event(&event) {
                     // Draw the current frame
                     app_state.bus.ppu_mut().renderer().draw();
@@ -146,7 +178,7 @@ impl ApplicationHandler for App {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         if let Some(app_state) = self.app_state.as_mut() {
             update_logic(app_state, event_loop);
         }
@@ -166,7 +198,7 @@ pub fn main() {
 
     let event_loop = EventLoop::new().unwrap();
 
-    let mut app = App::new(mapper, args.trace_boot);
+    let mut app = App::new(mapper, args.trace_boot, args.zapper);
 
     let _ = event_loop.run_app(&mut app);
 }
@@ -187,7 +219,9 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         let bus = &mut app_state.bus;
 
         handle_inputs(input, bus.controller1_mut(), &app_state.key_map1);
-        handle_inputs(input, bus.controller2_mut(), &app_state.key_map2);
+        if let Some(ctrl2) = bus.controller2_mut() {
+            handle_inputs(input, ctrl2, &app_state.key_map2);
+        }
 
         if !app_state.pause {
             while !bus.ppu().frame_ready() {
@@ -201,6 +235,22 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 
     app_state.pattern_window.update();
+}
+
+fn update_zapper_input(app_state: &mut AppState) {
+    let size = app_state.main_window.inner_size();
+    let position = app_state.cursor_position.and_then(|(x, y)| {
+        (size.width > 0 && size.height > 0).then(|| {
+            (
+                (x * f64::from(INNER_W) / f64::from(size.width)) as usize,
+                (y * f64::from(INNER_H) / f64::from(size.height)) as usize,
+            )
+        })
+    });
+
+    app_state
+        .bus
+        .set_zapper_input(position, app_state.zapper_trigger_pressed);
 }
 
 fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
