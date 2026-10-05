@@ -48,8 +48,10 @@ struct AppState {
 
     main_window: Arc<Window>,
     main_window_helper: WinitInputHelper,
+
     cursor_position: Option<(f64, f64)>,
     zapper_trigger_pressed: bool,
+    zapper_needs_update: bool,
 
     pause: bool,
 }
@@ -104,6 +106,7 @@ impl App {
             main_window_helper: WinitInputHelper::new(),
             cursor_position: None,
             zapper_trigger_pressed: false,
+            zapper_needs_update: false,
         }
     }
 }
@@ -142,24 +145,26 @@ impl ApplicationHandler for App {
     ) {
         if let Some(app_state) = self.app_state.as_mut() {
             if window_id == app_state.main_window.id() {
-                match &event {
-                    WindowEvent::CursorMoved { position, .. } => {
-                        app_state.cursor_position = Some((position.x, position.y));
-                        update_zapper_input(app_state);
+                if app_state.bus.zapper_mut().is_some() {
+                    match &event {
+                        WindowEvent::CursorMoved { position, .. } => {
+                            app_state.cursor_position = Some((position.x, position.y));
+                            app_state.zapper_needs_update = true;
+                        }
+                        WindowEvent::CursorLeft { .. } => {
+                            app_state.cursor_position = None;
+                            app_state.zapper_needs_update = true;
+                        }
+                        WindowEvent::MouseInput {
+                            state,
+                            button: MouseButton::Left,
+                            ..
+                        } => {
+                            app_state.zapper_trigger_pressed = *state == ElementState::Pressed;
+                            app_state.zapper_needs_update = true;
+                        }
+                        _ => {}
                     }
-                    WindowEvent::CursorLeft { .. } => {
-                        app_state.cursor_position = None;
-                        update_zapper_input(app_state);
-                    }
-                    WindowEvent::MouseInput {
-                        state,
-                        button: MouseButton::Left,
-                        ..
-                    } => {
-                        app_state.zapper_trigger_pressed = *state == ElementState::Pressed;
-                        update_zapper_input(app_state);
-                    }
-                    _ => {}
                 }
 
                 if app_state.main_window_helper.process_window_event(&event) {
@@ -216,18 +221,20 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         // reborrow
         let input = &app_state.main_window_helper;
 
-        let bus = &mut app_state.bus;
-
-        handle_inputs(input, bus.controller1_mut(), &app_state.key_map1);
-        if let Some(ctrl2) = bus.controller2_mut() {
+        handle_inputs(input, app_state.bus.controller1_mut(), &app_state.key_map1);
+        if let Some(ctrl2) = app_state.bus.controller2_mut() {
             handle_inputs(input, ctrl2, &app_state.key_map2);
         }
 
+        if app_state.bus.zapper_mut().is_some() && app_state.zapper_needs_update {
+            update_zapper_input(app_state);
+        }
+
         if !app_state.pause {
-            while !bus.ppu().frame_ready() {
-                app_state.cpu.tick(bus);
+            while !app_state.bus.ppu().frame_ready() {
+                app_state.cpu.tick(&mut app_state.bus);
             }
-            bus.ppu_mut().clear_frame_ready();
+            app_state.bus.ppu_mut().clear_frame_ready();
             app_state.limiter.update();
         }
 

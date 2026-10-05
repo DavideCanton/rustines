@@ -121,7 +121,7 @@ impl Bus {
     }
 
     pub fn set_zapper_input(&mut self, position: Option<(usize, usize)>, trigger_pressed: bool) {
-        if let Controller2::Zapper(zapper) = &mut self.controller2 {
+        if let Some(zapper) = self.zapper_mut() {
             zapper.set_input(position, trigger_pressed);
             self.ppu.set_zapper_position(position);
         }
