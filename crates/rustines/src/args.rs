@@ -1,22 +1,37 @@
+use std::{collections::HashSet, str::FromStr};
+
 use clap::Parser;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, clap::ValueEnum)]
-pub enum TraceLevel {
-    #[value(name = "1")]
-    TraceCpu = 1,
-    #[value(name = "2")]
-    TraceCpuBus = 2,
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum TraceTargets {
+    Cpu,
+    Bus,
+    Ppu,
 }
 
-impl TraceLevel {
-    pub fn trace_cpu(&self) -> bool {
-        true
-    }
+impl FromStr for TraceTargets {
+    type Err = String;
 
-    pub fn trace_bus(&self) -> bool {
-        use TraceLevel::*;
-        matches!(self, TraceCpuBus)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use TraceTargets::*;
+        match &*s.to_lowercase() {
+            "c" => Ok(Cpu),
+            "b" => Ok(Bus),
+            "p" => Ok(Ppu),
+            _ => Err(format!("Invalid value {}", s)),
+        }
     }
+}
+
+fn parse_trace_targets(value: &str) -> Result<HashSet<TraceTargets>, String> {
+    let mut targets = HashSet::new();
+    if value.is_empty() {
+        return Ok(targets);
+    }
+    for target in value.split(',') {
+        targets.insert(target.trim().parse()?);
+    }
+    Ok(targets)
 }
 
 #[derive(Parser, Debug)]
@@ -41,16 +56,20 @@ pub struct RustinesArgs {
     #[clap(
         short = 't',
         long = "trace_level",
-        help = "Trace level (1=CPU, 2=CPU+BUS)"
+        help = "Trace level c=CPU, b=BUS, p=PPU",
+        value_parser = parse_trace_targets,
+        default_value = ""
     )]
-    pub trace_level: Option<TraceLevel>,
+    pub trace_level: HashSet<TraceTargets>,
     #[clap(short = 'b', long = "trace_boot", help = "Trace boot")]
     pub trace_boot: bool,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::args::TraceLevel;
+    use std::collections::HashSet;
+
+    use crate::args::TraceTargets;
 
     use super::RustinesArgs;
     use clap::Parser;
@@ -60,7 +79,7 @@ mod tests {
         let args = RustinesArgs::try_parse_from(["rustines", "game.nes"]).unwrap();
         assert_eq!(args.log_file, None);
         assert!(!args.trace_boot);
-        assert!(args.trace_level.is_none());
+        assert!(args.trace_level.is_empty());
     }
 
     #[test]
@@ -77,17 +96,35 @@ mod tests {
 
     #[test]
     fn trace_options() {
-        let args = RustinesArgs::try_parse_from(["rustines", "-t", "2", "-b", "game.nes"]).unwrap();
+        let args =
+            RustinesArgs::try_parse_from(["rustines", "-t", "c, b", "-b", "game.nes"]).unwrap();
         assert!(args.trace_boot);
-        assert_eq!(args.trace_level, Some(TraceLevel::TraceCpuBus));
+        assert_eq!(
+            args.trace_level,
+            HashSet::from_iter([TraceTargets::Bus, TraceTargets::Cpu])
+        );
 
-        let args = RustinesArgs::try_parse_from(["rustines", "-t", "1", "game.nes"]).unwrap();
-        assert_eq!(args.trace_level, Some(TraceLevel::TraceCpu));
+        let args = RustinesArgs::try_parse_from(["rustines", "-t", "c,b,p", "game.nes"]).unwrap();
+        assert_eq!(
+            args.trace_level,
+            HashSet::from_iter([TraceTargets::Bus, TraceTargets::Cpu, TraceTargets::Ppu])
+        );
+        assert_eq!(
+            RustinesArgs::try_parse_from(["rustines", "-t", "c,c", "game.nes"])
+                .unwrap()
+                .trace_level,
+            HashSet::from_iter([TraceTargets::Cpu])
+        );
     }
 
     #[test]
     fn trace_invalid() {
-        let args = RustinesArgs::try_parse_from(["rustines", "-t", "3", "game.nes"]);
-        assert!(args.is_err());
+        use clap::error::ErrorKind;
+
+        for value in ["3", "x", "c,x"] {
+            let error =
+                RustinesArgs::try_parse_from(["rustines", "-t", value, "game.nes"]).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::ValueValidation);
+        }
     }
 }
