@@ -37,6 +37,22 @@ pub struct Sprite {
     x: u8,
 }
 
+impl Sprite {
+    pub fn pattern_table(&self) -> bool {
+        extract_flag(self.tile, BI::_0)
+    }
+
+    pub fn in_bound_x(&self, x: usize) -> bool {
+        let sprite_x = self.x as usize;
+        (sprite_x..sprite_x + 8).contains(&x)
+    }
+
+    pub fn in_bound_y(&self, y: i16) -> bool {
+        let sprite_y = self.y as i16 + 1;
+        (sprite_y..sprite_y + 8).contains(&y)
+    }
+}
+
 impl From<[u8; 4]> for Sprite {
     fn from(value: [u8; 4]) -> Self {
         bytemuck::cast(value)
