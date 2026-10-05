@@ -4,7 +4,7 @@ use std::io::{self, BufWriter, Write};
 use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::ppu::{Ppu, Sprite, get_color_index};
+use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
@@ -94,10 +94,8 @@ pub fn debug_dump_palette(bus: &Bus) {
 
 pub fn debug_dump_oam(bus: &Bus) {
     println!("=== DUMP OAM ===");
-    // SAFETY: self.oam_data has always a length multiple of 4
-    let oam = unsafe { bus.ppu().oam_data().as_chunks_unchecked::<4>() };
-    for (i, chunk) in oam.iter().enumerate() {
-        let sprite: Sprite = (*chunk).into();
+    let sprites: &[OamSprite; 64] = bytemuck::cast_ref(bus.ppu().oam_data());
+    for (i, sprite) in sprites.iter().enumerate() {
         println!("Sprite {} = {:?}", i, sprite);
     }
     println!("\n===============\n");
