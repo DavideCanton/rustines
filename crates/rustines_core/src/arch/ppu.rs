@@ -608,7 +608,7 @@ impl Ppu {
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
-                    // if bit 0 of mask is 0, greyscale mode is enabled, mask the lower bits
+                    // if bit 0 of mask is 1, greyscale mode is enabled, mask the lower bits
                     if self.mask.grayscale() {
                         data &= 0x30;
                     }
@@ -685,9 +685,9 @@ impl Ppu {
     fn render_pixel(&mut self, mapper: &dyn Mapper) {
         let x_pos = (self.cycle - 1) as usize;
         let y_pos = self.scanline as usize;
-        let valid_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
+        let valid_bg_x = x_pos >= 8 || self.mask.show_background_leftmost();
 
-        let (bg_pixel, bg_palette) = if !self.mask.show_background() || !valid_x {
+        let (bg_pixel, bg_palette) = if !self.mask.show_background() || !valid_bg_x {
             (0, 0)
         } else {
             let bit_mux = 0x8000 >> self.x_reg;
@@ -699,7 +699,9 @@ impl Ppu {
         let mut sprite_behind = false;
         let mut is_sprite_zero = false;
 
-        if self.mask.show_sprites() && valid_x {
+        let valid_sprite_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
+
+        if self.mask.show_sprites() && valid_sprite_x {
             for i in 0..self.sprite_count {
                 let sprite = &self.sprite_data[i];
                 if sprite.in_bounds_x(x_pos) {
