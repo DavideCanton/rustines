@@ -59,7 +59,7 @@ impl Mapper for Mapper0 {
         &self.chr_rom
     }
 
-    fn fetch_prg_rom(&self, addr: u16) -> u8 {
+    fn fetch_cpu(&self, addr: u16) -> u8 {
         let mut addr = addr - 0x8000;
 
         if self.banks == 1 {
@@ -69,7 +69,7 @@ impl Mapper for Mapper0 {
         self.prg_rom[addr as usize]
     }
 
-    fn fetch_chr_rom(&self, addr: u16) -> u8 {
+    fn fetch_ppu(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
             if let Some(chr_ram) = self.chr_ram {
                 chr_ram[addr as usize]
@@ -81,7 +81,7 @@ impl Mapper for Mapper0 {
         }
     }
 
-    fn store_chr_rom(&mut self, addr: u16, val: u8) {
+    fn store_ppu(&mut self, addr: u16, val: u8) {
         if addr <= 0x1FFF
             && let Some(chr_ram) = self.chr_ram.as_mut()
         {
@@ -89,13 +89,7 @@ impl Mapper for Mapper0 {
         }
     }
 
-    fn fetch_prg_ram(&self, _addr: u16) -> u8 {
-        0
-    }
-
-    fn store_prg_ram(&mut self, _addr: u16, _val: u8) {}
-
-    fn store_prg_rom(&mut self, _addr: u16, _val: u8) {}
+    fn store_cpu(&mut self, _addr: u16, _val: u8) {}
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type

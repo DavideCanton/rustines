@@ -3,7 +3,7 @@ use bytemuck::Zeroable;
 use crate::arch::apu::Apu;
 use crate::arch::bus::{Bus, Controller2};
 use crate::arch::cpu::Cpu;
-use crate::arch::mappers::mapper_0::Mapper0;
+use crate::arch::mappers::Mapper0;
 use crate::arch::ppu::Ppu;
 use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, INesHeader, PRG_ROM_BANK_SIZE};
 use crate::renderer::NoopRenderer;

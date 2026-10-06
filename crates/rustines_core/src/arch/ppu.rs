@@ -515,7 +515,7 @@ impl Ppu {
         }
     }
 
-    pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &dyn Mapper) {
+    pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &mut dyn Mapper) {
         if self.tracing_enabled {
             trace!("PPU CPU WRITE {reg_index:04X} {value:04X}");
         }
@@ -639,7 +639,7 @@ impl Ppu {
         addr &= 0x3FFF;
 
         let ret = match addr {
-            0x0000..=0x1FFF => mapper.fetch_chr_rom(addr),
+            0x0000..=0x1FFF => mapper.fetch_ppu(addr),
             0x2000..=0x3EFF => {
                 let idx = mirror_nametable_addr(addr, mapper.mirroring_mode());
                 self.nametables[idx]
@@ -658,7 +658,7 @@ impl Ppu {
         ret
     }
 
-    pub fn vram_write(&mut self, mut addr: u16, value: u8, mapper: &dyn Mapper) {
+    pub fn vram_write(&mut self, mut addr: u16, value: u8, mapper: &mut dyn Mapper) {
         let orig_addr = addr;
         addr &= 0x3FFF;
 
@@ -668,11 +668,7 @@ impl Ppu {
 
         match addr {
             0x0000..=0x1FFF => {
-                // TODO
-                // if mapper.has_chr_ram() {
-                //     chr_memory[address as usize] = data;
-                // } else {
-                // }
+                mapper.store_ppu(addr, value);
             }
             0x2000..=0x3EFF => {
                 let idx = mirror_nametable_addr(addr, mapper.mirroring_mode());
@@ -1016,31 +1012,23 @@ mod tests {
             todo!()
         }
 
-        fn fetch_prg_rom(&self, _addr: u16) -> u8 {
-            todo!()
-        }
-
-        fn store_prg_rom(&mut self, _addr: u16, _val: u8) {
-            todo!()
-        }
-
-        fn fetch_chr_rom(&self, _addr: u16) -> u8 {
-            todo!()
-        }
-
-        fn store_chr_rom(&mut self, _addr: u16, _val: u8) {
-            todo!()
-        }
-
-        fn fetch_prg_ram(&self, _addr: u16) -> u8 {
-            todo!()
-        }
-
-        fn store_prg_ram(&mut self, _addr: u16, _val: u8) {
-            todo!()
-        }
-
         fn mirroring_mode(&self) -> MirroringType {
+            todo!()
+        }
+
+        fn fetch_cpu(&self, _addr: u16) -> u8 {
+            todo!()
+        }
+
+        fn store_cpu(&mut self, _addr: u16, _val: u8) {
+            todo!()
+        }
+
+        fn fetch_ppu(&self, _addr: u16) -> u8 {
+            todo!()
+        }
+
+        fn store_ppu(&mut self, _addr: u16, _val: u8) {
             todo!()
         }
     }
@@ -1055,9 +1043,9 @@ mod tests {
         ppu.x_reg = 0b1111_1111;
         ppu.w_toggle = true;
 
-        let mapper = FakeMapper;
+        let mut mapper = FakeMapper;
 
-        ppu.cpu_write(0, 0, &mapper);
+        ppu.cpu_write(0, 0, &mut mapper);
 
         assert_eq!(ppu.t_reg, 0b0111_0011_1111_1111);
         assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
@@ -1071,28 +1059,28 @@ mod tests {
         assert_eq!(ppu.x_reg, 0b1111_1111);
         assert!(!ppu.w_toggle);
 
-        ppu.cpu_write(5, 0b0111_1101, &mapper);
+        ppu.cpu_write(5, 0b0111_1101, &mut mapper);
 
         assert_eq!(ppu.t_reg, 0b0111_0011_1110_1111);
         assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(ppu.w_toggle);
 
-        ppu.cpu_write(5, 0b0101_1110, &mapper);
+        ppu.cpu_write(5, 0b0101_1110, &mut mapper);
 
         assert_eq!(ppu.t_reg, 0b0110_0001_0110_1111);
         assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(!ppu.w_toggle);
 
-        ppu.cpu_write(6, 0b0011_1101, &mapper);
+        ppu.cpu_write(6, 0b0011_1101, &mut mapper);
 
         assert_eq!(ppu.t_reg, 0b0011_1101_0110_1111);
         assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(ppu.w_toggle);
 
-        ppu.cpu_write(6, 0b11110000, &mapper);
+        ppu.cpu_write(6, 0b11110000, &mut mapper);
 
         assert_eq!(ppu.t_reg, 0b0011_1101_1111_0000);
         assert_eq!(ppu.v_reg, 0b0011_1101_1111_0000);

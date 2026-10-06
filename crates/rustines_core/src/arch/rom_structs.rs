@@ -36,7 +36,7 @@ pub struct INesHeader {
     pub prg_rom_banks: u8,
     pub chr_rom_banks: u8,
     flags: HeaderFlags,
-    pub prg_ram_size: u8,
+    pub prg_ram_banks: u8,
     pub flags_9: u8,
     pub flags_10: u8,
     pub _padding: [u8; 5],
@@ -52,7 +52,7 @@ impl Debug for INesHeader {
             .field("prg_rom_banks", &self.prg_rom_banks)
             .field("chr_rom_banks", &self.chr_rom_banks)
             .field("flags", &self.flags)
-            .field("prg_ram_size", &self.prg_ram_size)
+            .field("prg_ram_banks", &self.prg_ram_banks)
             .field("flags_9", &self.flags_9)
             .field("flags_10", &self.flags_10)
             .field("_padding", &self._padding)
@@ -69,6 +69,7 @@ pub enum MirroringType {
 
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;
 pub const CHR_ROM_BANK_SIZE: usize = 1 << 13;
+pub const PRG_RAM_BANK_SIZE: usize = 1 << 13;
 
 pub const TRAINER_SIZE: usize = 1 << 9;
 
@@ -87,8 +88,16 @@ impl INesHeader {
         (self.chr_rom_banks as usize) * CHR_ROM_BANK_SIZE
     }
 
+    pub fn prg_ram_size(&self) -> usize {
+        (self.prg_ram_banks as usize) * PRG_RAM_BANK_SIZE
+    }
+
     pub fn uses_chr_ram(&self) -> bool {
         self.chr_rom_banks == 0
+    }
+
+    pub fn uses_prg_ram(&self) -> bool {
+        self.prg_ram_banks != 0
     }
 
     pub fn mirroring_type(&self) -> MirroringType {
@@ -150,7 +159,7 @@ mod tests {
         assert_eq!(header.prg_rom_banks, 5);
         assert_eq!(header.chr_rom_banks, 6);
         assert_eq!(header.flags.0, 0x0807);
-        assert_eq!(header.prg_ram_size, 9);
+        assert_eq!(header.prg_ram_banks, 9);
         assert_eq!(header.flags_9, 10);
         assert_eq!(header.flags_10, 11);
         assert_eq!(header._padding, [12, 13, 14, 15, 16]);

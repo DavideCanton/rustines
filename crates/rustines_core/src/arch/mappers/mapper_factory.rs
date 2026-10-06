@@ -1,13 +1,28 @@
-use anyhow::bail;
+use anyhow::{Result as AResult, bail};
 
-use crate::arch::{
-    mappers::{mapper::Mapper, mapper_0::Mapper0},
-    rom_structs::INesHeader,
+use crate::{
+    Mapper, MapperBox,
+    arch::{
+        mappers::{Mapper0, Mapper3},
+        rom_structs::INesHeader,
+    },
 };
 
-pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> anyhow::Result<Box<dyn Mapper>> {
+fn boxed_mapper<M>(
+    ctor: impl FnOnce(&INesHeader, Vec<u8>) -> AResult<M>,
+    header: &INesHeader,
+    buf: Vec<u8>,
+) -> AResult<MapperBox>
+where
+    M: Mapper + 'static,
+{
+    ctor(header, buf).map(|m| Box::new(m) as MapperBox)
+}
+
+pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> AResult<MapperBox> {
     match header.mapping_number() {
-        0 => Mapper0::new(header, buf).map(|m| Box::new(m) as Box<dyn Mapper>),
+        0 => boxed_mapper(Mapper0::new, header, buf),
+        3 => boxed_mapper(Mapper3::new, header, buf),
         _ => bail!("Invalid mapper"),
     }
 }

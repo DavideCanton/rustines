@@ -23,8 +23,8 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
 
                     let tile_offset = (table_index * 0x1000) + (tile_y * 16 * 16) + (tile_x * 16);
                     let addr = (tile_offset + pixel_y) as u16;
-                    let byte_low = mapper.fetch_chr_rom(addr);
-                    let byte_high = mapper.fetch_chr_rom(addr + 8);
+                    let byte_low = mapper.fetch_ppu(addr);
+                    let byte_high = mapper.fetch_ppu(addr + 8);
 
                     for pixel_x in 0..8 {
                         let color: u8 = get_color_index(byte_low, byte_high, pixel_x as u8) * 85;

@@ -158,7 +158,7 @@ impl Bus {
     pub fn peek(&self, address: u16) -> u8 {
         match address {
             0x0000..=0x1FFF => self.nes_ram[(address & 0b0000_0111_1111_1111) as usize],
-            0x8000..=0xFFFF => self.mapper.fetch_prg_rom(address),
+            0x6000..=0xFFFF => self.mapper.fetch_cpu(address),
 
             0x2002 => self.ppu.status_bits_shadow(),
             0x2007 => self.ppu.vram_buffer_shadow(self.mapper.as_ref()),
@@ -209,14 +209,11 @@ impl Bus {
                 update_open_bus = false;
                 self.open_bus_value
             }
-            0x6000..=0x7FFF => {
-                if self.mapper.has_prg_ram() {
-                    self.mapper.fetch_prg_ram(address)
-                } else {
-                    self.open_bus_value
-                }
+            0x6000..=0xFFFF => {
+                self.mapper.fetch_cpu(address)
+                // TODO
+                // self.open_bus_value
             }
-            _ => self.mapper.fetch_prg_rom(address),
         };
         if update_open_bus {
             self.open_bus_value = value;
@@ -252,7 +249,7 @@ impl Bus {
             }
             0x2000..=0x3FFF => {
                 let ind = address & 0b0000_0000_0000_0111;
-                self.ppu.cpu_write(ind as u8, val, self.mapper.as_ref());
+                self.ppu.cpu_write(ind as u8, val, self.mapper.as_mut());
             }
             0x4000..=0x4017 => {
                 if address == 0x4016 {
@@ -279,11 +276,8 @@ impl Bus {
             0x4018..=0x401F => {
                 // do nothing here
             }
-            0x4020..=0x7FFF => {
-                self.mapper.store_prg_ram(address, val);
-            }
-            _ => {
-                self.mapper.store_prg_rom(address, val);
+            0x4020..=0xFFFF => {
+                self.mapper.store_cpu(address, val);
             }
         };
     }

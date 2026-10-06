@@ -4,14 +4,11 @@ pub trait Mapper: Named {
     fn prg_rom(&self) -> &[u8];
     fn chr_rom(&self) -> &[u8];
 
-    fn fetch_prg_rom(&self, addr: u16) -> u8;
-    fn store_prg_rom(&mut self, addr: u16, val: u8);
+    fn fetch_cpu(&self, addr: u16) -> u8;
+    fn store_cpu(&mut self, addr: u16, val: u8);
 
-    fn fetch_chr_rom(&self, addr: u16) -> u8;
-    fn store_chr_rom(&mut self, addr: u16, val: u8);
-
-    fn fetch_prg_ram(&self, addr: u16) -> u8;
-    fn store_prg_ram(&mut self, addr: u16, val: u8);
+    fn fetch_ppu(&self, addr: u16) -> u8;
+    fn store_ppu(&mut self, addr: u16, val: u8);
 
     fn mirroring_mode(&self) -> MirroringType;
     fn has_prg_ram(&self) -> bool {
