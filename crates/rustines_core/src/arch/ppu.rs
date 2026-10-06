@@ -536,7 +536,9 @@ impl Ppu {
                     self.nmi_interrupt = true;
                 }
             }
-            1 => self.mask = PpuMask(value),
+            1 => {
+                self.mask = PpuMask(value);
+            }
             2 => {}
             3 => {
                 self.oam_addr = value;
@@ -608,10 +610,6 @@ impl Ppu {
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
-                    // if bit 0 of mask is 1, greyscale mode is enabled, mask the lower bits
-                    if self.mask.grayscale() {
-                        data &= 0x30;
-                    }
                     // when reading palette data, the upper two bits of the open bus are preserved
                     data = (data & 0x3F) | (self.open_bus_value & 0xC0);
                     self.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
@@ -934,7 +932,12 @@ fn normalize_palette_address(addr: u16) -> usize {
 }
 
 fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
-    let color = NES_PALETTE[(color_id & 0b0011_1111) as usize];
+    let color_id = if mask.grayscale() {
+        color_id & 0b0011_0000
+    } else {
+        color_id & 0b0011_1111
+    };
+    let color = NES_PALETTE[color_id as usize];
     apply_emphasis(color, mask)
 }
 
