@@ -361,10 +361,6 @@ impl Ppu {
         self.zapper_light_timer = self.zapper_light_timer.saturating_sub(1);
         let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
 
-        if self.is_visible_scanline() && self.cycle >= 1 && self.cycle <= 256 {
-            self.render_pixel(mapper);
-        }
-
         if self.scanline >= -1 && self.scanline < 240 {
             if self.scanline == -1 && self.cycle == 1 {
                 self.status.set_vblank_started(false);
@@ -464,6 +460,10 @@ impl Ppu {
             if self.ctrl.vblank_nmi_enable() {
                 self.nmi_interrupt = true;
             }
+        }
+
+        if self.is_visible_scanline() && self.cycle >= 1 && self.cycle <= 256 {
+            self.render_pixel(mapper);
         }
 
         self.increase_cycle();
