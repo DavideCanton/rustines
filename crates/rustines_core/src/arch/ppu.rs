@@ -241,6 +241,7 @@ pub struct Ppu {
 
     sprite_count: usize,
     sprite_data: [SpriteData; 8],
+    clearing_oam: bool,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -285,6 +286,7 @@ impl Ppu {
             bg_data: BackgroundData::default(),
             sprite_data: [SpriteData::default(); 8],
             sprite_count: 0,
+            clearing_oam: false,
 
             oam_addr: 0,
             data_buffer: 0,
@@ -344,16 +346,26 @@ impl Ppu {
         &self.palette_table
     }
 
+    /// Returns true if the current scanline is the prerender one (-1)
+    fn is_prerender_scanline(&self) -> bool {
+        self.scanline == -1
+    }
+
+    /// Returns true if the current scanline is between 0 and 239
     fn is_visible_scanline(&self) -> bool {
         (0..=239).contains(&self.scanline)
     }
 
-    fn max_cycles_for_this_scanline(&self) -> u16 {
-        let offset = if self.scanline == -1 && self.rendering_enabled() && self.is_odd_frame {
-            0
-        } else {
-            1
-        };
+    /// Returns true if the current cycle is between 1 and 256
+    fn is_visible_cycle(&self) -> bool {
+        (1..=256).contains(&self.cycle)
+    }
+
+    fn max_cycles_for_current_scanline(&self) -> u16 {
+        // the prerender scanline skips the last cycle on odd frames
+        let skip_last =
+            self.is_prerender_scanline() && self.rendering_enabled() && self.is_odd_frame;
+        let offset = if skip_last { 0 } else { 1 };
         340 + offset
     }
 
@@ -361,84 +373,60 @@ impl Ppu {
         self.zapper_light_timer = self.zapper_light_timer.saturating_sub(1);
         let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
 
-        if self.scanline >= -1 && self.scanline < 240 {
-            if self.scanline == -1 && self.cycle == 1 {
+        let is_prerender_scanline = self.is_prerender_scanline();
+        let is_visible_scanline = self.is_visible_scanline();
+
+        if is_visible_scanline || is_prerender_scanline {
+            // in the prerender scanline, second cycle, the vblank is cleared along with other
+            // flags
+            if is_prerender_scanline && self.cycle == 1 {
                 self.status.set_vblank_started(false);
                 self.status.set_sprite_zero_hit(false);
                 self.status.set_sprite_overflow(false);
             }
 
             if rendering_enabled {
+                // every cycle, the shifters must be updated so that the next write writes
+                // the correct bit
                 if (self.cycle >= 2 && self.cycle <= 257)
                     || (self.cycle >= 322 && self.cycle <= 337)
                 {
                     self.bg_data.update_shifters();
                 }
 
-                if (self.cycle >= 1 && self.cycle <= 256)
-                    || (self.cycle >= 321 && self.cycle <= 337)
-                {
-                    match self.cycle % 8 {
-                        1 => {
-                            let nt_address = 0x2000 | (self.v_reg & 0x0FFF);
-                            self.bg_data.latch_nt = self.vram_read(nt_address, mapper);
-                        }
-                        3 => {
-                            let at_address = 0x23C0
-                                | (self.v_reg & 0x0C00)
-                                | ((self.v_reg >> 4) & 0x38)
-                                | ((self.v_reg >> 2) & 0x07);
-                            let attribute = self.vram_read(at_address, mapper);
-
-                            let coarse_x = self.v_reg & 0x001F;
-                            let coarse_y = (self.v_reg >> 5) & 0x001F;
-                            let shift = ((coarse_y & 0x02) << 1) | (coarse_x & 0x02);
-                            self.bg_data.latch_at = (attribute >> shift) & 0x03;
-                        }
-                        5 => {
-                            let end_y = (self.v_reg >> 12) & 0x07;
-
-                            let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
-                            let address = (table_select << 12)
-                                | ((self.bg_data.latch_nt as u16) << 4)
-                                | end_y;
-                            self.bg_data.latch_pl = self.vram_read(address, mapper);
-                        }
-                        7 => {
-                            let end_y = (self.v_reg >> 12) & 0x07;
-
-                            let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
-                            let address = (table_select << 12)
-                                | ((self.bg_data.latch_nt as u16) << 4)
-                                | end_y
-                                | 8;
-                            self.bg_data.latch_ph = self.vram_read(address, mapper);
-                        }
-                        0 => {
-                            self.bg_data.load_shifters();
-                            self.increment_vram_address_x();
-                        }
-                        _ => {}
-                    }
+                if self.is_visible_cycle() || (self.cycle >= 321 && self.cycle <= 336) {
+                    self.cycle_load_data(mapper);
                 }
 
+                // cycle 256 in visible and pre render scanlines increments y scroll too
                 if self.cycle == 256 {
                     self.increment_vram_address_y();
                 }
-
+                // cycle 257 in visible and pre render scanlines transfers the x scroll
                 if self.cycle == 257 {
                     self.transfer_scroll_x();
                 }
 
-                if self.scanline == -1 && self.cycle >= 280 && self.cycle <= 304 {
+                // prerender scanline continuously transfers the y scroll between 280 and 304
+                if is_prerender_scanline && self.cycle >= 280 && self.cycle <= 304 {
                     self.transfer_scroll_y();
                 }
 
-                if self.is_visible_scanline() || self.scanline == -1 {
-                    if self.cycle == 257 {
+                if is_visible_scanline || is_prerender_scanline {
+                    if self.cycle == 1 {
+                        self.clearing_oam = true;
+                    }
+                    if self.cycle == 65 {
+                        self.clearing_oam = false;
+                    }
+
+                    // load sprites for next scanlines
+                    // TODO make this progressive instead of instantly doing it at cycle 257
+                    if is_visible_scanline && self.cycle == 257 {
                         self.evaluate_sprites_for_next_scanline();
                     }
 
+                    // sprite evaluation
                     if self.cycle >= 257
                         && self.cycle <= 320
                         && (self.cycle - 257).is_multiple_of(8)
@@ -455,6 +443,7 @@ impl Ppu {
             }
         }
 
+        // VBlank is ALWAYS set at scanline 241, cycle 1
         if self.scanline == 241 && self.cycle == 1 {
             self.status.set_vblank_started(true);
             if self.ctrl.vblank_nmi_enable() {
@@ -462,11 +451,55 @@ impl Ppu {
             }
         }
 
-        if self.is_visible_scanline() && self.cycle >= 1 && self.cycle <= 256 {
+        if is_visible_scanline && self.is_visible_cycle() {
             self.render_pixel(mapper);
         }
 
         self.increase_cycle();
+    }
+
+    fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
+        match self.cycle % 8 {
+            // cycles 1-2: load nametable data
+            2 => {
+                let nt_address = 0x2000 | (self.v_reg & 0x0FFF);
+                self.bg_data.latch_nt = self.vram_read(nt_address, mapper);
+            }
+            // cycles 3-4: load attribute table data
+            4 => {
+                let at_address = 0x23C0
+                    | (self.v_reg & 0x0C00)
+                    | ((self.v_reg >> 4) & 0x38)
+                    | ((self.v_reg >> 2) & 0x07);
+                let attribute = self.vram_read(at_address, mapper);
+
+                let coarse_x = self.v_reg & 0x001F;
+                let coarse_y = (self.v_reg >> 5) & 0x001F;
+                let shift = ((coarse_y & 0x02) << 1) | (coarse_x & 0x02);
+                self.bg_data.latch_at = (attribute >> shift) & 0x03;
+            }
+            // cycles 5-6: load bg low part
+            6 => {
+                let end_y = (self.v_reg >> 12) & 0x07;
+
+                let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
+                let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y;
+                self.bg_data.latch_pl = self.vram_read(address, mapper);
+            }
+            // cycles 7-8: load bg high part, then transfer everything in the shifters
+            // then increment vram x scroll
+            0 => {
+                let end_y = (self.v_reg >> 12) & 0x07;
+
+                let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
+                let address =
+                    (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y | 8;
+                self.bg_data.latch_ph = self.vram_read(address, mapper);
+                self.bg_data.load_shifters();
+                self.increment_vram_address_x();
+            }
+            _ => {}
+        }
     }
 
     fn update_sprite_shifters(&mut self) {
@@ -486,7 +519,8 @@ impl Ppu {
     }
 
     fn increase_cycle(&mut self) {
-        if self.cycle + 1 >= self.max_cycles_for_this_scanline() {
+        self.cycle += 1;
+        if self.cycle >= self.max_cycles_for_current_scanline() {
             self.cycle = 0;
             self.scanline += 1;
 
@@ -497,8 +531,6 @@ impl Ppu {
                 self.is_odd_frame = !self.is_odd_frame;
                 self.handle_open_bus_decay();
             }
-        } else {
-            self.cycle += 1;
         }
     }
 
@@ -602,6 +634,13 @@ impl Ppu {
 
                 self.write_open_bus(data);
                 data
+            }
+            4 => {
+                if self.clearing_oam {
+                    0xFF
+                } else {
+                    self.oam_data[self.oam_addr as usize]
+                }
             }
             7 => {
                 let mut data = self.vram_buffer_shadow(mapper);

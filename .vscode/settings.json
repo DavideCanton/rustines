@@ -3,9 +3,11 @@
         "bitfield",
         "ilen",
         "nametable",
+        "prerender",
         "rustines",
         "scanline",
         "unisystem",
+        "vblank",
         "Zeroable"
     ],
     "[rust]": {
