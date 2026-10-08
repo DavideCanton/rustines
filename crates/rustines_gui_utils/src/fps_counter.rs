@@ -26,7 +26,7 @@ impl FpsCounter {
     /// last non-None timestamp (or the counter creation), else `None`.
     pub fn drawn(&mut self) -> Option<f64> {
         self.frame_count += 1;
-        let now: Instant = Instant::now();
+        let now = Instant::now();
         let elapsed = now.duration_since(self.last_fps_check);
 
         if elapsed >= Duration::from_secs(1) {

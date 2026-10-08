@@ -100,12 +100,16 @@ impl PatternTableWindow {
             {
                 close = true;
             }
-
-            state.window.request_redraw();
         }
 
         if close {
             self.state = None;
+        }
+    }
+
+    pub(crate) fn render(&mut self) {
+        if let Some(state) = self.state.as_mut() {
+            state.window.request_redraw();
         }
     }
 

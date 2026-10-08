@@ -1,6 +1,6 @@
 use std::{
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
@@ -15,7 +15,7 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 
-use rustines_gui_utils::{FpsCounter, FpsLimiter};
+use rustines_gui_utils::FpsCounter;
 
 #[must_use]
 fn init_logger() -> LoggerHandle {
@@ -34,8 +34,9 @@ struct AppState {
     window: Arc<Window>,
     pixels: Pixels<'static>,
     world: World,
-    limiter: FpsLimiter,
     counter: FpsCounter,
+    next_frame: Instant,
+    duration: Duration,
 }
 
 #[derive(Default)]
@@ -44,11 +45,15 @@ struct App {
 }
 
 impl ApplicationHandler for App {
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let now = Instant::now();
         if let Some(state) = self.state.as_mut() {
-            state.world.update();
-            state.limiter.update();
-            state.window.request_redraw();
+            if now >= state.next_frame {
+                state.world.update();
+                state.window.request_redraw();
+                state.next_frame += state.duration;
+            }
+            event_loop.set_control_flow(ControlFlow::WaitUntil(state.next_frame));
         }
     }
 
@@ -75,15 +80,15 @@ impl ApplicationHandler for App {
 
         let world = World::new(1, 1, 20, 3, INNER_WIDTH, INNER_HEIGHT);
 
-        let limiter = FpsLimiter::new(60.0);
         let counter = FpsCounter::new();
 
         let state = AppState {
             counter,
-            limiter,
             pixels,
             window,
             world,
+            duration: Duration::from_secs_f64(1.0 / 60.0),
+            next_frame: Instant::now(),
         };
         self.state = Some(state);
     }
@@ -126,8 +131,6 @@ pub fn main() {
     let _logger = init_logger();
 
     let event_loop = EventLoop::new().unwrap();
-
-    event_loop.set_control_flow(ControlFlow::Poll);
 
     let mut app = App::default();
     let _ = event_loop.run_app(&mut app);
@@ -191,12 +194,12 @@ impl World {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos()
-                & 0b1111_1111_1111_1111_1111_1111) as u32;
+                & 0xFFFFFF) as u32;
             self.color = [
-                ((inst & 0b1111_1111_0000_0000_0000_0000) >> 16) as u8,
-                ((inst & 0b1111_1111_0000_0000) >> 8) as u8,
-                (inst & 0b1111_1111) as u8,
-                255,
+                ((inst & 0xFF0000) >> 16) as u8,
+                ((inst & 0xFF00) >> 8) as u8,
+                (inst & 0xFF) as u8,
+                0xFF,
             ];
         }
 

@@ -13,15 +13,20 @@ use clap::Parser;
 use log::info;
 use pixels::{Pixels, ScalingMode, SurfaceTexture};
 use rustines_core::{self as core, arch::bus::Controller2};
-use rustines_gui_utils::{FpsCounter, FpsLimiter};
-use std::{collections::HashMap, path, sync::Arc};
+use rustines_gui_utils::FpsCounter;
+use std::{
+    collections::HashMap,
+    path,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
     event::{ElementState, MouseButton, StartCause, WindowEvent},
-    event_loop::{ActiveEventLoop, EventLoop},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::KeyCode,
-    window::{Window, WindowAttributes},
+    window::{Window, WindowAttributes, WindowId},
 };
 use winit_input_helper::WinitInputHelper;
 
@@ -30,6 +35,7 @@ const INNER_H: u32 = 240;
 const WIDTH: u32 = 1024;
 const RATIO: f64 = INNER_H as f64 / INNER_W as f64;
 const HEIGHT: u32 = (WIDTH as f64 * RATIO) as u32;
+const TARGET_FPS: f64 = 60.0;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 
@@ -37,7 +43,7 @@ struct AppState {
     bus: core::Bus,
     cpu: core::Cpu,
 
-    limiter: FpsLimiter,
+    // limiter: FpsLimiter,
     counter: FpsCounter,
     log_point: u32,
 
@@ -54,6 +60,8 @@ struct AppState {
     zapper_needs_update: bool,
 
     pause: bool,
+    next_frame_time: Instant,
+    frame_duration: Duration,
 }
 
 struct App {
@@ -98,7 +106,6 @@ impl App {
             cpu,
             key_map1: build_keymap_c1(),
             key_map2: build_keymap_c2(),
-            limiter: FpsLimiter::new(60.0),
             log_point: 1,
             pattern_window: PatternTableWindow::new(),
             main_window,
@@ -107,6 +114,8 @@ impl App {
             cursor_position: None,
             zapper_trigger_pressed: false,
             zapper_needs_update: false,
+            next_frame_time: Instant::now(),
+            frame_duration: Duration::from_secs_f64(1.0 / TARGET_FPS),
         }
     }
 }
@@ -139,8 +148,8 @@ impl ApplicationHandler for App {
 
     fn window_event(
         &mut self,
-        _event_loop: &winit::event_loop::ActiveEventLoop,
-        window_id: winit::window::WindowId,
+        _event_loop: &ActiveEventLoop,
+        window_id: WindowId,
         event: WindowEvent,
     ) {
         if let Some(app_state) = self.app_state.as_mut() {
@@ -185,9 +194,28 @@ impl ApplicationHandler for App {
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         if let Some(app_state) = self.app_state.as_mut() {
-            update_logic(app_state, event_loop);
+            handle_inputs(app_state, event_loop);
+
+            if Instant::now() >= app_state.next_frame_time {
+                update_logic(app_state);
+
+                app_state.next_frame_time += app_state.frame_duration;
+                event_loop.set_control_flow(ControlFlow::WaitUntil(app_state.next_frame_time));
+            }
         }
     }
+}
+
+fn update_logic(app_state: &mut AppState) {
+    if !app_state.pause {
+        while !app_state.bus.ppu().frame_ready() {
+            app_state.cpu.tick(&mut app_state.bus);
+        }
+        app_state.bus.ppu_mut().clear_frame_ready();
+    }
+
+    app_state.main_window.request_redraw();
+    app_state.pattern_window.render();
 }
 
 pub fn main() {
@@ -208,7 +236,7 @@ pub fn main() {
     let _ = event_loop.run_app(&mut app);
 }
 
-fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+fn handle_inputs(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     let input = &mut app_state.main_window_helper;
 
     input.end_step();
@@ -221,24 +249,14 @@ fn update_logic(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         // reborrow
         let input = &app_state.main_window_helper;
 
-        handle_inputs(input, app_state.bus.controller1_mut(), &app_state.key_map1);
+        handle_input_keys(input, app_state.bus.controller1_mut(), &app_state.key_map1);
         if let Some(ctrl2) = app_state.bus.controller2_mut() {
-            handle_inputs(input, ctrl2, &app_state.key_map2);
+            handle_input_keys(input, ctrl2, &app_state.key_map2);
         }
 
         if app_state.bus.zapper_mut().is_some() && app_state.zapper_needs_update {
             update_zapper_input(app_state);
         }
-
-        if !app_state.pause {
-            while !app_state.bus.ppu().frame_ready() {
-                app_state.cpu.tick(&mut app_state.bus);
-            }
-            app_state.bus.ppu_mut().clear_frame_ready();
-            app_state.limiter.update();
-        }
-
-        app_state.main_window.request_redraw();
     }
 
     app_state.pattern_window.update();
@@ -353,7 +371,7 @@ fn build_keymap_c2() -> KeyMap {
     key_map
 }
 
-fn handle_inputs(
+fn handle_input_keys(
     input: &WinitInputHelper,
     ctrl: &mut core::NesController,
     key_map: &HashMap<KeyCode, core::NesKey>,
