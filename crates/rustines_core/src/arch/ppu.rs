@@ -232,6 +232,13 @@ pub struct Ppu {
     pub(crate) open_bus_value: u8,
     open_bus_decay_timer: u8,
 
+    /// ```
+    /// yyy NN YYYYY XXXXX
+    /// ||| || ||||| +++++-- coarse X scroll
+    /// ||| || +++++-------- coarse Y scroll
+    /// ||| ++-------------- nametable select
+    /// +++----------------- fine Y scroll
+    /// ```
     pub(crate) v_reg: u16,
     pub(crate) t_reg: u16,
     pub(crate) x_reg: u8,
@@ -520,6 +527,7 @@ impl Ppu {
 
     fn increase_cycle(&mut self) {
         self.cycle += 1;
+
         if self.cycle >= self.max_cycles_for_current_scanline() {
             self.cycle = 0;
             self.scanline += 1;
@@ -886,37 +894,49 @@ impl Ppu {
     }
 
     fn increment_vram_address_x(&mut self) {
-        if (self.v_reg & 0x1F) == 0x1F {
-            self.v_reg &= !0x1F;
-            self.v_reg ^= 0x0400;
+        let mut v = self.v_reg;
+        if (v & 0x1F) == 0x1F {
+            // in this case, wraps the last 5 bits to 0
+            v &= !0x1F;
+            // switch the horizontal nametable
+            v ^= 0x0400;
         } else {
-            self.v_reg += 1;
+            // increments the x part, that are the last 5 bits
+            v += 1;
         }
+        self.v_reg = v;
     }
 
     fn increment_vram_address_y(&mut self) {
-        let mut end_y = (self.v_reg >> 12) & 0x07;
+        let mut v = self.v_reg;
 
-        if end_y < 7 {
-            end_y += 1;
-
-            self.v_reg = (self.v_reg & 0x0FFF) | (end_y << 12);
+        if (v & 0x7000) != 0x7000 {
+            // if the y part is not maxed, simply increment it
+            v += 0x1000;
         } else {
-            self.v_reg &= 0x0FFF;
+            // in this case, wrap the y bits to 0
+            v &= !0x7000;
 
-            let mut coarse_y = (self.v_reg >> 5) & 0x001F;
+            // compute coarse y
+            let mut y = (v & 0x3E0) >> 5;
 
-            if coarse_y == 29 {
-                coarse_y = 0;
-                self.v_reg ^= 0x0800;
-            } else if coarse_y == 31 {
-                coarse_y = 0;
+            if y == 29 {
+                // clear coarse y
+                y = 0;
+                // switch the vertical nametable
+                v ^= 0x0800;
+            } else if y == 31 {
+                // clear coarse y without switching
+                y = 0;
             } else {
-                coarse_y += 1;
+                // increment coarse y
+                y += 1;
             }
 
-            self.v_reg = (self.v_reg & !0x03E0) | (coarse_y << 5);
+            // put back coarse y
+            v = (v & !0x03E0) | (y << 5);
         }
+        self.v_reg = v;
     }
 
     pub(crate) fn oam_data(&self) -> &[u8; 256] {
