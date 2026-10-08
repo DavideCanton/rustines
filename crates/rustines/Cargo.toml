@@ -5,12 +5,29 @@ authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
 default-run = "rustines"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "rustines_lib"
+
 [dependencies]
-winit = { workspace = true }
+clap = { version = "4.6", features = ["derive"] }
 pixels = { workspace = true }
+winit = { workspace = true }
 winit_input_helper = { workspace = true }
 log = { workspace = true }
-clap = { version = "4.6", features = ["derive"] }
 rustines-core = { path = "../rustines_core" }
 rustines-gui-utils = { path = "../rustines_gui_utils" }
 flexi_logger = { workspace = true }
+pollster = "1.0.1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-time = "1"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "HtmlCanvasElement"
+] }
+console_error_panic_hook = { version = "0.1" }
+console_log = "1.0"

@@ -1,4 +1,5 @@
-use std::{fs::File, io, io::Read};
+use std::io::Cursor;
+use std::{io, io::Read};
 
 use log::info;
 use rustines_macro::Named;
@@ -11,8 +12,9 @@ use crate::utils::named::Named;
 pub struct ZipLoader;
 
 impl Loader for ZipLoader {
-    fn load_rom(&self, f: &mut File) -> io::Result<Vec<u8>> {
-        let mut archive = ZipArchive::new(f)?;
+    fn load_rom(&self, buf: &[u8]) -> io::Result<Vec<u8>> {
+        let cursor = Cursor::new(buf);
+        let mut archive = ZipArchive::new(cursor)?;
 
         let mut rom_file = archive.by_index(0)?;
 
@@ -31,11 +33,7 @@ mod tests {
     use super::ZipLoader;
     use crate::loaders::loader::Loader;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use std::{
-        env::temp_dir,
-        fs::{File, OpenOptions},
-        io::Write,
-    };
+    use std::{env::temp_dir, fs::OpenOptions, io::Write};
     use zip::{ZipWriter, write::SimpleFileOptions};
 
     #[test]
@@ -60,8 +58,7 @@ mod tests {
         zip.finish().unwrap();
 
         let loader = ZipLoader;
-        let mut file = File::open(&zip_path).unwrap();
-        let data = loader.load_rom(&mut file).unwrap();
+        let data = loader.load_rom(&buf).unwrap();
 
         assert_eq!(data.len(), buf.len());
         assert_eq!(data, buf);

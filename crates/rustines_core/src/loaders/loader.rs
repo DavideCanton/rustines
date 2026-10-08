@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use anyhow::bail;
 use arrayref::array_ref;
 use log::{debug, error, info};
@@ -11,7 +9,7 @@ use crate::arch::{
 use crate::utils::named::Named;
 
 pub trait Loader: Named {
-    fn load_rom(&self, file: &mut File) -> std::io::Result<Vec<u8>>;
+    fn load_rom(&self, content: &[u8]) -> std::io::Result<Vec<u8>>;
 
     fn load_header(&self, buf: &[u8; 16]) -> anyhow::Result<INesHeader> {
         let header: INesHeader = buf.into();
@@ -28,9 +26,9 @@ pub trait Loader: Named {
         Ok(header)
     }
 
-    fn load_rom_struct(&self, file: &mut File) -> anyhow::Result<(NesRom, MapperBox)> {
+    fn load_rom_struct(&self, content: &[u8]) -> anyhow::Result<(NesRom, MapperBox)> {
         let mut buf = self
-            .load_rom(file)
+            .load_rom(content)
             .map_err(|e| anyhow::anyhow!(format!("Error during load: {}", e)))?;
 
         let header = self.load_header(array_ref![buf, 0, 16])?;

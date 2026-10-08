@@ -467,6 +467,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "console_log"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86919cef3e37b9356ccf54d4421208c17ecfda01beae61393e7ffd72916c0ef1"
+dependencies = [
+ "log",
+ "web-sys",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1690,7 +1710,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27af78f16789b973b8b340fe3f68cc2ec9f5e6f4aea64e4d794d5833ac9ca52e"
 dependencies = [
  "bytemuck",
- "pollster",
+ "pollster 0.4.0",
  "raw-window-handle",
  "thiserror 2.0.21",
  "ultraviolet",
@@ -1739,6 +1759,12 @@ name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
+
+[[package]]
+name = "pollster"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6355899e1c9462875b6757c79f3caa011a1fdae12bbb1a2e72dd1f234f8336"
 
 [[package]]
 name = "portable-atomic"
@@ -1950,11 +1976,18 @@ name = "rustines"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "console_error_panic_hook",
+ "console_log",
  "flexi_logger",
  "log",
  "pixels",
+ "pollster 1.0.1",
  "rustines-core",
  "rustines-gui-utils",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
  "winit",
  "winit_input_helper",
 ]

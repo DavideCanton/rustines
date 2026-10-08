@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Rustines</title>
+    </head>
+    <body>
+        Rom: <input type="file" id="rom" />
+        <br />
+        <button disabled id="start">Start</button>
+        <p id="status" role="status"></p>
+
+        <script type="module">
+            import init, { start_wasm } from "./assets/rustines_lib.js";
+
+            const romInput = document.getElementById("rom");
+            const btn = document.getElementById("start");
+            const status = document.getElementById("status");
+            let romBytes;
+            let romExtension;
+
+            romInput.addEventListener("change", async () => {
+                const file = romInput.files[0];
+                romBytes = undefined;
+                romExtension = undefined;
+                btn.disabled = true;
+
+                if (!file) {
+                    return;
+                }
+
+                try {
+                    romBytes = new Uint8Array(await file.arrayBuffer());
+                    const extensionSeparator = file.name.lastIndexOf(".");
+                    romExtension = extensionSeparator < 0
+                        ? ""
+                        : file.name.slice(extensionSeparator + 1).toLowerCase();
+                    btn.disabled = false;
+                    status.textContent = `Loaded ${file.name}`;
+                } catch (error) {
+                    status.textContent = `Could not read file: ${error}`;
+                }
+            });
+
+            btn.addEventListener("click", async () => {
+                btn.disabled = true;
+
+                try {
+                    await init();
+                    start_wasm(romBytes, romExtension);
+                } catch (error) {
+                    status.textContent = `Could not start ROM: ${error}`;
+                    btn.disabled = false;
+                }
+            });
+        </script>
+    </body>
+</html>
