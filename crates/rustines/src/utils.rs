@@ -1,8 +1,13 @@
 use crate::args::TraceTargets;
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
-use log::{LevelFilter, Record};
+use log::{LevelFilter, Record, debug};
 use rustines_core::{self as core, arch::mappers::mapper::MapperBox};
-use std::{collections::HashSet, fs, io, path};
+use std::{
+    collections::HashSet,
+    fs,
+    io::{self, Read},
+    path,
+};
 
 #[must_use]
 pub fn init_logger(file: Option<String>, trace: HashSet<TraceTargets>) -> LoggerHandle {
@@ -58,8 +63,13 @@ pub fn read_file(file_path: &path::Path) -> Result<(core::NesRom, MapperBox), St
 
     let loader = core::decode_loader(ext);
 
+    let mut buf: Vec<u8> = vec![];
+    let read = file.read_to_end(&mut buf).map_err(|e| format!("{}", e))?;
+
+    debug!("Read {} bytes", read);
+
     let loaded = loader
-        .load_rom_struct(&mut file)
+        .load_rom_struct(&buf)
         .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
     Ok(loaded)

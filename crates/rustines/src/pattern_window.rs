@@ -51,8 +51,12 @@ impl PatternTableWindow {
         let window_size = window.inner_size();
         let surface_texture =
             SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-        let mut pixels = Pixels::new(pattern_width as u32, pattern_height as u32, surface_texture)
-            .expect("Cannot create pixels buffer");
+        let mut pixels = pollster::block_on(Pixels::new_async(
+            pattern_width as u32,
+            pattern_height as u32,
+            surface_texture,
+        ))
+        .expect("Cannot create pixels buffer");
         pixels.set_scaling_mode(ScalingMode::Fill);
 
         pixels.frame_mut().copy_from_slice(&buf);

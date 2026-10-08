@@ -9,7 +9,7 @@ use rustines_core::{
     self as core,
     arch::{bus::Controller2, instrs::instr_table::disassemble_instr},
 };
-use std::{fs, path};
+use std::{fs, io::Read, path};
 
 #[must_use]
 fn init_logger() -> LoggerHandle {
@@ -50,8 +50,11 @@ fn read_file(
 
     let loader = core::decode_loader(ext);
 
+    let mut buf: Vec<u8> = vec![];
+    file.read_to_end(&mut buf)?;
+
     let (rom, mapper) = loader
-        .load_rom_struct(&mut file)
+        .load_rom_struct(&buf)
         .map_err(|e| RustinesDebugError::FileFormatError(e.to_string()))?;
 
     Ok((rom, mapper))
