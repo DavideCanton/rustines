@@ -81,6 +81,38 @@ pub fn debug_dump_nametables(bus: &Bus) {
     }
 }
 
+pub fn debug_dump_scrolling_state(bus: &Bus) {
+    let ppu = bus.ppu();
+    let mapper = bus.mapper_ref();
+
+    println!(
+        "PPU scroll: scanline={} cycle={} v={:#06X} t={:#06X} fine_x={} mirroring={:?}",
+        ppu.scanline,
+        ppu.cycle,
+        ppu.v_reg,
+        ppu.t_reg,
+        ppu.x_reg,
+        mapper.mirroring_mode()
+    );
+
+    println!("=== V REGISTER AT VISIBLE SCANLINES (start -> after dot 256) ===");
+    for (scanline, start_v, end_v) in &ppu.scroll_trace {
+        println!("{scanline:03}: {start_v:#06X} -> {end_v:#06X}");
+    }
+
+    for (page, base) in [(0, 0x2000u16), (1, 0x2400)] {
+        println!("=== PHYSICAL NAMETABLE PAGE {page} ({base:#06X}) ===");
+        for row in 0..30 {
+            print!("{row:02X} | ");
+            for col in 0..32 {
+                let address = base + (row * 32 + col) as u16;
+                print!("{:02X} ", ppu.vram_read(address, mapper));
+            }
+            println!();
+        }
+    }
+}
+
 pub fn debug_dump_palette(bus: &Bus) {
     println!("=== DUMP PALETTE ===");
     for (i, color) in bus.ppu().palette_table().iter().enumerate() {

@@ -345,6 +345,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
         if input.key_pressed(KeyCode::KeyQ) {
             core::debug_utils::debug_dump_state(bus, cpu);
+            core::debug_utils::debug_dump_scrolling_state(bus);
         }
 
         if input.key_pressed(KeyCode::KeyT) {
