@@ -36,12 +36,6 @@ pub struct OamSprite {
     x: u8,
 }
 
-impl OamSprite {
-    fn sprite_row(&self, next_scanline: i16) -> i16 {
-        next_scanline - (self.y as i16) - 1
-    }
-}
-
 bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuCtrl(u8);
@@ -102,7 +96,6 @@ bitfield! {
 struct SpriteData {
     shifter_pattern_lo: u8,
     shifter_pattern_hi: u8,
-    active_row: u8,
     active_x: u8,
     behind: bool,
     active_palette: u8,
@@ -110,14 +103,13 @@ struct SpriteData {
 }
 
 impl SpriteData {
-    fn from_oam_sprite(oam_sprite: &OamSprite, sprite_row: u8, is_sprite_zero: bool) -> Self {
+    fn from_oam_sprite(oam_sprite: &OamSprite, is_sprite_zero: bool) -> Self {
         let mut data = SpriteData::default();
 
         if is_sprite_zero {
             data.active_is_zero = true;
         }
 
-        data.active_row = sprite_row;
         data.active_x = oam_sprite.x;
 
         let attributes = oam_sprite.attr;
@@ -551,11 +543,13 @@ impl Ppu {
         // if self.n is >= 64, we arrived at the end of the primary oam. No more searching
         if self.sprites_found < 9 && self.current_sprite_index < 64 {
             let oam_addr = self.current_sprite_oam_addr();
-            let cur_sprite_y = self.oam_data[oam_addr];
+            // sprite y is delayed
+            let sprite_y = self.oam_data[oam_addr] as u16 + 1;
             let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
 
-            let sprite_row = self.scanline - cur_sprite_y as i16;
-            if (0..sprite_height).contains(&sprite_row) {
+            let next_scanline = (self.scanline as u16) + 1;
+
+            if (sprite_y..sprite_y + sprite_height).contains(&next_scanline) {
                 if self.sprites_found < 8 {
                     found = true;
                     debug_assert_eq!(self.current_sprite_byte, 0);
@@ -850,13 +844,14 @@ impl Ppu {
     fn render_pixel(&mut self, mapper: &dyn Mapper) {
         let x_pos = (self.cycle - 1) as usize;
         let y_pos = self.scanline as usize;
+
         let valid_bg_x = x_pos >= 8 || self.mask.show_background_leftmost();
 
-        let (bg_pixel, bg_palette) = if !self.mask.show_background() || !valid_bg_x {
-            (0, 0)
-        } else {
+        let (bg_pixel, bg_palette) = if self.mask.show_background() && valid_bg_x {
             let bit_mux = 0x8000 >> self.x_reg;
             self.bg_data.get_pixel_palette(bit_mux)
+        } else {
+            (0, 0)
         };
 
         let mut sprite_pixel = 0;
@@ -932,12 +927,11 @@ impl Ppu {
     }
 
     fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
-        let next_scanline = self.scanline + 1;
+        let next_scanline = (self.scanline as u16) + 1;
         let addr = sprite_idx * 4;
         let oam_sprite: &OamSprite = bytemuck::from_bytes(&self.secondary_oam[addr..addr + 4]);
-        let sprite_row = oam_sprite.sprite_row(next_scanline) as u8;
 
-        let mut sprite = SpriteData::from_oam_sprite(oam_sprite, sprite_row, sprite_idx == 0);
+        let mut sprite = SpriteData::from_oam_sprite(oam_sprite, sprite_idx == 0);
 
         let tile_index = sprite.shifter_pattern_lo;
         let attributes: &SpriteAttr = bytemuck::cast_ref(&sprite.shifter_pattern_hi);
@@ -945,26 +939,24 @@ impl Ppu {
         let flip_vertical = attributes.vertical_flip();
         let flip_horizontal = attributes.horizontal_flip();
 
-        let mut row = sprite.active_row as u16;
+        let mut sprite_row = next_scanline - (oam_sprite.y as u16) - 1;
+        if flip_vertical {
+            sprite_row = !sprite_row & 0xFF;
+        }
 
         let (table_base, actual_tile) = {
             if self.ctrl.sprite_size() {
-                if flip_vertical {
-                    row = 15 - row;
-                }
-
+                debug_assert!((0..=15).contains(&sprite_row));
                 let table_base = ((tile_index & 0x01) as u16) << 12;
                 let mut actual_tile = (tile_index & 0xFE) as u16;
 
-                if row >= 8 {
+                if sprite_row >= 8 {
                     actual_tile += 1;
-                    row -= 8;
+                    sprite_row -= 8;
                 }
                 (table_base, actual_tile)
             } else {
-                if flip_vertical {
-                    row = 7 - row;
-                }
+                debug_assert!((0..=7).contains(&sprite_row));
                 let table_base = if self.ctrl.sprite_pattern_table() {
                     0x1000
                 } else {
@@ -974,7 +966,7 @@ impl Ppu {
                 (table_base, actual_tile)
             }
         };
-        let address = table_base | (actual_tile << 4) | row;
+        let address = table_base | (actual_tile << 4) | sprite_row;
 
         let mut pattern_lo = self.vram_read(address, mapper);
         let mut pattern_hi = self.vram_read(address | 8, mapper);
