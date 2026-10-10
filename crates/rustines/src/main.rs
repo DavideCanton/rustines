@@ -16,7 +16,7 @@ use rustines_core::{self as core, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
 use std::{
     collections::HashMap,
-    path,
+    path::Path,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -53,6 +53,8 @@ impl SpeedupState {
 }
 
 struct AppState {
+    rom_name: String,
+
     bus: core::Bus,
     cpu: core::Cpu,
 
@@ -78,18 +80,23 @@ struct AppState {
     speedup: SpeedupState,
 }
 
+struct AppStateInfo {
+    mapper: core::MapperBox,
+    rom_name: String,
+}
+
 struct App {
     app_state: Option<AppState>,
-    mapper: Option<core::MapperBox>,
+    info: Option<AppStateInfo>,
     trace_boot: bool,
     zapper: bool,
 }
 
 impl App {
-    fn new(mapper: core::MapperBox, trace_boot: bool, zapper: bool) -> Self {
+    fn new(rom_name: String, mapper: core::MapperBox, trace_boot: bool, zapper: bool) -> Self {
         App {
+            info: Some(AppStateInfo { mapper, rom_name }),
             app_state: None,
-            mapper: Some(mapper),
             trace_boot,
             zapper,
         }
@@ -105,7 +112,9 @@ impl App {
             Controller2::nes_controller()
         };
 
-        let mut bus = core::Bus::new(self.mapper.take().unwrap(), ppu, apu, ctrl2);
+        let info = self.info.take().unwrap();
+
+        let mut bus = core::Bus::new(info.mapper, ppu, apu, ctrl2);
         let mut cpu = core::Cpu::new();
 
         if self.trace_boot {
@@ -115,6 +124,7 @@ impl App {
         }
 
         AppState {
+            rom_name: info.rom_name,
             bus,
             render_counter: FpsCounter::new(),
             update_counter: FpsCounter::new(),
@@ -138,6 +148,10 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        if self.app_state.is_some() {
+            return;
+        }
+
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         let main_window = Arc::new(
             event_loop
@@ -202,9 +216,10 @@ impl ApplicationHandler for App {
                     let u_fps =
                         format_fps(app_state.update_counter.current_fps(), "Simulation FPS");
 
-                    app_state
-                        .main_window
-                        .set_title(&format!("Rustines | {r_fps} | {u_fps}"));
+                    app_state.main_window.set_title(&format!(
+                        "Rustines | {} | {r_fps} | {u_fps}",
+                        app_state.rom_name
+                    ));
                 }
             } else if app_state.pattern_window.owns_window_event(window_id) {
                 app_state.pattern_window.window_event(&event);
@@ -239,8 +254,8 @@ impl ApplicationHandler for App {
 
 fn update_logic(app_state: &mut AppState) {
     if !app_state.pause {
-        let frame_cnt = if app_state.speedup.active { 4 } else { 1 };
-        for _ in 0..frame_cnt {
+        let frame_to_run = if app_state.speedup.active { 4 } else { 1 };
+        for _ in 0..frame_to_run {
             app_state.update_counter.update();
             while !app_state.bus.ppu().frame_ready() {
                 app_state.cpu.tick(&mut app_state.bus);
@@ -258,11 +273,9 @@ pub fn main() {
 
     let _logger_handle = init_logger(args.log_file, args.trace_level);
 
-    let file_path = path::PathBuf::from(&args.file_path);
-
     info!("Using input file: {}", args.file_path);
 
-    let (_, mapper) = read_file(&file_path).unwrap();
+    let (_, mapper) = read_file(Path::new(&args.file_path)).unwrap();
 
     info!(
         "Zapper {}",
@@ -271,7 +284,7 @@ pub fn main() {
 
     let event_loop = EventLoop::new().unwrap();
 
-    let mut app = App::new(mapper, args.trace_boot, args.zapper);
+    let mut app = App::new(args.file_path, mapper, args.trace_boot, args.zapper);
 
     let _ = event_loop.run_app(&mut app);
 }
@@ -345,6 +358,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
         if input.key_pressed(KeyCode::KeyQ) {
             core::debug_utils::debug_dump_state(bus, cpu);
+            core::debug_utils::debug_dump_scrolling_state(bus);
         }
 
         if input.key_pressed(KeyCode::KeyT) {

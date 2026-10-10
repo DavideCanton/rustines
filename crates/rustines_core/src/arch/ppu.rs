@@ -42,12 +42,6 @@ impl OamSprite {
     }
 }
 
-impl From<[u8; 4]> for OamSprite {
-    fn from(value: [u8; 4]) -> Self {
-        bytemuck::cast(value)
-    }
-}
-
 bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuCtrl(u8);
@@ -116,20 +110,24 @@ struct SpriteData {
 }
 
 impl SpriteData {
-    fn fill_from(&mut self, oam_sprite: &OamSprite, sprite_row: u8, is_sprite_zero: bool) {
+    fn from_oam_sprite(oam_sprite: &OamSprite, sprite_row: u8, is_sprite_zero: bool) -> Self {
+        let mut data = SpriteData::default();
+
         if is_sprite_zero {
-            self.active_is_zero = true;
+            data.active_is_zero = true;
         }
 
-        self.active_row = sprite_row;
-        self.active_x = oam_sprite.x;
+        data.active_row = sprite_row;
+        data.active_x = oam_sprite.x;
 
         let attributes = oam_sprite.attr;
-        self.active_palette = attributes.palette();
-        self.behind = attributes.behind();
+        data.active_palette = attributes.palette();
+        data.behind = attributes.behind();
 
-        self.shifter_pattern_lo = oam_sprite.tile;
-        self.shifter_pattern_hi = attributes.0;
+        data.shifter_pattern_lo = oam_sprite.tile;
+        data.shifter_pattern_hi = attributes.0;
+
+        data
     }
 
     fn update_shifter(&mut self, x_pos: usize) {
@@ -145,17 +143,17 @@ impl SpriteData {
     }
 
     fn get_pixel(&self) -> u8 {
-        let mut p = 0;
+        let mut pixel = 0;
 
         if extract_flag(self.shifter_pattern_lo, BI::_7) {
-            p |= 0x1;
+            pixel |= 0x1;
         }
 
         if extract_flag(self.shifter_pattern_hi, BI::_7) {
-            p |= 0x2;
+            pixel |= 0x2;
         }
 
-        p
+        pixel
     }
 }
 
@@ -221,6 +219,15 @@ impl BackgroundData {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SpritePhase {
+    Idle,
+    Clearing,
+    Searching,
+    Copying,
+    Fetching,
+}
+
 pub struct Ppu {
     nametables: [u8; 2048],
     palette_table: [u8; 32],
@@ -246,9 +253,15 @@ pub struct Ppu {
 
     bg_data: BackgroundData,
 
-    sprite_count: usize,
-    sprite_data: [SpriteData; 8],
-    clearing_oam: bool,
+    sprite_data: Vec<SpriteData>,
+    secondary_oam: [u8; 32],
+    // named n in nesdev doc
+    current_sprite_index: u8,
+    // named m in nesdev doc
+    current_sprite_byte: u8,
+    secondary_oam_addr: u8,
+    sprites_found: usize,
+    sprite_phase: SpritePhase,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -291,9 +304,13 @@ impl Ppu {
             w_toggle: false,
 
             bg_data: BackgroundData::default(),
-            sprite_data: [SpriteData::default(); 8],
-            sprite_count: 0,
-            clearing_oam: false,
+            current_sprite_byte: 0,
+            current_sprite_index: 0,
+            secondary_oam: [0; 32],
+            secondary_oam_addr: 0,
+            sprite_phase: SpritePhase::Idle,
+            sprites_found: 0,
+            sprite_data: Vec::with_capacity(8),
 
             oam_addr: 0,
             data_buffer: 0,
@@ -388,10 +405,16 @@ impl Ppu {
             self.render_pixel(mapper);
         }
 
+        let cycle = self.cycle;
+
+        if cycle == 257 {
+            self.sprite_data.clear();
+        }
+
         if is_visible_scanline || is_prerender_scanline {
             // in the prerender scanline, second cycle, the vblank is cleared along with other
             // flags
-            if is_prerender_scanline && self.cycle == 1 {
+            if is_prerender_scanline && cycle == 1 {
                 self.status.set_vblank_started(false);
                 self.status.set_sprite_zero_hit(false);
                 self.status.set_sprite_overflow(false);
@@ -400,57 +423,30 @@ impl Ppu {
             if rendering_enabled {
                 // every cycle, the shifters must be updated so that the next write writes
                 // the correct bit
-                if (self.cycle >= 2 && self.cycle <= 257)
-                    || (self.cycle >= 322 && self.cycle <= 337)
-                {
+                if (2..=257).contains(&cycle) || (322..=337).contains(&cycle) {
                     self.bg_data.update_shifters();
                 }
 
-                if self.is_visible_cycle() || (self.cycle >= 321 && self.cycle <= 336) {
+                if self.is_visible_cycle() || (321..=336).contains(&cycle) {
                     self.cycle_load_data(mapper);
                 }
 
                 // cycle 256 in visible and pre render scanlines increments y scroll too
-                if self.cycle == 256 {
+                if cycle == 256 {
                     self.increment_vram_address_y();
                 }
                 // cycle 257 in visible and pre render scanlines transfers the x scroll
-                if self.cycle == 257 {
+                if cycle == 257 {
                     self.transfer_scroll_x();
                 }
 
                 // prerender scanline continuously transfers the y scroll between 280 and 304
-                if is_prerender_scanline && self.cycle >= 280 && self.cycle <= 304 {
+                if is_prerender_scanline && (280..=304).contains(&cycle) {
                     self.transfer_scroll_y();
                 }
 
-                if is_visible_scanline || is_prerender_scanline {
-                    if self.cycle == 1 {
-                        self.clearing_oam = true;
-                    }
-                    if self.cycle == 65 {
-                        self.clearing_oam = false;
-                    }
-
-                    // load sprites for next scanlines
-                    // TODO make this progressive instead of instantly doing it at cycle 257
-                    if is_visible_scanline && self.cycle == 257 {
-                        self.evaluate_sprites_for_next_scanline();
-                    }
-
-                    // sprite evaluation
-                    if self.cycle >= 257
-                        && self.cycle <= 320
-                        && (self.cycle - 257).is_multiple_of(8)
-                    {
-                        let sprite_idx = ((self.cycle - 257) >> 3) as usize;
-                        if sprite_idx < self.sprite_count {
-                            self.fetch_sprite_pattern(sprite_idx, mapper);
-                        } else {
-                            self.sprite_data[sprite_idx].shifter_pattern_lo = 0;
-                            self.sprite_data[sprite_idx].shifter_pattern_hi = 0;
-                        }
-                    }
+                if is_visible_scanline {
+                    self.handle_sprites(mapper);
                 }
             }
         }
@@ -464,6 +460,129 @@ impl Ppu {
         }
 
         self.increase_cycle();
+    }
+
+    fn handle_sprites(&mut self, mapper: &mut dyn Mapper) {
+        use SpritePhase::*;
+
+        let cycle = self.cycle;
+
+        self.sprite_phase = match self.sprite_phase {
+            Idle if cycle == 1 => {
+                // start clearing secondary oam at cycle 1
+                self.secondary_oam_addr = 0;
+                Clearing
+            }
+            Clearing if cycle.is_multiple_of(2) => {
+                // secondary oam initialization, copy 0xFF every even cycle and increase
+                // secondary oam address
+                self.store_secondary_oam(0xFF);
+                Clearing
+            }
+            Clearing if cycle == 65 => {
+                // end clearing phase, start searching
+                self.sprites_found = 0;
+                self.secondary_oam_addr = 0;
+                self.current_sprite_index = 0;
+                self.current_sprite_byte = 0;
+                Searching
+            }
+            Searching if cycle == 257 => {
+                // end search phase, start fetching
+                // NOTE: at cycle 257 also fetch sprite 0
+                self.fetch_sprite(mapper, cycle);
+                Fetching
+            }
+            Searching => {
+                // search for next sprite, if found start copying phase else continue searching
+                if self.search_next_sprite() {
+                    Copying
+                } else {
+                    Searching
+                }
+            }
+            Copying => {
+                debug_assert!(self.sprites_found < 9 && self.current_sprite_index < 64);
+                if self.copy_sprite_byte() {
+                    Copying
+                } else {
+                    // done copying the current sprite, resume to search the next
+                    Searching
+                }
+            }
+            Fetching if (cycle - 257).is_multiple_of(8) => {
+                // fetch a sprite every 8 cycles
+                self.fetch_sprite(mapper, cycle);
+                Fetching
+            }
+            Fetching if cycle == 320 => Idle,
+            phase => phase,
+        };
+    }
+
+    fn store_secondary_oam(&mut self, value: u8) {
+        self.secondary_oam[self.secondary_oam_addr as usize] = value;
+        self.secondary_oam_addr += 1;
+    }
+
+    /// Returns `false` if the sprite copy has ended, otherwise it returns `true`.
+    fn copy_sprite_byte(&mut self) -> bool {
+        let oam_addr = self.current_sprite_oam_addr();
+        // copy from oam to secondary oam
+        self.store_secondary_oam(self.oam_data[oam_addr]);
+        self.current_sprite_byte += 1;
+        if self.current_sprite_byte == 4 {
+            // end copying the current sprite, resume to search the next
+            self.current_sprite_byte = 0;
+            self.current_sprite_index += 1;
+            self.sprites_found += 1;
+            false
+        } else {
+            true
+        }
+    }
+
+    fn search_next_sprite(&mut self) -> bool {
+        let mut found = false;
+
+        // if sprites_found is 9, no need to search for more sprites as more than 8 are not
+        // supported. Don't stop at 8, try searching for the ninth just to set the sprite
+        // overflow flag if found, without actually copying it
+        // if self.n is >= 64, we arrived at the end of the primary oam. No more searching
+        if self.sprites_found < 9 && self.current_sprite_index < 64 {
+            let oam_addr = self.current_sprite_oam_addr();
+            let cur_sprite_y = self.oam_data[oam_addr];
+            let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
+
+            let sprite_row = self.scanline - cur_sprite_y as i16;
+            if (0..sprite_height).contains(&sprite_row) {
+                if self.sprites_found < 8 {
+                    found = true;
+                    debug_assert_eq!(self.current_sprite_byte, 0);
+                    let more = self.copy_sprite_byte();
+                    debug_assert!(more);
+                } else {
+                    self.status.set_sprite_overflow(true);
+                    self.sprites_found += 1;
+                }
+            } else {
+                self.current_sprite_index += 1;
+            }
+        }
+
+        found
+    }
+
+    fn current_sprite_oam_addr(&self) -> usize {
+        (self.current_sprite_index as usize) * 4 + (self.current_sprite_byte as usize)
+    }
+
+    fn fetch_sprite(&mut self, mapper: &mut dyn Mapper, cycle: u16) {
+        // sprite evaluation
+        let sprite_idx = ((cycle - 257) >> 3) as usize;
+        if sprite_idx < self.sprites_found.min(8) {
+            self.fill_sprite_data(sprite_idx, mapper);
+        }
     }
 
     fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
@@ -513,8 +632,8 @@ impl Ppu {
     fn update_sprite_shifters(&mut self) {
         let x_pos = (self.cycle - 1) as usize;
 
-        for i in 0..self.sprite_count {
-            self.sprite_data[i].update_shifter(x_pos);
+        for sprite_data in &mut self.sprite_data {
+            sprite_data.update_shifter(x_pos);
         }
     }
 
@@ -645,7 +764,7 @@ impl Ppu {
                 data
             }
             4 => {
-                if self.clearing_oam {
+                if self.sprite_phase == SpritePhase::Clearing {
                     0xFF
                 } else {
                     self.oam_data[self.oam_addr as usize]
@@ -724,7 +843,7 @@ impl Ppu {
                 let palette_addr = normalize_palette_address(addr);
                 self.palette_table[palette_addr] = value;
             }
-            _ => {}
+            _ => unreachable!(),
         }
     }
 
@@ -748,8 +867,7 @@ impl Ppu {
         let valid_sprite_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
 
         if self.mask.show_sprites() && valid_sprite_x {
-            for i in 0..self.sprite_count {
-                let sprite = &self.sprite_data[i];
+            for sprite in &self.sprite_data {
                 if sprite.in_bounds_x(x_pos) {
                     let pixel = sprite.get_pixel();
 
@@ -813,35 +931,13 @@ impl Ppu {
         self.renderer.render_pixel(x_pos, y_pos, rgb_color);
     }
 
-    fn evaluate_sprites_for_next_scanline(&mut self) {
-        let mut cnt = 0;
-
-        bytemuck::fill_zeroes(&mut self.sprite_data);
-
-        let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
+    fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
         let next_scanline = self.scanline + 1;
+        let addr = sprite_idx * 4;
+        let oam_sprite: &OamSprite = bytemuck::from_bytes(&self.secondary_oam[addr..addr + 4]);
+        let sprite_row = oam_sprite.sprite_row(next_scanline) as u8;
 
-        let oam_sprites: &[OamSprite; 64] = bytemuck::cast_ref(&self.oam_data);
-
-        for oam_sprite in oam_sprites {
-            let sprite_row = oam_sprite.sprite_row(next_scanline);
-
-            if sprite_row >= 0 && sprite_row < sprite_height {
-                if cnt < 8 {
-                    self.sprite_data[cnt].fill_from(oam_sprite, sprite_row as u8, cnt == 0);
-                    cnt += 1;
-                } else {
-                    self.status.set_sprite_overflow(true);
-                    break;
-                }
-            }
-        }
-
-        self.sprite_count = cnt;
-    }
-
-    fn fetch_sprite_pattern(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
-        let sprite = &mut self.sprite_data[sprite_idx];
+        let mut sprite = SpriteData::from_oam_sprite(oam_sprite, sprite_row, sprite_idx == 0);
 
         let tile_index = sprite.shifter_pattern_lo;
         let attributes: &SpriteAttr = bytemuck::cast_ref(&sprite.shifter_pattern_hi);
@@ -888,10 +984,10 @@ impl Ppu {
             pattern_hi = pattern_hi.reverse_bits();
         }
 
-        let sprite = &mut self.sprite_data[sprite_idx];
-
         sprite.shifter_pattern_lo = pattern_lo;
         sprite.shifter_pattern_hi = pattern_hi;
+
+        self.sprite_data.push(sprite);
     }
 
     fn increment_vram_address_x(&mut self) {
@@ -1058,6 +1154,7 @@ const NES_PALETTE: [u32; 64] = [
 
 #[cfg(test)]
 mod tests {
+    use super::PpuMask;
     use crate::{Mapper, MirroringType, NoopRenderer, Ppu, utils::named::Named};
 
     struct FakeMapper;
@@ -1078,7 +1175,7 @@ mod tests {
         }
 
         fn mirroring_mode(&self) -> MirroringType {
-            todo!()
+            MirroringType::Vertical
         }
 
         fn fetch_cpu(&self, _addr: u16) -> u8 {
@@ -1090,7 +1187,7 @@ mod tests {
         }
 
         fn fetch_ppu(&self, _addr: u16) -> u8 {
-            todo!()
+            0
         }
 
         fn store_ppu(&mut self, _addr: u16, _val: u8) {
@@ -1151,5 +1248,55 @@ mod tests {
         assert_eq!(ppu.v_reg, 0b0011_1101_1111_0000);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(!ppu.w_toggle);
+    }
+
+    #[test]
+    fn sprite_evaluation_copies_in_range_sprites_and_skips_empty_slots() {
+        let mut ppu = Ppu::new(Box::new(NoopRenderer));
+        let mut mapper = FakeMapper;
+
+        ppu.mask = PpuMask(0x10);
+        ppu.scanline = 10;
+        ppu.cycle = 65;
+        ppu.oam_data[0] = 1;
+        ppu.oam_data[4..8].copy_from_slice(&[8, 0x2A, 0x80, 0x34]);
+
+        for _ in 65..=256 {
+            ppu.tick(&mut mapper);
+        }
+
+        assert_eq!(ppu.sprites_found, 1);
+        assert_eq!(&ppu.secondary_oam[..4], &[8, 0x2A, 0x80, 0x34]);
+        assert_eq!(ppu.current_sprite_index, 64);
+
+        for _ in 257..=320 {
+            ppu.tick(&mut mapper);
+        }
+
+        assert_eq!(ppu.sprite_data[0].active_x, 0x34);
+        assert!(ppu.sprite_data[0].active_is_zero);
+        assert_eq!(ppu.sprite_data[1].active_x, 0);
+        assert!(!ppu.sprite_data[1].active_is_zero);
+    }
+
+    #[test]
+    fn sprite_evaluation_flags_overflow_on_ninth_sprite() {
+        let mut ppu = Ppu::new(Box::new(NoopRenderer));
+        let mut mapper = FakeMapper;
+
+        ppu.mask = PpuMask(0x10);
+        ppu.scanline = 10;
+        ppu.cycle = 65;
+        for sprite in 0..9 {
+            ppu.oam_data[sprite * 4] = 8;
+        }
+
+        for _ in 65..=256 {
+            ppu.tick(&mut mapper);
+        }
+
+        assert!(ppu.status.sprite_overflow());
+        assert_eq!(ppu.sprites_found, 9);
+        assert_eq!(ppu.secondary_oam_addr, 32);
     }
 }
