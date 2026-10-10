@@ -229,6 +229,11 @@ pub fn main() {
 
     let (_, mapper) = read_file(&file_path).unwrap();
 
+    info!(
+        "Zapper {}",
+        if args.zapper { "enabled" } else { "disabled" }
+    );
+
     let event_loop = EventLoop::new().unwrap();
 
     let mut app = App::new(mapper, args.trace_boot, args.zapper);
