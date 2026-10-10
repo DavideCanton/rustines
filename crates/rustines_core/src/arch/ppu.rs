@@ -232,7 +232,7 @@ pub struct Ppu {
     pub(crate) open_bus_value: u8,
     open_bus_decay_timer: u8,
 
-    /// ```
+    /// ```text
     /// yyy NN YYYYY XXXXX
     /// ||| || ||||| +++++-- coarse X scroll
     /// ||| || +++++-------- coarse Y scroll

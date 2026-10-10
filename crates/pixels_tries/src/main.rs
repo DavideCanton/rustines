@@ -105,9 +105,11 @@ impl ApplicationHandler for App {
                     state.world.draw(state.pixels.frame_mut());
                     state.pixels.render().unwrap();
 
-                    if let Some(fps) = state.counter.drawn() {
-                        state.window.set_title(&format!("Try | FPS: {:.1}", fps));
-                    }
+                    state.counter.update();
+
+                    state
+                        .window
+                        .set_title(&format!("Try | FPS: {:.1}", state.counter.current_fps()));
                 }
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::KeyboardInput {
