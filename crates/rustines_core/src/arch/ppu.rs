@@ -219,6 +219,15 @@ impl BackgroundData {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SpritePhase {
+    Idle,
+    Clearing,
+    Searching,
+    Copying,
+    Fetching,
+}
+
 pub struct Ppu {
     nametables: [u8; 2048],
     palette_table: [u8; 32],
@@ -249,9 +258,8 @@ pub struct Ppu {
     n: u8,
     m: u8,
     secondary_oam_addr: u8,
-    clearing_oam: bool,
-    next_scanline_sprite_count: usize,
-    is_copying: bool,
+    sprites_found: usize,
+    sprite_phase: SpritePhase,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -298,9 +306,8 @@ impl Ppu {
             n: 0,
             secondary_oam: [0; 32],
             secondary_oam_addr: 0,
-            clearing_oam: false,
-            is_copying: false,
-            next_scanline_sprite_count: 0,
+            sprite_phase: SpritePhase::Idle,
+            sprites_found: 0,
             sprite_data: Vec::with_capacity(8),
 
             oam_addr: 0,
@@ -454,70 +461,111 @@ impl Ppu {
     }
 
     fn handle_sprites(&mut self, mapper: &mut dyn Mapper) {
+        use SpritePhase::*;
+
         let cycle = self.cycle;
 
-        if cycle == 1 {
-            self.clearing_oam = true;
-            self.secondary_oam_addr = 0;
-        }
-        if cycle == 65 {
-            self.clearing_oam = false;
-            self.is_copying = false;
-            self.next_scanline_sprite_count = 0;
-            self.secondary_oam_addr = 0;
-            self.n = 0;
-            self.m = 0;
-        }
-
-        // secondary oam initialization
-        if (1..=64).contains(&cycle) && cycle.is_multiple_of(2) {
-            self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
-            self.secondary_oam_addr += 1;
-        }
-
-        if (65..=256).contains(&cycle)
-            && cycle.is_multiple_of(2)
-            && self.next_scanline_sprite_count < 9
-            && self.n < 64
-        {
-            let oam_addr = (self.n as usize) * 4 + (self.m as usize);
-
-            if self.is_copying {
-                self.secondary_oam[self.secondary_oam_addr as usize] = self.oam_data[oam_addr];
+        self.sprite_phase = match self.sprite_phase {
+            Idle if cycle == 1 => {
+                // start clearing secondary oam at cycle 1
+                self.secondary_oam_addr = 0;
+                Clearing
+            }
+            Clearing if cycle.is_multiple_of(2) => {
+                // secondary oam initialization, copy 0xFF every even cycle and increase
+                // secondary oam address
+                self.store_secondary_oam(0xFF);
+                Clearing
+            }
+            Clearing if cycle == 65 => {
+                // end clearing phase, start searching
+                self.sprites_found = 0;
+                self.secondary_oam_addr = 0;
+                self.n = 0;
+                self.m = 0;
+                Searching
+            }
+            Searching if cycle == 257 => {
+                // end search phase, start fetching
+                // NOTE: at cycle 257 also fetch sprite 0
+                self.fetch_sprite(mapper, cycle);
+                Fetching
+            }
+            Searching => {
+                // search for next sprite, if found start copying phase else continue searching
+                if self.search_next_sprite() {
+                    Copying
+                } else {
+                    Searching
+                }
+            }
+            Copying => {
+                debug_assert!(self.sprites_found < 9 && self.n < 64);
+                let oam_addr = (self.n as usize) * 4 + (self.m as usize);
+                // copy from oam to secondary oam
+                self.store_secondary_oam(self.oam_data[oam_addr]);
                 self.m += 1;
-                self.secondary_oam_addr += 1;
                 if self.m == 4 {
+                    // end copying the current sprite, resume to search the next
                     self.m = 0;
                     self.n += 1;
-                    self.is_copying = false;
-                    self.next_scanline_sprite_count += 1;
+                    self.sprites_found += 1;
+                    Searching
+                } else {
+                    Copying
+                }
+            }
+            Fetching if (cycle - 257).is_multiple_of(8) => {
+                // fetch a sprite every 8 cycles
+                self.fetch_sprite(mapper, cycle);
+                Fetching
+            }
+            Fetching if cycle == 320 => Idle,
+            phase => phase,
+        };
+    }
+
+    fn store_secondary_oam(&mut self, value: u8) {
+        self.secondary_oam[self.secondary_oam_addr as usize] = value;
+        self.secondary_oam_addr += 1;
+    }
+
+    fn search_next_sprite(&mut self) -> bool {
+        let mut found = false;
+
+        // if sprites_found is 9, no need to search for more sprites as more than 8 are not
+        // supported. Don't stop at 8, try searching for the ninth just to set the sprite
+        // overflow flag if found, without actually copying it
+        // if self.n is >= 64, we arrived at the end of the primary oam. No more searching
+        if self.sprites_found < 9 && self.n < 64 {
+            let oam_addr = (self.n as usize) * 4 + (self.m as usize);
+            let cur_sprite_y = self.oam_data[oam_addr];
+            let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
+
+            let sprite_row = self.scanline - cur_sprite_y as i16;
+            if (0..sprite_height).contains(&sprite_row) {
+                if self.sprites_found < 8 {
+                    found = true;
+                    self.secondary_oam[self.secondary_oam_addr as usize] = cur_sprite_y;
+                    self.secondary_oam_addr += 1;
+                    self.m = 1;
+                } else {
+                    self.status.set_sprite_overflow(true);
+                    self.sprites_found += 1;
                 }
             } else {
-                let cur_sprite_y = self.oam_data[oam_addr];
-                let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
-                let sprite_row = self.scanline - cur_sprite_y as i16;
-                if (0..sprite_height).contains(&sprite_row) {
-                    if self.next_scanline_sprite_count < 8 {
-                        self.is_copying = true;
-                        self.secondary_oam[self.secondary_oam_addr as usize] = cur_sprite_y;
-                        self.secondary_oam_addr += 1;
-                        self.m = 1;
-                    } else {
-                        self.status.set_sprite_overflow(true);
-                        self.next_scanline_sprite_count += 1;
-                    }
-                } else {
-                    self.n += 1;
-                }
+                self.n += 1;
             }
         }
 
+        found
+    }
+
+    fn fetch_sprite(&mut self, mapper: &mut dyn Mapper, cycle: u16) {
         // sprite evaluation
-        if (257..=320).contains(&cycle) && (cycle - 257).is_multiple_of(8) {
-            let sprite_idx = ((cycle - 257) >> 3) as usize;
-            if sprite_idx < self.next_scanline_sprite_count.min(8) {
-                self.fill_sprite_data(sprite_idx, mapper);
-            }
+        let sprite_idx = ((cycle - 257) >> 3) as usize;
+        if sprite_idx < self.sprites_found.min(8) {
+            self.fill_sprite_data(sprite_idx, mapper);
         }
     }
 
@@ -700,7 +748,7 @@ impl Ppu {
                 data
             }
             4 => {
-                if self.clearing_oam {
+                if self.sprite_phase == SpritePhase::Clearing {
                     0xFF
                 } else {
                     self.oam_data[self.oam_addr as usize]
@@ -779,7 +827,7 @@ impl Ppu {
                 let palette_addr = normalize_palette_address(addr);
                 self.palette_table[palette_addr] = value;
             }
-            _ => {}
+            _ => unreachable!(),
         }
     }
 
@@ -1201,7 +1249,7 @@ mod tests {
             ppu.tick(&mut mapper);
         }
 
-        assert_eq!(ppu.next_scanline_sprite_count, 1);
+        assert_eq!(ppu.sprites_found, 1);
         assert_eq!(&ppu.secondary_oam[..4], &[8, 0x2A, 0x80, 0x34]);
         assert_eq!(ppu.n, 64);
 
@@ -1232,7 +1280,7 @@ mod tests {
         }
 
         assert!(ppu.status.sprite_overflow());
-        assert_eq!(ppu.next_scanline_sprite_count, 9);
+        assert_eq!(ppu.sprites_found, 9);
         assert_eq!(ppu.secondary_oam_addr, 32);
     }
 }
