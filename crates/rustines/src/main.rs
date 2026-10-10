@@ -275,7 +275,8 @@ pub fn main() {
 
     info!("Using input file: {}", args.file_path);
 
-    let (_, mapper) = read_file(Path::new(&args.file_path)).unwrap();
+    let file_path = Path::new(&args.file_path);
+    let (_, mapper) = read_file(file_path).unwrap();
 
     info!(
         "Zapper {}",
@@ -284,7 +285,12 @@ pub fn main() {
 
     let event_loop = EventLoop::new().unwrap();
 
-    let mut app = App::new(args.file_path, mapper, args.trace_boot, args.zapper);
+    let mut app = App::new(
+        file_path.file_name().unwrap().to_str().unwrap().to_string(),
+        mapper,
+        args.trace_boot,
+        args.zapper,
+    );
 
     let _ = event_loop.run_app(&mut app);
 }
