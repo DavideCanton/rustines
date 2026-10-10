@@ -3,6 +3,7 @@
         "bitfield",
         "ilen",
         "nametable",
+        "nesdev",
         "prerender",
         "rustines",
         "scanline",

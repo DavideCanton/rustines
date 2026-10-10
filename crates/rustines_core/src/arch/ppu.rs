@@ -255,8 +255,10 @@ pub struct Ppu {
 
     sprite_data: Vec<SpriteData>,
     secondary_oam: [u8; 32],
-    n: u8,
-    m: u8,
+    // named n in nesdev doc
+    current_sprite_index: u8,
+    // named m in nesdev doc
+    current_sprite_byte: u8,
     secondary_oam_addr: u8,
     sprites_found: usize,
     sprite_phase: SpritePhase,
@@ -302,8 +304,8 @@ impl Ppu {
             w_toggle: false,
 
             bg_data: BackgroundData::default(),
-            m: 0,
-            n: 0,
+            current_sprite_byte: 0,
+            current_sprite_index: 0,
             secondary_oam: [0; 32],
             secondary_oam_addr: 0,
             sprite_phase: SpritePhase::Idle,
@@ -481,8 +483,8 @@ impl Ppu {
                 // end clearing phase, start searching
                 self.sprites_found = 0;
                 self.secondary_oam_addr = 0;
-                self.n = 0;
-                self.m = 0;
+                self.current_sprite_index = 0;
+                self.current_sprite_byte = 0;
                 Searching
             }
             Searching if cycle == 257 => {
@@ -500,19 +502,12 @@ impl Ppu {
                 }
             }
             Copying => {
-                debug_assert!(self.sprites_found < 9 && self.n < 64);
-                let oam_addr = (self.n as usize) * 4 + (self.m as usize);
-                // copy from oam to secondary oam
-                self.store_secondary_oam(self.oam_data[oam_addr]);
-                self.m += 1;
-                if self.m == 4 {
-                    // end copying the current sprite, resume to search the next
-                    self.m = 0;
-                    self.n += 1;
-                    self.sprites_found += 1;
-                    Searching
-                } else {
+                debug_assert!(self.sprites_found < 9 && self.current_sprite_index < 64);
+                if self.copy_sprite_byte() {
                     Copying
+                } else {
+                    // done copying the current sprite, resume to search the next
+                    Searching
                 }
             }
             Fetching if (cycle - 257).is_multiple_of(8) => {
@@ -530,6 +525,23 @@ impl Ppu {
         self.secondary_oam_addr += 1;
     }
 
+    /// Returns `false` if the sprite copy has ended, otherwise it returns `true`.
+    fn copy_sprite_byte(&mut self) -> bool {
+        let oam_addr = self.current_sprite_oam_addr();
+        // copy from oam to secondary oam
+        self.store_secondary_oam(self.oam_data[oam_addr]);
+        self.current_sprite_byte += 1;
+        if self.current_sprite_byte == 4 {
+            // end copying the current sprite, resume to search the next
+            self.current_sprite_byte = 0;
+            self.current_sprite_index += 1;
+            self.sprites_found += 1;
+            false
+        } else {
+            true
+        }
+    }
+
     fn search_next_sprite(&mut self) -> bool {
         let mut found = false;
 
@@ -537,8 +549,8 @@ impl Ppu {
         // supported. Don't stop at 8, try searching for the ninth just to set the sprite
         // overflow flag if found, without actually copying it
         // if self.n is >= 64, we arrived at the end of the primary oam. No more searching
-        if self.sprites_found < 9 && self.n < 64 {
-            let oam_addr = (self.n as usize) * 4 + (self.m as usize);
+        if self.sprites_found < 9 && self.current_sprite_index < 64 {
+            let oam_addr = self.current_sprite_oam_addr();
             let cur_sprite_y = self.oam_data[oam_addr];
             let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
 
@@ -546,19 +558,23 @@ impl Ppu {
             if (0..sprite_height).contains(&sprite_row) {
                 if self.sprites_found < 8 {
                     found = true;
-                    self.secondary_oam[self.secondary_oam_addr as usize] = cur_sprite_y;
-                    self.secondary_oam_addr += 1;
-                    self.m = 1;
+                    debug_assert_eq!(self.current_sprite_byte, 0);
+                    let more = self.copy_sprite_byte();
+                    debug_assert!(more);
                 } else {
                     self.status.set_sprite_overflow(true);
                     self.sprites_found += 1;
                 }
             } else {
-                self.n += 1;
+                self.current_sprite_index += 1;
             }
         }
 
         found
+    }
+
+    fn current_sprite_oam_addr(&self) -> usize {
+        (self.current_sprite_index as usize) * 4 + (self.current_sprite_byte as usize)
     }
 
     fn fetch_sprite(&mut self, mapper: &mut dyn Mapper, cycle: u16) {
@@ -1251,7 +1267,7 @@ mod tests {
 
         assert_eq!(ppu.sprites_found, 1);
         assert_eq!(&ppu.secondary_oam[..4], &[8, 0x2A, 0x80, 0x34]);
-        assert_eq!(ppu.n, 64);
+        assert_eq!(ppu.current_sprite_index, 64);
 
         for _ in 257..=320 {
             ppu.tick(&mut mapper);
