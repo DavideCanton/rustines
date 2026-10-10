@@ -1,4 +1,4 @@
-use clap::{Args as ClapArgs, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 pub struct Context {
     pub subcommand: Commands,
@@ -14,19 +14,10 @@ impl Context {
     }
 }
 
-#[derive(ClapArgs, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[command(author, version, about, long_about = None)]
-pub struct ExArgs {
-    #[arg(short, long, default_value_t = false)]
-    pub(crate) verbose: bool,
-}
-
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     /// Disassemble ROM
     Dis,
-    /// Execute ROM instructions
-    Ex(ExArgs),
 }
 
 #[derive(Parser, Debug)]

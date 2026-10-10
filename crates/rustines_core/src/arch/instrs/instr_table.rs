@@ -334,8 +334,8 @@ pub fn error_fn(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     1
 }
 
-pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
-    let opcode: u8 = prg[current];
+pub fn disassemble_instr(prg: &[u8], pc: usize) -> (String, usize) {
+    let opcode: u8 = prg[pc];
 
     let instr = &INSTR_TABLE[opcode as usize];
     let Instr { fname, ilen, .. } = instr;
@@ -346,18 +346,18 @@ pub fn disassemble_instr(prg: &[u8], current: usize) -> (String, usize) {
     let msg = if is_error {
         format!("{} ({})", fname, hex!(opcode))
     } else {
-        if current + ilen > prg.len() {
+        if pc + ilen > prg.len() {
             let mut buf = vec![0; ilen];
-            let rem = prg.len() - current;
-            buf[..rem].copy_from_slice(&prg[current..]);
+            let rem = prg.len() - pc;
+            buf[..rem].copy_from_slice(&prg[pc..]);
             buf[rem..].copy_from_slice(&prg[..ilen - rem]);
             instr.get_fname_for_print(&buf)
         } else {
-            instr.get_fname_for_print(&prg[current..current + ilen])
+            instr.get_fname_for_print(&prg[pc..pc + ilen])
         }
     };
 
-    (msg, current + ilen)
+    (msg, pc + ilen)
 }
 
 #[cfg(test)]

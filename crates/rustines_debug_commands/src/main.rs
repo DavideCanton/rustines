@@ -5,10 +5,7 @@ use crate::{context::Args, types::RustinesDebugError};
 use clap::Parser;
 use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::{LevelFilter, info};
-use rustines_core::{
-    self as core,
-    arch::{bus::Controller2, instrs::instr_table::disassemble_instr},
-};
+use rustines_core::{self as core, arch::instrs::instr_table::disassemble_instr};
 use std::{fs, path};
 
 #[must_use]
@@ -20,22 +17,13 @@ fn init_logger() -> LoggerHandle {
 
 fn disassemble_rom(mapper: core::MapperBox) {
     let data = mapper.prg_rom();
-    let mut cnt: usize = 0;
+    let mut pc: usize = 0;
 
-    while cnt < data.len() {
-        let (string, cnt_2) = disassemble_instr(data, cnt);
-        cnt = cnt_2;
+    while pc < data.len() {
+        let (string, new_pc) = disassemble_instr(data, pc);
+        pc = new_pc;
         println!("{}", string);
     }
-}
-
-#[allow(unused)]
-fn execute_rom(mapper: core::MapperBox, verbose: bool) {
-    let ppu = core::Ppu::new(Box::new(core::NoopRenderer));
-    let apu = core::Apu::default();
-    let mem = core::Bus::new(mapper, ppu, apu, Controller2::nes_controller());
-    let mut cpu = core::Cpu::new();
-    todo!()
 }
 
 fn read_file(
@@ -66,9 +54,6 @@ fn process_file(
     match &context.subcommand {
         Commands::Dis => {
             disassemble_rom(mapper);
-        }
-        Commands::Ex(args) => {
-            execute_rom(mapper, args.verbose);
         }
     };
     Ok(())
