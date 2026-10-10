@@ -39,12 +39,25 @@ const TARGET_FPS: f64 = 60.0;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 
+#[derive(Default)]
+struct SpeedupState {
+    active: bool,
+    changed: bool,
+}
+
+impl SpeedupState {
+    fn update(&mut self, active: bool) {
+        self.changed = active != self.active;
+        self.active = active;
+    }
+}
+
 struct AppState {
     bus: core::Bus,
     cpu: core::Cpu,
 
-    // limiter: FpsLimiter,
-    counter: FpsCounter,
+    render_counter: FpsCounter,
+    update_counter: FpsCounter,
     log_point: u32,
 
     key_map1: KeyMap,
@@ -62,6 +75,7 @@ struct AppState {
     pause: bool,
     next_frame_time: Instant,
     frame_duration: Duration,
+    speedup: SpeedupState,
 }
 
 struct App {
@@ -102,7 +116,8 @@ impl App {
 
         AppState {
             bus,
-            counter: FpsCounter::new(),
+            render_counter: FpsCounter::new(),
+            update_counter: FpsCounter::new(),
             cpu,
             key_map1: build_keymap_c1(),
             key_map2: build_keymap_c2(),
@@ -116,6 +131,7 @@ impl App {
             zapper_needs_update: false,
             next_frame_time: Instant::now(),
             frame_duration: Duration::from_secs_f64(1.0 / TARGET_FPS),
+            speedup: SpeedupState::default(),
         }
     }
 }
@@ -180,11 +196,15 @@ impl ApplicationHandler for App {
                     // Draw the current frame
                     app_state.bus.ppu_mut().renderer().draw();
 
-                    if let Some(fps) = app_state.counter.drawn() {
-                        app_state
-                            .main_window
-                            .set_title(&format!("Rustines | FPS: {:.1}", fps));
-                    }
+                    app_state.render_counter.update();
+
+                    let r_fps = format_fps(app_state.render_counter.current_fps(), "FPS");
+                    let u_fps =
+                        format_fps(app_state.update_counter.current_fps(), "Simulation FPS");
+
+                    app_state
+                        .main_window
+                        .set_title(&format!("Rustines | {r_fps} | {u_fps}"));
                 }
             } else if app_state.pattern_window.owns_window_event(window_id) {
                 app_state.pattern_window.window_event(&event);
@@ -196,10 +216,21 @@ impl ApplicationHandler for App {
         if let Some(app_state) = self.app_state.as_mut() {
             handle_inputs(app_state, event_loop);
 
-            if Instant::now() >= app_state.next_frame_time {
-                update_logic(app_state);
+            let now = Instant::now();
+            let next_frame = now >= app_state.next_frame_time;
 
-                app_state.next_frame_time += app_state.frame_duration;
+            if app_state.speedup.active || next_frame {
+                update_logic(app_state);
+            }
+            if app_state.speedup.active {
+                event_loop.set_control_flow(ControlFlow::Poll);
+            } else if next_frame {
+                if app_state.speedup.changed {
+                    app_state.next_frame_time = now + app_state.frame_duration;
+                } else {
+                    app_state.next_frame_time += app_state.frame_duration;
+                }
+
                 event_loop.set_control_flow(ControlFlow::WaitUntil(app_state.next_frame_time));
             }
         }
@@ -208,10 +239,14 @@ impl ApplicationHandler for App {
 
 fn update_logic(app_state: &mut AppState) {
     if !app_state.pause {
-        while !app_state.bus.ppu().frame_ready() {
-            app_state.cpu.tick(&mut app_state.bus);
+        let frame_cnt = if app_state.speedup.active { 4 } else { 1 };
+        for _ in 0..frame_cnt {
+            app_state.update_counter.update();
+            while !app_state.bus.ppu().frame_ready() {
+                app_state.cpu.tick(&mut app_state.bus);
+            }
+            app_state.bus.ppu_mut().clear_frame_ready();
         }
-        app_state.bus.ppu_mut().clear_frame_ready();
     }
 
     app_state.main_window.request_redraw();
@@ -288,6 +323,8 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
     let bus = &mut app_state.bus;
     let cpu = &mut app_state.cpu;
+
+    app_state.speedup.update(input.key_held(KeyCode::Backquote));
 
     if input.held_shift() {
         if input.key_pressed(KeyCode::KeyD) {
@@ -389,4 +426,8 @@ fn handle_input_keys(
             ctrl.released(*key_map.get(k).unwrap());
         }
     }
+}
+
+fn format_fps(fps: f64, msg: &str) -> String {
+    format!("{}: {:.1}", msg, fps)
 }

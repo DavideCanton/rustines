@@ -5,10 +5,12 @@ use std::time::{Duration, Instant};
 /// # Usage
 ///
 /// - create a new instance of `FpsCounter` using `FpsCounter::new`
-/// - call the `drawn` method every time the window is drawn. The return value, if not `None`, is the number of frames rendered since the last call.
+/// - call the `update` method every time a frame is completed
+/// - read the current fps value from `current_fps()`.
 pub struct FpsCounter {
     last_fps_check: Instant,
     frame_count: u64,
+    current_fps: f64,
 }
 
 impl FpsCounter {
@@ -17,14 +19,12 @@ impl FpsCounter {
         FpsCounter {
             last_fps_check: Instant::now(),
             frame_count: 0,
+            current_fps: 0.0,
         }
     }
 
-    /// Callback that should be invoked when the window is drawn.
-    ///
-    /// Returns a `f64` containing the current FPS, if at least a second has passed since the
-    /// last non-None timestamp (or the counter creation), else `None`.
-    pub fn drawn(&mut self) -> Option<f64> {
+    /// Function to be invoked when a frame is ended.
+    pub fn update(&mut self) {
         self.frame_count += 1;
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_fps_check);
@@ -33,11 +33,12 @@ impl FpsCounter {
             let current_fps = self.frame_count as f64 / elapsed.as_secs_f64();
             self.frame_count = 0;
             self.last_fps_check = now;
-
-            Some(current_fps)
-        } else {
-            None
+            self.current_fps = current_fps;
         }
+    }
+
+    pub fn current_fps(&self) -> f64 {
+        self.current_fps
     }
 }
 
@@ -76,15 +77,14 @@ mod tests {
     }
 
     #[test]
-    fn test_drawn() {
+    fn test_update() {
         // T
         let mut counter = FpsCounter::new();
 
-        let res = counter.drawn(); // 1
-        assert!(res.is_none());
+        counter.update(); // 1
 
         for _ in 0..3 {
-            counter.drawn();
+            counter.update();
             sleep(Duration::from_millis(100));
         }
 
@@ -94,13 +94,13 @@ mod tests {
         sleep(Duration::from_secs(1));
 
         // T = 1300ms
-        let res = counter.drawn().unwrap();
+        counter.update();
 
         // count = 5
 
         // fps ~= 5 / 1.3
         let exp = 5.0 / 1.3;
-        let diff = (res - exp).abs();
+        let diff = (counter.current_fps() - exp).abs();
         assert!(diff < 0.1, "diff {} above the threshold", diff);
     }
 }
