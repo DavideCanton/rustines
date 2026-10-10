@@ -10,9 +10,10 @@ use bytemuck::{Pod, Zeroable};
 use log::trace;
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
+const INVALID_SPRITE_DATA: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFF];
 
 bitfield! {
-    #[derive(Clone, Copy, Pod, Zeroable)]
+    #[derive(Clone, Copy, Pod, Zeroable, Default)]
     #[repr(C)]
     struct SpriteAttr(u8);
     impl Debug;
@@ -56,6 +57,12 @@ bitfield! {
     pub nametable_addr, _: 1, 0;
 }
 
+impl PpuCtrl {
+    fn sprite_height(&self) -> u16 {
+        if self.sprite_size() { 16 } else { 8 }
+    }
+}
+
 bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuMask(u8);
@@ -78,6 +85,12 @@ bitfield! {
     pub grayscale, set_grayscale: 0;
 }
 
+impl PpuMask {
+    fn rendering_enabled(&self) -> bool {
+        self.show_background() || self.show_sprites()
+    }
+}
+
 bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuStatus(u8);
@@ -96,57 +109,9 @@ bitfield! {
 struct SpriteData {
     shifter_pattern_lo: u8,
     shifter_pattern_hi: u8,
-    active_x: u8,
-    behind: bool,
-    active_palette: u8,
-    active_is_zero: bool,
-}
-
-impl SpriteData {
-    fn from_oam_sprite(oam_sprite: &OamSprite, is_sprite_zero: bool) -> Self {
-        let mut data = SpriteData::default();
-
-        if is_sprite_zero {
-            data.active_is_zero = true;
-        }
-
-        data.active_x = oam_sprite.x;
-
-        let attributes = oam_sprite.attr;
-        data.active_palette = attributes.palette();
-        data.behind = attributes.behind();
-
-        data.shifter_pattern_lo = oam_sprite.tile;
-        data.shifter_pattern_hi = attributes.0;
-
-        data
-    }
-
-    fn update_shifter(&mut self, x_pos: usize) {
-        if self.in_bounds_x(x_pos) {
-            self.shifter_pattern_lo <<= 1;
-            self.shifter_pattern_hi <<= 1;
-        }
-    }
-
-    fn in_bounds_x(&self, x_pos: usize) -> bool {
-        let sprite_x = self.active_x as usize;
-        x_pos >= sprite_x && x_pos < sprite_x + 8
-    }
-
-    fn get_pixel(&self) -> u8 {
-        let mut pixel = 0;
-
-        if extract_flag(self.shifter_pattern_lo, BI::_7) {
-            pixel |= 0x1;
-        }
-
-        if extract_flag(self.shifter_pattern_hi, BI::_7) {
-            pixel |= 0x2;
-        }
-
-        pixel
-    }
+    x: u8,
+    attributes: SpriteAttr,
+    is_zero: bool,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -211,7 +176,7 @@ impl BackgroundData {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum SpritePhase {
     Idle,
     Clearing,
@@ -245,7 +210,7 @@ pub struct Ppu {
 
     bg_data: BackgroundData,
 
-    sprite_data: Vec<SpriteData>,
+    sprite_data: [SpriteData; 8],
     secondary_oam: [u8; 32],
     // named n in nesdev doc
     current_sprite_index: u8,
@@ -302,7 +267,7 @@ impl Ppu {
             secondary_oam_addr: 0,
             sprite_phase: SpritePhase::Idle,
             sprites_found: 0,
-            sprite_data: Vec::with_capacity(8),
+            sprite_data: [SpriteData::default(); 8],
 
             oam_addr: 0,
             data_buffer: 0,
@@ -380,14 +345,14 @@ impl Ppu {
     fn max_cycles_for_current_scanline(&self) -> u16 {
         // the prerender scanline skips the last cycle on odd frames
         let skip_last =
-            self.is_prerender_scanline() && self.rendering_enabled() && self.is_odd_frame;
+            self.is_prerender_scanline() && self.mask.rendering_enabled() && self.is_odd_frame;
         let offset = if skip_last { 0 } else { 1 };
         340 + offset
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.zapper_light_timer = self.zapper_light_timer.saturating_sub(1);
-        let rendering_enabled = self.mask.show_background() || self.mask.show_sprites();
+        let rendering_enabled = self.mask.rendering_enabled();
 
         let is_prerender_scanline = self.is_prerender_scanline();
         let is_visible_scanline = self.is_visible_scanline();
@@ -398,10 +363,6 @@ impl Ppu {
         }
 
         let cycle = self.cycle;
-
-        if cycle == 257 {
-            self.sprite_data.clear();
-        }
 
         if is_visible_scanline || is_prerender_scanline {
             // in the prerender scanline, second cycle, the vblank is cleared along with other
@@ -482,7 +443,7 @@ impl Ppu {
             Searching if cycle == 257 => {
                 // end search phase, start fetching
                 // NOTE: at cycle 257 also fetch sprite 0
-                self.fetch_sprite(mapper, cycle);
+                self.fill_sprite_data(0, mapper);
                 Fetching
             }
             Searching => {
@@ -502,12 +463,13 @@ impl Ppu {
                     Searching
                 }
             }
-            Fetching if (cycle - 257).is_multiple_of(8) => {
+            Fetching if cycle == 320 => Idle,
+            Fetching if cycle >= 257 && (cycle - 257).is_multiple_of(8) => {
                 // fetch a sprite every 8 cycles
-                self.fetch_sprite(mapper, cycle);
+                let sprite_idx = ((cycle - 257) >> 3) as usize;
+                self.fill_sprite_data(sprite_idx, mapper);
                 Fetching
             }
-            Fetching if cycle == 320 => Idle,
             phase => phase,
         };
     }
@@ -544,12 +506,13 @@ impl Ppu {
         if self.sprites_found < 9 && self.current_sprite_index < 64 {
             let oam_addr = self.current_sprite_oam_addr();
             // sprite y is delayed
-            let sprite_y = self.oam_data[oam_addr] as u16 + 1;
-            let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
+            let sprite_y = self.oam_data[oam_addr] as i16;
+            let sprite_height = self.ctrl.sprite_height() as i16;
 
-            let next_scanline = (self.scanline as u16) + 1;
+            debug_assert!(self.is_visible_scanline());
+            let sprite_row = self.scanline - sprite_y;
 
-            if (sprite_y..sprite_y + sprite_height).contains(&next_scanline) {
+            if sprite_row >= 0 && sprite_row < sprite_height {
                 if self.sprites_found < 8 {
                     found = true;
                     debug_assert_eq!(self.current_sprite_byte, 0);
@@ -569,14 +532,6 @@ impl Ppu {
 
     fn current_sprite_oam_addr(&self) -> usize {
         (self.current_sprite_index as usize) * 4 + (self.current_sprite_byte as usize)
-    }
-
-    fn fetch_sprite(&mut self, mapper: &mut dyn Mapper, cycle: u16) {
-        // sprite evaluation
-        let sprite_idx = ((cycle - 257) >> 3) as usize;
-        if sprite_idx < self.sprites_found.min(8) {
-            self.fill_sprite_data(sprite_idx, mapper);
-        }
     }
 
     fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
@@ -623,14 +578,6 @@ impl Ppu {
         }
     }
 
-    fn update_sprite_shifters(&mut self) {
-        let x_pos = (self.cycle - 1) as usize;
-
-        for sprite_data in &mut self.sprite_data {
-            sprite_data.update_shifter(x_pos);
-        }
-    }
-
     fn transfer_scroll_x(&mut self) {
         self.v_reg = (self.v_reg & 0x7BE0) | (self.t_reg & 0x041F);
     }
@@ -654,10 +601,6 @@ impl Ppu {
                 self.handle_open_bus_decay();
             }
         }
-    }
-
-    fn rendering_enabled(&self) -> bool {
-        self.mask.show_background() || self.mask.show_sprites()
     }
 
     fn handle_open_bus_decay(&mut self) {
@@ -854,30 +797,38 @@ impl Ppu {
             (0, 0)
         };
 
+        let valid_sprite_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
+
         let mut sprite_pixel = 0;
         let mut sprite_palette = 0;
         let mut sprite_behind = false;
         let mut is_sprite_zero = false;
 
-        let valid_sprite_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
-
         if self.mask.show_sprites() && valid_sprite_x {
-            for sprite in &self.sprite_data {
-                if sprite.in_bounds_x(x_pos) {
-                    let pixel = sprite.get_pixel();
+            for sprite in &mut self.sprite_data {
+                if sprite.x > 0 {
+                    sprite.x -= 1;
+                } else {
+                    let mut pixel = 0;
 
-                    if pixel != 0 {
+                    if extract_flag(sprite.shifter_pattern_lo, BI::_7) {
+                        pixel |= 0x1;
+                    }
+                    if extract_flag(sprite.shifter_pattern_hi, BI::_7) {
+                        pixel |= 0x2;
+                    }
+                    sprite.shifter_pattern_lo <<= 1;
+                    sprite.shifter_pattern_hi <<= 1;
+
+                    if sprite_pixel == 0 && pixel != 0 {
                         sprite_pixel = pixel;
-                        sprite_palette = sprite.active_palette | 0x04;
-                        sprite_behind = sprite.behind;
-                        is_sprite_zero = sprite.active_is_zero;
-                        break;
+                        sprite_palette = sprite.attributes.palette() | 0x4;
+                        sprite_behind = sprite.attributes.behind();
+                        is_sprite_zero = sprite.is_zero;
                     }
                 }
             }
         }
-
-        self.update_sprite_shifters();
 
         let (palette, pixel) = {
             if bg_pixel == 0 && sprite_pixel == 0 {
@@ -888,8 +839,6 @@ impl Ppu {
                 (bg_palette, bg_pixel)
             } else {
                 if is_sprite_zero {
-                    let rendering_enabled = self.mask.show_background() && self.mask.show_sprites();
-
                     let mut clip_left = false;
                     if !self.mask.show_background_leftmost() || !self.mask.show_sprites_leftmost() {
                         clip_left = x_pos < 8;
@@ -897,7 +846,7 @@ impl Ppu {
 
                     let valid_cycle = self.cycle >= 1 && self.cycle <= 254;
 
-                    if rendering_enabled && !clip_left && valid_cycle {
+                    if self.mask.rendering_enabled() && !clip_left && valid_cycle {
                         self.status.set_sprite_zero_hit(true);
                     }
                 }
@@ -927,26 +876,32 @@ impl Ppu {
     }
 
     fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
-        let next_scanline = (self.scanline as u16) + 1;
         let addr = sprite_idx * 4;
-        let oam_sprite: &OamSprite = bytemuck::from_bytes(&self.secondary_oam[addr..addr + 4]);
+        let sprite_data = &self.secondary_oam[addr..addr + 4];
 
-        let mut sprite = SpriteData::from_oam_sprite(oam_sprite, sprite_idx == 0);
+        let scanline = if sprite_data == INVALID_SPRITE_DATA {
+            0xFF
+        } else {
+            self.scanline
+        };
 
-        let tile_index = sprite.shifter_pattern_lo;
-        let attributes: &SpriteAttr = bytemuck::cast_ref(&sprite.shifter_pattern_hi);
+        let oam_sprite: &OamSprite = bytemuck::from_bytes(sprite_data);
+
+        let tile_index = oam_sprite.tile;
+        let attributes = oam_sprite.attr;
 
         let flip_vertical = attributes.vertical_flip();
         let flip_horizontal = attributes.horizontal_flip();
 
-        let mut sprite_row = next_scanline - (oam_sprite.y as u16) - 1;
+        let mut sprite_row = (scanline - (oam_sprite.y as i16)) as u16;
+        let sprite_height = self.ctrl.sprite_height();
+
         if flip_vertical {
-            sprite_row = !sprite_row & 0xFF;
+            sprite_row = sprite_height - 1 - sprite_row;
         }
 
         let (table_base, actual_tile) = {
             if self.ctrl.sprite_size() {
-                debug_assert!((0..=15).contains(&sprite_row));
                 let table_base = ((tile_index & 0x01) as u16) << 12;
                 let mut actual_tile = (tile_index & 0xFE) as u16;
 
@@ -956,7 +911,6 @@ impl Ppu {
                 }
                 (table_base, actual_tile)
             } else {
-                debug_assert!((0..=7).contains(&sprite_row));
                 let table_base = if self.ctrl.sprite_pattern_table() {
                     0x1000
                 } else {
@@ -966,7 +920,7 @@ impl Ppu {
                 (table_base, actual_tile)
             }
         };
-        let address = table_base | (actual_tile << 4) | sprite_row;
+        let address = table_base | (actual_tile << 4) | (sprite_row & 0x7);
 
         let mut pattern_lo = self.vram_read(address, mapper);
         let mut pattern_hi = self.vram_read(address | 8, mapper);
@@ -976,10 +930,15 @@ impl Ppu {
             pattern_hi = pattern_hi.reverse_bits();
         }
 
-        sprite.shifter_pattern_lo = pattern_lo;
-        sprite.shifter_pattern_hi = pattern_hi;
+        let sprite_data = SpriteData {
+            x: oam_sprite.x,
+            attributes: oam_sprite.attr,
+            is_zero: sprite_idx == 0,
+            shifter_pattern_hi: pattern_hi,
+            shifter_pattern_lo: pattern_lo,
+        };
 
-        self.sprite_data.push(sprite);
+        self.sprite_data[sprite_idx] = sprite_data;
     }
 
     fn increment_vram_address_x(&mut self) {
@@ -1247,13 +1206,12 @@ mod tests {
         let mut ppu = Ppu::new(Box::new(NoopRenderer));
         let mut mapper = FakeMapper;
 
-        ppu.mask = PpuMask(0x10);
         ppu.scanline = 10;
-        ppu.cycle = 65;
+        ppu.mask = PpuMask(0x10);
         ppu.oam_data[0] = 1;
         ppu.oam_data[4..8].copy_from_slice(&[8, 0x2A, 0x80, 0x34]);
 
-        for _ in 65..=256 {
+        for _ in 0..=256 {
             ppu.tick(&mut mapper);
         }
 
@@ -1265,10 +1223,9 @@ mod tests {
             ppu.tick(&mut mapper);
         }
 
-        assert_eq!(ppu.sprite_data[0].active_x, 0x34);
-        assert!(ppu.sprite_data[0].active_is_zero);
-        assert_eq!(ppu.sprite_data[1].active_x, 0);
-        assert!(!ppu.sprite_data[1].active_is_zero);
+        assert_eq!(ppu.sprite_data.len(), 1);
+        assert_eq!(ppu.sprite_data[0].x, 0x34);
+        assert!(ppu.sprite_data[0].is_zero);
     }
 
     #[test]
@@ -1278,12 +1235,12 @@ mod tests {
 
         ppu.mask = PpuMask(0x10);
         ppu.scanline = 10;
-        ppu.cycle = 65;
+
         for sprite in 0..9 {
             ppu.oam_data[sprite * 4] = 8;
         }
 
-        for _ in 65..=256 {
+        for _ in 0..=256 {
             ppu.tick(&mut mapper);
         }
 
