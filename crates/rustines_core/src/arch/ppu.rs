@@ -383,6 +383,11 @@ impl Ppu {
         let is_prerender_scanline = self.is_prerender_scanline();
         let is_visible_scanline = self.is_visible_scanline();
 
+        // the ppu always emits the dot before updating the registers
+        if is_visible_scanline && self.is_visible_cycle() {
+            self.render_pixel(mapper);
+        }
+
         if is_visible_scanline || is_prerender_scanline {
             // in the prerender scanline, second cycle, the vblank is cleared along with other
             // flags
@@ -456,10 +461,6 @@ impl Ppu {
             if self.ctrl.vblank_nmi_enable() {
                 self.nmi_interrupt = true;
             }
-        }
-
-        if is_visible_scanline && self.is_visible_cycle() {
-            self.render_pixel(mapper);
         }
 
         self.increase_cycle();
