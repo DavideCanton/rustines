@@ -259,7 +259,6 @@ pub struct Ppu {
     pub(crate) scanline: i16,
     pub(crate) cycle: u16,
     pub(crate) frame: u16,
-    pub(crate) scroll_trace: Vec<(i16, u16, u16)>,
 
     pub(crate) nmi_interrupt: bool,
     pub(crate) frame_ready: bool,
@@ -310,7 +309,6 @@ impl Ppu {
             scanline: -1,
             cycle: 0,
             frame: 0,
-            scroll_trace: Vec::with_capacity(240),
 
             nmi_interrupt: false,
             frame_ready: false,
@@ -400,14 +398,6 @@ impl Ppu {
 
         let cycle = self.cycle;
 
-        if is_visible_scanline && cycle == 1 {
-            if self.scanline == 0 {
-                self.scroll_trace.clear();
-            }
-            self.scroll_trace
-                .push((self.scanline, self.v_reg, self.v_reg));
-        }
-
         if cycle == 257 {
             self.sprite_data.clear();
         }
@@ -435,12 +425,6 @@ impl Ppu {
                 // cycle 256 in visible and pre render scanlines increments y scroll too
                 if cycle == 256 {
                     self.increment_vram_address_y();
-                    if is_visible_scanline
-                        && let Some((scanline, _, end_v)) = self.scroll_trace.last_mut()
-                        && *scanline == self.scanline
-                    {
-                        *end_v = self.v_reg;
-                    }
                 }
                 // cycle 257 in visible and pre render scanlines transfers the x scroll
                 if cycle == 257 {

@@ -95,11 +95,6 @@ pub fn debug_dump_scrolling_state(bus: &Bus) {
         mapper.mirroring_mode()
     );
 
-    println!("=== V REGISTER AT VISIBLE SCANLINES (start -> after dot 256) ===");
-    for (scanline, start_v, end_v) in &ppu.scroll_trace {
-        println!("{scanline:03}: {start_v:#06X} -> {end_v:#06X}");
-    }
-
     for (page, base) in [(0, 0x2000u16), (1, 0x2400)] {
         println!("=== PHYSICAL NAMETABLE PAGE {page} ({base:#06X}) ===");
         for row in 0..30 {
