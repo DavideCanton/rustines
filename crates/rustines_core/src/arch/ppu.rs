@@ -437,69 +437,7 @@ impl Ppu {
                 }
 
                 if is_visible_scanline {
-                    if cycle == 1 {
-                        self.clearing_oam = true;
-                        self.secondary_oam_addr = 0;
-                    }
-                    if cycle == 65 {
-                        self.clearing_oam = false;
-                        self.is_copying = false;
-                        self.next_scanline_sprite_count = 0;
-                        self.secondary_oam_addr = 0;
-                        self.n = 0;
-                        self.m = 0;
-                    }
-
-                    // secondary oam initialization
-                    if (1..=64).contains(&cycle) && cycle.is_multiple_of(2) {
-                        self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
-                        self.secondary_oam_addr += 1;
-                    }
-
-                    if (65..=256).contains(&cycle)
-                        && cycle.is_multiple_of(2)
-                        && self.next_scanline_sprite_count < 9
-                        && self.n < 64
-                    {
-                        if self.is_copying {
-                            self.secondary_oam[self.secondary_oam_addr as usize] =
-                                self.oam_data[self.oam_addr_n_m()];
-                            self.m += 1;
-                            self.secondary_oam_addr += 1;
-                            if self.m == 4 {
-                                self.m = 0;
-                                self.n += 1;
-                                self.is_copying = false;
-                                self.next_scanline_sprite_count += 1;
-                            }
-                        } else {
-                            let cur_sprite_y = self.oam_data[self.oam_addr_n_m()];
-                            let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
-                            let sprite_row = self.scanline - cur_sprite_y as i16;
-                            if (0..sprite_height).contains(&sprite_row) {
-                                if self.next_scanline_sprite_count < 8 {
-                                    self.is_copying = true;
-                                    self.secondary_oam[self.secondary_oam_addr as usize] =
-                                        cur_sprite_y;
-                                    self.secondary_oam_addr += 1;
-                                    self.m = 1;
-                                } else {
-                                    self.status.set_sprite_overflow(true);
-                                    self.next_scanline_sprite_count += 1;
-                                }
-                            } else {
-                                self.n += 1;
-                            }
-                        }
-                    }
-
-                    // sprite evaluation
-                    if (257..=320).contains(&cycle) && (cycle - 257).is_multiple_of(8) {
-                        let sprite_idx = ((cycle - 257) >> 3) as usize;
-                        if sprite_idx < self.next_scanline_sprite_count.min(8) {
-                            self.fill_sprite_data(sprite_idx, mapper);
-                        }
-                    }
+                    self.handle_sprites(mapper);
                 }
             }
         }
@@ -515,8 +453,72 @@ impl Ppu {
         self.increase_cycle();
     }
 
-    fn oam_addr_n_m(&self) -> usize {
-        (self.n as usize) * 4 + (self.m as usize)
+    fn handle_sprites(&mut self, mapper: &mut dyn Mapper) {
+        let cycle = self.cycle;
+
+        if cycle == 1 {
+            self.clearing_oam = true;
+            self.secondary_oam_addr = 0;
+        }
+        if cycle == 65 {
+            self.clearing_oam = false;
+            self.is_copying = false;
+            self.next_scanline_sprite_count = 0;
+            self.secondary_oam_addr = 0;
+            self.n = 0;
+            self.m = 0;
+        }
+
+        // secondary oam initialization
+        if (1..=64).contains(&cycle) && cycle.is_multiple_of(2) {
+            self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
+            self.secondary_oam_addr += 1;
+        }
+
+        if (65..=256).contains(&cycle)
+            && cycle.is_multiple_of(2)
+            && self.next_scanline_sprite_count < 9
+            && self.n < 64
+        {
+            let oam_addr = (self.n as usize) * 4 + (self.m as usize);
+
+            if self.is_copying {
+                self.secondary_oam[self.secondary_oam_addr as usize] = self.oam_data[oam_addr];
+                self.m += 1;
+                self.secondary_oam_addr += 1;
+                if self.m == 4 {
+                    self.m = 0;
+                    self.n += 1;
+                    self.is_copying = false;
+                    self.next_scanline_sprite_count += 1;
+                }
+            } else {
+                let cur_sprite_y = self.oam_data[oam_addr];
+                let sprite_height = if self.ctrl.sprite_size() { 16 } else { 8 };
+                let sprite_row = self.scanline - cur_sprite_y as i16;
+                if (0..sprite_height).contains(&sprite_row) {
+                    if self.next_scanline_sprite_count < 8 {
+                        self.is_copying = true;
+                        self.secondary_oam[self.secondary_oam_addr as usize] = cur_sprite_y;
+                        self.secondary_oam_addr += 1;
+                        self.m = 1;
+                    } else {
+                        self.status.set_sprite_overflow(true);
+                        self.next_scanline_sprite_count += 1;
+                    }
+                } else {
+                    self.n += 1;
+                }
+            }
+        }
+
+        // sprite evaluation
+        if (257..=320).contains(&cycle) && (cycle - 257).is_multiple_of(8) {
+            let sprite_idx = ((cycle - 257) >> 3) as usize;
+            if sprite_idx < self.next_scanline_sprite_count.min(8) {
+                self.fill_sprite_data(sprite_idx, mapper);
+            }
+        }
     }
 
     fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
