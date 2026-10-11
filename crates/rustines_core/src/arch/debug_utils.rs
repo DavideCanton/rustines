@@ -5,6 +5,8 @@ use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
+use crate::arch::utils::generate_ppm;
+use crate::hex;
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
@@ -119,13 +121,33 @@ pub fn debug_dump_palette(bus: &Bus) {
     println!("\n====================\n");
 }
 
-pub fn debug_dump_oam(bus: &Bus) {
+pub fn debug_dump_oam(ppu: &Ppu) {
     println!("=== DUMP OAM ===");
-    let sprites: &[OamSprite; 64] = bytemuck::cast_ref(bus.ppu().oam_data());
-    for (i, sprite) in sprites.iter().enumerate() {
-        println!("Sprite {} = {:?}", i, sprite);
+    for (i, sprite_bytes) in ppu.oam_data().as_chunks::<4>().0.iter().enumerate() {
+        let sprite: &OamSprite = bytemuck::cast_ref(sprite_bytes);
+        println!(
+            "Sprite {} = {:?} {}",
+            i,
+            sprite,
+            format_sprite_bytes(sprite_bytes)
+        );
     }
+    println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.cycle);
+    println!(
+        "{}",
+        ppu.secondary_oam_data()
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| format_sprite_bytes(c))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    );
     println!("\n===============\n");
+}
+
+fn format_sprite_bytes(bytes: &[u8]) -> String {
+    bytes.iter().map(|v| hex!(v)).collect::<Vec<_>>().join("-")
 }
 
 pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
@@ -155,20 +177,6 @@ pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
     println!("PPUCTRL = {:?}", ppu.ctrl);
     println!("PPUMASK = {:?}", ppu.mask);
     println!("PPUSTATUS = {:?}", ppu.status);
-}
-
-pub fn generate_ppm(width: usize, height: usize, data: &[u8], skip_fourth: bool) -> Vec<u8> {
-    let mut vec = Vec::new();
-
-    vec.extend(format!("P6\n{} {}\n255\n", width, height).as_bytes());
-
-    for (i, v) in data.iter().enumerate() {
-        if i % 4 != 3 || !skip_fourth {
-            vec.push(*v);
-        }
-    }
-
-    vec
 }
 
 #[macro_export]

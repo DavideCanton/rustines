@@ -16,6 +16,7 @@ use rustines_core::{self as core, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
 use std::{
     collections::HashMap,
+    fs::File,
     path::Path,
     sync::Arc,
     time::{Duration, Instant},
@@ -208,7 +209,7 @@ impl ApplicationHandler for App {
 
                 if app_state.main_window_helper.process_window_event(&event) {
                     // Draw the current frame
-                    app_state.bus.ppu_mut().renderer().draw();
+                    app_state.bus.ppu_mut().renderer_mut().draw();
 
                     app_state.render_counter.update();
 
@@ -355,7 +356,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         }
 
         if input.key_pressed(KeyCode::KeyO) {
-            core::debug_utils::debug_dump_oam(bus);
+            core::debug_utils::debug_dump_oam(bus.ppu());
         }
 
         if input.key_pressed(KeyCode::KeyX) {
@@ -365,6 +366,14 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         if input.key_pressed(KeyCode::KeyQ) {
             core::debug_utils::debug_dump_state(bus, cpu);
             core::debug_utils::debug_dump_scrolling_state(bus);
+        }
+
+        if input.key_pressed(KeyCode::KeyF) {
+            let mut file = File::create("frame.ppm").expect("cannot create file");
+            bus.ppu()
+                .renderer()
+                .dump_frame(&mut file)
+                .expect("cannot dump frame");
         }
 
         if input.key_pressed(KeyCode::KeyT) {

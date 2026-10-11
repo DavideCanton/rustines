@@ -7,6 +7,7 @@
         "prerender",
         "rustines",
         "scanline",
+        "scanlines",
         "unisystem",
         "vblank",
         "Zeroable"
