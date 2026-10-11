@@ -10,9 +10,7 @@ use crate::{
         rom_structs::MirroringType,
     },
     renderer::Renderer,
-    utils::bit_utils::{
-        BitCount as BC, BitIndex as BI, extract_bits_shift, extract_flag, set_flag,
-    },
+    utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, set_flag},
 };
 use log::trace;
 
@@ -656,24 +654,15 @@ impl Ppu {
 
         if self.mask.show_sprites() && valid_sprite_x {
             for sprite in self.sprite_shifters.iter_mut() {
-                if sprite.x > 0 {
-                    sprite.x -= 1;
+                if !sprite.reached_x() {
+                    sprite.dec_x();
                 } else {
-                    let mut pixel = 0;
-
-                    if extract_flag(sprite.lo_shifter, BI::_7) {
-                        pixel |= 0x1;
-                    }
-                    if extract_flag(sprite.hi_shifter, BI::_7) {
-                        pixel |= 0x2;
-                    }
-                    sprite.lo_shifter <<= 1;
-                    sprite.hi_shifter <<= 1;
+                    let pixel = sprite.get_bit_and_shift();
 
                     if sprite_pixel == 0 && pixel != 0 {
                         sprite_pixel = pixel;
-                        sprite_palette = sprite.attributes.palette() | 0x4;
-                        sprite_behind = sprite.attributes.behind();
+                        sprite_palette = sprite.palette();
+                        sprite_behind = sprite.behind();
                     }
                 }
             }

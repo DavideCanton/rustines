@@ -1,4 +1,10 @@
-use crate::utils::bit_utils::{BitIndex as BI, extract_flag};
+use std::fmt;
+
+use crate::{
+    arch::ppu::utils::get_bits_mask,
+    bin, hex,
+    utils::bit_utils::{BitIndex as BI, extract_flag},
+};
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BackgroundData {
@@ -39,26 +45,25 @@ impl BackgroundData {
     }
 
     pub fn get_pixel_palette(&self, bit_mux: u16) -> (u8, u8) {
-        let mut bg_pixel = 0;
-
-        if self.shifter_pattern_lo & bit_mux != 0 {
-            bg_pixel |= 0x1;
-        }
-
-        if self.shifter_pattern_hi & bit_mux != 0 {
-            bg_pixel |= 0x2;
-        }
-
-        let mut bg_palette = 0;
-
-        if self.shifter_attrib_lo & bit_mux != 0 {
-            bg_palette |= 0x1;
-        }
-
-        if self.shifter_attrib_hi & bit_mux != 0 {
-            bg_palette |= 0x2;
-        }
-
+        let bg_pixel = get_bits_mask(self.shifter_pattern_lo, self.shifter_pattern_hi, bit_mux);
+        let bg_palette = get_bits_mask(self.shifter_attrib_lo, self.shifter_attrib_hi, bit_mux);
         (bg_pixel, bg_palette)
+    }
+}
+
+impl fmt::Display for BackgroundData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "BackgroundData[pat_lo={} pat_hi={} attr_lo={} attr_hi={} nt={} at={} pl={} ph={}]",
+            bin!(self.shifter_pattern_lo),
+            bin!(self.shifter_pattern_hi),
+            bin!(self.shifter_attrib_lo),
+            bin!(self.shifter_attrib_hi),
+            hex!(self.latch_nt),
+            hex!(self.latch_at),
+            hex!(self.latch_pl),
+            hex!(self.latch_ph),
+        )
     }
 }

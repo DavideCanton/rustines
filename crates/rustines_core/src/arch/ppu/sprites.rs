@@ -3,7 +3,7 @@ use std::fmt;
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 
-use crate::bin;
+use crate::{arch::ppu::utils::get_bits_mask, bin};
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -11,7 +11,7 @@ pub struct OamSprite {
     // NOTE keep the attributes in this order since they are casted using bytemuck!
     pub y: u8,
     pub tile: u8,
-    pub attr: SpriteAttr,
+    pub attr: SpriteAttributes,
     pub x: u8,
 }
 
@@ -29,7 +29,7 @@ impl OamSprite {
 bitfield! {
     #[derive(Clone, Copy, Pod, Zeroable, Default)]
     #[repr(C)]
-    pub struct SpriteAttr(u8);
+    pub struct SpriteAttributes(u8);
     impl Debug;
     /** 7 -> Vertical flip */
     pub vertical_flip, _: 7;
@@ -43,10 +43,10 @@ bitfield! {
 
 #[derive(Default, Debug, Clone, Copy, Zeroable)]
 pub struct SpriteShifters {
-    pub lo_shifter: u8,
-    pub hi_shifter: u8,
-    pub x: u8,
-    pub attributes: SpriteAttr,
+    lo_shifter: u8,
+    hi_shifter: u8,
+    pub(super) x: u8,
+    attributes: SpriteAttributes,
 }
 
 impl SpriteShifters {
@@ -55,6 +55,31 @@ impl SpriteShifters {
         self.x = oam_sprite.x;
         self.lo_shifter = lo_shifter;
         self.hi_shifter = hi_shifter;
+    }
+
+    pub fn palette(&self) -> u8 {
+        self.attributes.palette() | 0x4
+    }
+
+    pub fn behind(&self) -> bool {
+        self.attributes.behind()
+    }
+
+    pub fn reached_x(&self) -> bool {
+        self.x == 0
+    }
+
+    pub fn dec_x(&mut self) {
+        self.x -= 1;
+    }
+
+    pub fn get_bit_and_shift(&mut self) -> u8 {
+        let pixel = get_bits_mask(self.lo_shifter, self.hi_shifter, 1 << 7);
+
+        self.lo_shifter <<= 1;
+        self.hi_shifter <<= 1;
+
+        pixel
     }
 }
 
