@@ -1,4 +1,4 @@
-use std::array;
+use std::{array, mem};
 
 use crate::{
     arch::{
@@ -62,7 +62,7 @@ pub struct Ppu {
     pub(crate) cycle: u16,
     pub(crate) frame: u16,
 
-    pub(crate) nmi_interrupt: bool,
+    pub(crate) nmi_request: bool,
     pub(crate) frame_ready: bool,
     pub(crate) is_odd_frame: bool,
 
@@ -115,7 +115,7 @@ impl Ppu {
             cycle: 0,
             frame: 0,
 
-            nmi_interrupt: false,
+            nmi_request: false,
             frame_ready: false,
             is_odd_frame: false,
 
@@ -127,12 +127,12 @@ impl Ppu {
         }
     }
 
-    pub fn nmi_requested(&self) -> bool {
-        self.nmi_interrupt
+    pub fn take_nmi_requested(&mut self) -> bool {
+        mem::replace(&mut self.nmi_request, false)
     }
 
     pub fn clear_nmi(&mut self) {
-        self.nmi_interrupt = false;
+        self.nmi_request = false;
     }
 
     pub fn current_frame(&self) -> u16 {
@@ -256,7 +256,7 @@ impl Ppu {
             if !self.suppress_vblank {
                 self.status.set_vblank_started(true);
                 if self.ctrl.vblank_nmi_enable() {
-                    self.nmi_interrupt = true;
+                    self.nmi_request = true;
                 }
             }
 
@@ -496,7 +496,7 @@ impl Ppu {
 
                 if !old_nmi_enable && self.ctrl.vblank_nmi_enable() && self.status.vblank_started()
                 {
-                    self.nmi_interrupt = true;
+                    self.nmi_request = true;
                 }
             }
             1 => {
@@ -564,7 +564,7 @@ impl Ppu {
                     }
                 } else {
                     if !(1..=3).contains(&self.cycle) {
-                        self.nmi_interrupt = false;
+                        self.nmi_request = false;
                     }
                 }
 

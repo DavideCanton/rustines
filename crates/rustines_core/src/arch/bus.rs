@@ -159,7 +159,6 @@ impl Bus {
         match address {
             0x0000..=0x1FFF => self.nes_ram[(address & 0b0000_0111_1111_1111) as usize],
             0x6000..=0xFFFF => self.mapper.fetch_cpu(address),
-
             0x2002 => self.ppu.status_bits_shadow(),
             0x2007 => self.ppu.vram_buffer_shadow(self.mapper.as_ref()),
             0x4016 => self.controller1.peek_state(),

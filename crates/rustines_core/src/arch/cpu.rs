@@ -68,7 +68,7 @@ impl Cpu {
             );
         }
 
-        self.poll_non_maskable_interrupts(bus);
+        self.poll_nmi(bus);
     }
 
     pub fn burn_internal_cycle(&mut self, bus: &mut Bus) {
@@ -263,8 +263,8 @@ impl Cpu {
         bus.ppu_mut().clear_nmi();
     }
 
-    pub fn poll_non_maskable_interrupts(&mut self, bus: &mut Bus) {
-        if bus.ppu_mut().nmi_requested() {
+    pub fn poll_nmi(&mut self, bus: &mut Bus) {
+        if bus.ppu_mut().take_nmi_requested() {
             self.pending_nmi_execution = true;
         }
     }
