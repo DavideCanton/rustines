@@ -53,6 +53,7 @@ pub struct Ppu {
     secondary_oam_full: bool,
     oam_end: bool,
     to_copy: u8,
+    suppress_vblank: bool,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -105,6 +106,7 @@ impl Ppu {
             oam_end: false,
             secondary_oam_full: false,
             to_copy: 0,
+            suppress_vblank: false,
 
             oam_addr: 0,
             data_buffer: 0,
@@ -251,10 +253,14 @@ impl Ppu {
 
         // VBlank is ALWAYS set at scanline 241, cycle 1
         if self.scanline == 241 && self.cycle == 1 {
-            self.status.set_vblank_started(true);
-            if self.ctrl.vblank_nmi_enable() {
-                self.nmi_interrupt = true;
+            if !self.suppress_vblank {
+                self.status.set_vblank_started(true);
+                if self.ctrl.vblank_nmi_enable() {
+                    self.nmi_interrupt = true;
+                }
             }
+
+            self.suppress_vblank = false;
         }
 
         self.increase_cycle();
@@ -546,16 +552,24 @@ impl Ppu {
             2 => {
                 let mut data = self.status_bits_shadow();
 
-                if self.cycle == 1 && (self.scanline == 241 || self.is_prerender_scanline()) {
-                    data = set_flag(data, BI::_7, false);
+                if self.scanline == 241 {
+                    // in this case the read happens before the vblank is actually set, so force
+                    // it to false
+                    if self.cycle == 1 {
+                        data = set_flag(data, BI::_7, false);
+                    }
+                    // reading $2002 at this scanline skips the vblank for this frame
+                    if self.cycle <= 1 {
+                        self.suppress_vblank = true;
+                    }
+                } else {
+                    if !(1..=3).contains(&self.cycle) {
+                        self.nmi_interrupt = false;
+                    }
                 }
 
                 self.status.set_vblank_started(false);
                 self.w_toggle = false;
-
-                if !(self.scanline == 241 && ((1..=3).contains(&self.cycle))) {
-                    self.nmi_interrupt = false;
-                }
 
                 self.write_open_bus(data);
                 data
