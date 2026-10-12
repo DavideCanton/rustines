@@ -246,11 +246,6 @@ impl Ppu {
                 if is_visible_scanline {
                     self.handle_sprites(mapper);
                 }
-
-                // clear oamaddr every cycle
-                if (257..=320).contains(&cycle) {
-                    self.oam_addr = 0;
-                }
             }
         }
 
@@ -277,11 +272,13 @@ impl Ppu {
                 self.secondary_oam_full = false;
                 self.sprite_in_range.fill(false);
             }
-            2..=64 if cycle.is_multiple_of(2) => {
-                // secondary oam initialization, copy 0xFF every even cycle and increase
-                // secondary oam address
-                self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
-                self.secondary_oam_addr += 1;
+            2..=64 => {
+                if cycle.is_multiple_of(2) {
+                    // secondary oam initialization, copy 0xFF every even cycle and increase
+                    // secondary oam address
+                    self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
+                    self.secondary_oam_addr += 1;
+                }
                 if cycle == 64 {
                     // end clearing phase, start searching
                     self.secondary_oam_addr = 0;
@@ -302,18 +299,22 @@ impl Ppu {
                     }
                 }
             }
-            257 => {
-                // end search phase, start fetching
-                // NOTE: at cycle 257 also fetch sprite 0
-                self.fill_sprite_data(0, mapper);
-            }
-            257..=320 if (cycle - 257).is_multiple_of(8) => {
-                // fetch a sprite every 8 cycles
-                let sprite_idx = ((cycle - 257) >> 3) as usize;
-                self.fill_sprite_data(sprite_idx, mapper);
-            }
-            257..=320 if !cycle.is_multiple_of(2) => {
-                self.sprite_zero_current = self.sprite_zero_next;
+            257..=320 => {
+                if cycle == 257 {
+                    // end search phase, start fetching
+                    // NOTE: at cycle 257 also fetch sprite 0
+                    self.fill_sprite_data(0, mapper);
+                }
+                if (cycle - 257).is_multiple_of(8) {
+                    // fetch a sprite every 8 cycles
+                    let sprite_idx = ((cycle - 257) >> 3) as usize;
+                    self.fill_sprite_data(sprite_idx, mapper);
+                }
+                if !cycle.is_multiple_of(2) {
+                    self.sprite_zero_current = self.sprite_zero_next;
+                }
+                // clear oamaddr every cycle
+                self.oam_addr = 0;
             }
             _ => {}
         }
@@ -382,7 +383,9 @@ impl Ppu {
             } else {
                 found = true;
                 self.sprite_in_range[(self.secondary_oam_addr >> 2) as usize] = true;
-                if n == 0 {
+                // sprite zero is hit only if it's in range at cycle 66 (i.e. it's the first)
+                // and only on visible scanlines. If this is the 239, the next is not visible
+                if self.cycle == 66 && self.scanline < 239 {
                     self.sprite_zero_next = true;
                 }
                 (m, n) = self.incr(m, n);
