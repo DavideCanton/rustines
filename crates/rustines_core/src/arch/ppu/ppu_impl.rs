@@ -52,7 +52,7 @@ pub struct Ppu {
     sprite_zero_next: bool,
     secondary_oam_full: bool,
     oam_end: bool,
-    copying: bool,
+    to_copy: u8,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -104,7 +104,7 @@ impl Ppu {
             sprite_zero_next: false,
             oam_end: false,
             secondary_oam_full: false,
-            copying: false,
+            to_copy: 0,
 
             oam_addr: 0,
             data_buffer: 0,
@@ -288,23 +288,17 @@ impl Ppu {
                 if !cycle.is_multiple_of(2) {
                     self.oam_data_latch = self.oam_data[self.oam_addr as usize];
                 } else {
-                    if self.copying {
-                        if self.copy_sprite_byte() {
-                            self.copying = false;
-                        }
+                    if self.to_copy > 0 {
+                        self.copy_sprite_byte();
+                        self.to_copy -= 1;
                     } else {
                         if self.search_next_sprite() {
-                            self.copying = true;
+                            self.to_copy = 3;
                         }
                     }
                 }
             }
             257..=320 => {
-                if cycle == 257 {
-                    // end search phase, start fetching
-                    // NOTE: at cycle 257 also fetch sprite 0
-                    self.fill_sprite_data(0, mapper);
-                }
                 if (cycle - 257).is_multiple_of(8) {
                     // fetch a sprite every 8 cycles
                     let sprite_idx = ((cycle - 257) >> 3) as usize;
@@ -320,24 +314,17 @@ impl Ppu {
         }
     }
 
-    fn copy_sprite_byte(&mut self) -> bool {
+    fn copy_sprite_byte(&mut self) {
         let mut m = self.oam_addr & 0x3;
         let mut n = self.oam_addr >> 2;
-        let mut end = false;
 
         if !self.secondary_oam_full {
-            let oam_value = self.oam_data[self.oam_addr as usize];
-            self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
+            self.secondary_oam[self.secondary_oam_addr as usize] = self.oam_data_latch;
             self.secondary_oam_addr += 1;
             (m, n) = self.incr(m, n);
-            if m == 0 {
-                end = true;
-            }
         }
 
         self.oam_addr = (n << 2) | m;
-
-        end
     }
 
     fn incr(&mut self, mut m: u8, mut n: u8) -> (u8, u8) {
