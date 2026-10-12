@@ -18,15 +18,6 @@ use log::trace;
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum SpritePhase {
-    Idle,
-    Clearing,
-    Searching,
-    Copying,
-    Fetching,
-}
-
 pub struct Ppu {
     nametables: [u8; 2048],
     palette_table: [u8; 32],
@@ -56,12 +47,12 @@ pub struct Ppu {
     secondary_oam: [u8; 32],
     sprite_in_range: [bool; 8],
     secondary_oam_addr: u8,
-    sprite_phase: SpritePhase,
     oam_data_latch: u8,
     sprite_zero_current: bool,
     sprite_zero_next: bool,
     secondary_oam_full: bool,
     oam_end: bool,
+    copying: bool,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -106,7 +97,6 @@ impl Ppu {
             bg_data: BackgroundData::default(),
             secondary_oam: [0; 32],
             secondary_oam_addr: 0,
-            sprite_phase: SpritePhase::Idle,
             sprite_shifters: array::from_fn(SpriteShifters::new),
             sprite_in_range: [false; 8],
             oam_data_latch: 0,
@@ -114,6 +104,7 @@ impl Ppu {
             sprite_zero_next: false,
             oam_end: false,
             secondary_oam_full: false,
+            copying: false,
 
             oam_addr: 0,
             data_buffer: 0,
@@ -228,10 +219,6 @@ impl Ppu {
             }
 
             if rendering_enabled {
-                if cycle == 0 {
-                    self.sprite_phase = SpritePhase::Idle;
-                }
-
                 // every cycle, the shifters must be updated so that the next write writes
                 // the correct bit
                 if (2..=257).contains(&cycle) || (322..=337).contains(&cycle) {
@@ -279,25 +266,18 @@ impl Ppu {
     }
 
     fn handle_sprites(&mut self, mapper: &mut dyn Mapper) {
-        use SpritePhase::*;
-
         let cycle = self.cycle;
 
-        if (257..=320).contains(&cycle) && !cycle.is_multiple_of(2) {
-            self.sprite_zero_current = self.sprite_zero_next;
-        }
-
-        self.sprite_phase = match self.sprite_phase {
-            Idle if cycle == 1 => {
+        match cycle {
+            1 => {
                 // start clearing secondary oam at cycle 1
                 self.secondary_oam_addr = 0;
                 self.sprite_zero_next = false;
                 self.oam_end = false;
                 self.secondary_oam_full = false;
                 self.sprite_in_range.fill(false);
-                Clearing
             }
-            Clearing if cycle.is_multiple_of(2) => {
+            2..=64 if cycle.is_multiple_of(2) => {
                 // secondary oam initialization, copy 0xFF every even cycle and increase
                 // secondary oam address
                 self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
@@ -305,39 +285,38 @@ impl Ppu {
                 if cycle == 64 {
                     // end clearing phase, start searching
                     self.secondary_oam_addr = 0;
-                    Searching
-                } else {
-                    Clearing
                 }
             }
-            Searching | Copying if cycle == 257 => {
+            65..=256 => {
+                if !cycle.is_multiple_of(2) {
+                    self.oam_data_latch = self.oam_data[self.oam_addr as usize];
+                } else {
+                    if self.copying {
+                        if self.copy_sprite_byte() {
+                            self.copying = false;
+                        }
+                    } else {
+                        if self.search_next_sprite() {
+                            self.copying = true;
+                        }
+                    }
+                }
+            }
+            257 => {
                 // end search phase, start fetching
                 // NOTE: at cycle 257 also fetch sprite 0
                 self.fill_sprite_data(0, mapper);
-                Fetching
             }
-            phase @ (Searching | Copying) if !cycle.is_multiple_of(2) => {
-                self.oam_data_latch = self.oam_data[self.oam_addr as usize];
-                phase
-            }
-            Searching => {
-                // search for next sprite, if found start copying else continue searching
-                let found = self.search_next_sprite();
-                if found { Copying } else { Searching }
-            }
-            Copying => {
-                let end = self.copy_sprite_byte();
-                if end { Searching } else { Copying }
-            }
-            Fetching if cycle == 320 => Idle,
-            Fetching if cycle >= 257 && (cycle - 257).is_multiple_of(8) => {
+            257..=320 if (cycle - 257).is_multiple_of(8) => {
                 // fetch a sprite every 8 cycles
                 let sprite_idx = ((cycle - 257) >> 3) as usize;
                 self.fill_sprite_data(sprite_idx, mapper);
-                Fetching
             }
-            phase => phase,
-        };
+            257..=320 if !cycle.is_multiple_of(2) => {
+                self.sprite_zero_current = self.sprite_zero_next;
+            }
+            _ => {}
+        }
     }
 
     fn copy_sprite_byte(&mut self) -> bool {
@@ -592,7 +571,7 @@ impl Ppu {
                 data
             }
             4 => {
-                if self.sprite_phase == SpritePhase::Clearing {
+                if self.mask.rendering_enabled() && (2..=64).contains(&self.cycle) {
                     0xFF
                 } else {
                     self.oam_data[self.oam_addr as usize]
