@@ -1,3 +1,5 @@
+use std::array;
+
 use crate::{
     arch::{
         mappers::mapper::Mapper,
@@ -52,11 +54,14 @@ pub struct Ppu {
 
     sprite_shifters: [SpriteShifters; 8],
     secondary_oam: [u8; 32],
+    sprite_in_range: [bool; 8],
     secondary_oam_addr: u8,
     sprite_phase: SpritePhase,
     oam_data_latch: u8,
     sprite_zero_current: bool,
     sprite_zero_next: bool,
+    secondary_oam_full: bool,
+    oam_end: bool,
 
     pub(crate) oam_addr: u8,
     pub(crate) data_buffer: u8,
@@ -102,10 +107,13 @@ impl Ppu {
             secondary_oam: [0; 32],
             secondary_oam_addr: 0,
             sprite_phase: SpritePhase::Idle,
-            sprite_shifters: [SpriteShifters::default(); 8],
+            sprite_shifters: array::from_fn(SpriteShifters::new),
+            sprite_in_range: [false; 8],
             oam_data_latch: 0,
             sprite_zero_current: false,
             sprite_zero_next: false,
+            oam_end: false,
+            secondary_oam_full: false,
 
             oam_addr: 0,
             data_buffer: 0,
@@ -220,6 +228,10 @@ impl Ppu {
             }
 
             if rendering_enabled {
+                if cycle == 0 {
+                    self.sprite_phase = SpritePhase::Idle;
+                }
+
                 // every cycle, the shifters must be updated so that the next write writes
                 // the correct bit
                 if (2..=257).contains(&cycle) || (322..=337).contains(&cycle) {
@@ -280,6 +292,9 @@ impl Ppu {
                 // start clearing secondary oam at cycle 1
                 self.secondary_oam_addr = 0;
                 self.sprite_zero_next = false;
+                self.oam_end = false;
+                self.secondary_oam_full = false;
+                self.sprite_in_range.fill(false);
                 Clearing
             }
             Clearing if cycle.is_multiple_of(2) => {
@@ -307,17 +322,12 @@ impl Ppu {
             }
             Searching => {
                 // search for next sprite, if found start copying else continue searching
-                let copy = self.search_next_sprite(cycle == 66);
-                if copy { Copying } else { Searching }
+                let found = self.search_next_sprite();
+                if found { Copying } else { Searching }
             }
             Copying => {
-                self.copy_sprite_byte();
-
-                if self.oam_addr.is_multiple_of(4) {
-                    Searching
-                } else {
-                    Copying
-                }
+                let end = self.copy_sprite_byte();
+                if end { Searching } else { Copying }
             }
             Fetching if cycle == 320 => Idle,
             Fetching if cycle >= 257 && (cycle - 257).is_multiple_of(8) => {
@@ -330,55 +340,87 @@ impl Ppu {
         };
     }
 
-    fn copy_sprite_byte(&mut self) {
-        let oam_value = self.oam_data[self.oam_addr as usize];
-        self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
-        self.oam_addr = self.oam_addr.wrapping_add(1);
-        self.secondary_oam_addr += 1;
-    }
+    fn copy_sprite_byte(&mut self) -> bool {
+        let mut m = self.oam_addr & 0x3;
+        let mut n = self.oam_addr >> 2;
+        let mut end = false;
 
-    fn search_next_sprite(&mut self, first: bool) -> bool {
-        debug_assert!(self.cycle.is_multiple_of(2));
-
-        let oam_value = self.oam_data_latch;
-        let is_y_byte = self.oam_addr.is_multiple_of(4);
-        let mut copy = false;
-
-        if self.secondary_oam_addr < 32 {
-            debug_assert!(self.is_visible_scanline());
-
-            if is_y_byte {
-                if first {
-                    self.sprite_zero_next = first;
-                }
-
-                if self.is_sprite_in_range_y() {
-                    self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
-                    self.oam_addr = self.oam_addr.wrapping_add(1);
-                    self.secondary_oam_addr += 1;
-                    copy = true;
-                } else {
-                    self.oam_addr = self.oam_addr.wrapping_add(4);
-                }
-            } else {
-                self.copy_sprite_byte();
-            }
-        } else {
-            if is_y_byte && self.is_sprite_in_range_y() {
-                self.status.set_sprite_overflow(true);
-            }
-            if is_y_byte {
-                self.oam_addr = self.oam_addr.wrapping_add(1);
-            } else {
-                self.oam_addr = self.oam_addr.wrapping_add(4);
+        if !self.secondary_oam_full {
+            let oam_value = self.oam_data[self.oam_addr as usize];
+            self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
+            self.secondary_oam_addr += 1;
+            (m, n) = self.incr(m, n);
+            if m == 0 {
+                end = true;
             }
         }
 
-        copy
+        self.oam_addr = (n << 2) | m;
+
+        end
     }
 
-    fn is_sprite_in_range_y(&self) -> bool {
-        let sprite_y = self.oam_data_latch as i16;
+    fn incr(&mut self, mut m: u8, mut n: u8) -> (u8, u8) {
+        m += 1;
+        if m == 4 {
+            m = 0;
+            n = self.incr_n(n);
+        }
+        (m, n)
+    }
+
+    fn incr_n(&mut self, mut n: u8) -> u8 {
+        n = (n + 1) & 0x3F;
+        if n == 0 {
+            self.oam_end = true;
+        }
+        if self.secondary_oam_addr == 32 {
+            self.secondary_oam_full = true;
+            self.secondary_oam_addr = 0;
+        }
+        n
+    }
+
+    fn search_next_sprite(&mut self) -> bool {
+        debug_assert!(self.cycle.is_multiple_of(2));
+
+        if self.oam_end {
+            return false;
+        }
+
+        let oam_value = self.oam_data_latch;
+        let mut found = false;
+
+        let mut m = self.oam_addr & 0x3;
+        let mut n = self.oam_addr >> 2;
+
+        if !self.secondary_oam_full {
+            self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
+        }
+        if self.is_sprite_in_range_y(oam_value) {
+            if self.secondary_oam_full {
+                self.status.set_sprite_overflow(true);
+            } else {
+                found = true;
+                self.sprite_in_range[(self.secondary_oam_addr >> 2) as usize] = true;
+                if n == 0 {
+                    self.sprite_zero_next = true;
+                }
+                (m, n) = self.incr(m, n);
+                self.secondary_oam_addr += 1;
+            }
+        } else {
+            n = self.incr_n(n);
+            m = 0;
+        }
+
+        self.oam_addr = (n << 2) | m;
+
+        found
+    }
+
+    fn is_sprite_in_range_y(&self, value: u8) -> bool {
+        let sprite_y = value as i16;
         let sprite_height = self.ctrl.sprite_height() as i16;
         self.scanline >= sprite_y && self.scanline < sprite_y + sprite_height
     }
@@ -652,14 +694,14 @@ impl Ppu {
         let mut sprite_palette = 0;
         let mut sprite_behind = false;
 
-        if self.mask.show_sprites() && valid_sprite_x {
+        if self.mask.show_sprites() {
             for sprite in self.sprite_shifters.iter_mut() {
                 if !sprite.reached_x() {
                     sprite.dec_x();
                 } else {
                     let pixel = sprite.get_bit_and_shift();
 
-                    if sprite_pixel == 0 && pixel != 0 {
+                    if valid_sprite_x && sprite_pixel == 0 && pixel != 0 {
                         sprite_pixel = pixel;
                         sprite_palette = sprite.palette();
                         sprite_behind = sprite.behind();
@@ -711,9 +753,7 @@ impl Ppu {
 
     fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
         let addr = sprite_idx * 4;
-        let (oam_sprite, valid) = OamSprite::from_bytes(&self.secondary_oam[addr..addr + 4]);
-
-        let scanline = if valid { self.scanline } else { 0xFF };
+        let oam_sprite = OamSprite::from_bytes(&self.secondary_oam[addr..addr + 4]);
 
         let tile_index = oam_sprite.tile;
         let attributes = oam_sprite.attr;
@@ -721,12 +761,14 @@ impl Ppu {
         let flip_vertical = attributes.vertical_flip();
         let flip_horizontal = attributes.horizontal_flip();
 
-        let mut sprite_row = (scanline - (oam_sprite.y as i16)) as u16;
-        let sprite_height = self.ctrl.sprite_height();
+        let mut sprite_row = self.scanline - (oam_sprite.y as i16);
 
         if flip_vertical {
-            sprite_row = sprite_height - 1 - sprite_row;
+            let sprite_height = self.ctrl.sprite_height() as i16;
+            sprite_row = (sprite_height - 1) - sprite_row;
         }
+
+        let mut sprite_row = sprite_row as u16;
 
         let (table_base, actual_tile) = {
             if self.ctrl.sprite_size() {
@@ -756,6 +798,11 @@ impl Ppu {
         if flip_horizontal {
             lo_shifter = lo_shifter.reverse_bits();
             hi_shifter = hi_shifter.reverse_bits();
+        }
+
+        if !self.sprite_in_range[sprite_idx] {
+            lo_shifter = 0;
+            hi_shifter = 0;
         }
 
         self.sprite_shifters[sprite_idx].load(oam_sprite, lo_shifter, hi_shifter);

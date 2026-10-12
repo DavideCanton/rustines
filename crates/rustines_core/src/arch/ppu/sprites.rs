@@ -16,13 +16,10 @@ pub struct OamSprite {
 }
 
 impl OamSprite {
-    const INVALID_SPRITE_DATA: [u8; 4] = (!0u32).to_le_bytes();
-
-    pub fn from_bytes(bytes: &[u8]) -> (&OamSprite, bool) {
+    pub fn from_bytes(bytes: &[u8]) -> &OamSprite {
         debug_assert_eq!(bytes.len(), 4);
-        let valid = bytes != OamSprite::INVALID_SPRITE_DATA;
         let oam_sprite: &OamSprite = bytemuck::from_bytes(bytes);
-        (oam_sprite, valid)
+        oam_sprite
     }
 }
 
@@ -41,15 +38,27 @@ bitfield! {
     pub palette, _: 1, 0;
 }
 
-#[derive(Default, Debug, Clone, Copy, Zeroable)]
+#[derive(Debug, Clone, Copy, Zeroable)]
 pub struct SpriteShifters {
-    lo_shifter: u8,
-    hi_shifter: u8,
+    #[allow(unused)]
+    pub(super) index: usize,
+    pub(super) lo_shifter: u8,
+    pub(super) hi_shifter: u8,
     pub(super) x: u8,
-    attributes: SpriteAttributes,
+    pub(super) attributes: SpriteAttributes,
 }
 
 impl SpriteShifters {
+    pub const fn new(index: usize) -> Self {
+        Self {
+            index,
+            lo_shifter: 0,
+            hi_shifter: 0,
+            x: 0,
+            attributes: SpriteAttributes(0),
+        }
+    }
+
     pub fn load(&mut self, oam_sprite: &OamSprite, lo_shifter: u8, hi_shifter: u8) {
         self.attributes = oam_sprite.attr;
         self.x = oam_sprite.x;
