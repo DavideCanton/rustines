@@ -11,21 +11,26 @@ use rustines_core::{self as core, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
 #[cfg(target_arch = "wasm32")]
 use std::{cell::RefCell, rc::Rc};
-use std::{
-    collections::HashMap,
-    fs::File,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, fs::File, sync::Arc};
+
+use web_time::{Duration, Instant};
+
 use winit::{
     application::ApplicationHandler,
-    dpi::{LogicalSize, PhysicalSize},
+    dpi::PhysicalSize,
     event::{ElementState, MouseButton, StartCause, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::KeyCode,
     window::{Window, WindowAttributes, WindowId},
 };
 use winit_input_helper::WinitInputHelper;
+
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowExtWebSys;
+#[cfg(target_arch = "wasm32")]
+use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
 
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
@@ -246,10 +251,22 @@ impl ApplicationHandler for App {
                     let u_fps =
                         format_fps(app_state.update_counter.current_fps(), "Simulation FPS");
 
-                    app_state.main_window.set_title(&format!(
-                        "Rustines | {} | {r_fps} | {u_fps}",
-                        app_state.rom_name
-                    ));
+                    let title = format!("{} | {r_fps} | {u_fps}", app_state.rom_name);
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        let window = web_sys::window().unwrap();
+                        let document = window.document().unwrap();
+                        document
+                            .get_element_by_id("status")
+                            .unwrap()
+                            .set_text_content(Some(&title));
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    app_state
+                        .main_window
+                        .set_title(&format!("Rustines | {title}"));
                 }
             } else if app_state.pattern_window.owns_window_event(window_id) {
                 app_state.pattern_window.window_event(&event);
@@ -260,10 +277,6 @@ impl ApplicationHandler for App {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         #[cfg(target_arch = "wasm32")]
         {
-            event_loop.set_control_flow(ControlFlow::wait_duration(
-                web_time::Duration::from_millis(16),
-            ));
-
             if self.app_state.is_none() {
                 let renderer = self.pending_renderer.borrow_mut().take();
                 if let Some(renderer) = renderer {
@@ -319,7 +332,12 @@ fn handle_inputs(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
     input.end_step();
 
-    if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+    #[cfg(not(target_arch = "wasm32"))]
+    let esc_pressed = input.key_pressed(KeyCode::Escape);
+    #[cfg(target_arch = "wasm32")]
+    let esc_pressed = false;
+
+    if esc_pressed || input.close_requested() {
         event_loop.exit();
     } else {
         handle_debug_keys(app_state, event_loop);
@@ -417,7 +435,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
 async fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
     #[cfg(target_arch = "wasm32")]
-    let size = PhysicalSize(WIDTH, HEIGHT);
+    let size = PhysicalSize::new(WIDTH, HEIGHT);
     #[cfg(not(target_arch = "wasm32"))]
     let size = window.inner_size();
 
@@ -433,6 +451,7 @@ async fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> 
     let builder = PixelsBuilder::new(INNER_W, INNER_H, surface_texture);
     #[cfg(target_arch = "wasm32")]
     let builder = builder.surface_texture_format(pixels::wgpu::TextureFormat::Bgra8Unorm);
+
     let mut pixels = builder.build_async().await.map_err(|e| format!("{}", e))?;
     pixels.set_scaling_mode(ScalingMode::Fill);
 
@@ -495,13 +514,6 @@ fn format_fps(fps: f64, msg: &str) -> String {
 }
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::EventLoopExtWebSys;
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowExtWebSys;
-
-#[cfg(target_arch = "wasm32")]
 fn attach_canvas(window: Arc<Window>) {
     let web_window = web_sys::window().expect("no global `window` exists");
     let document = web_window
@@ -512,12 +524,13 @@ fn attach_canvas(window: Arc<Window>) {
     let canvas = window.canvas().expect("Canvas generation failed");
     canvas.set_width(WIDTH);
     canvas.set_height(HEIGHT);
+    canvas.set_id("game_canvas");
     body.append_child(&canvas).expect("Canvas append failed");
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn start_wasm(buf: &[u8], ext: &str) -> Result<(), JsValue> {
+pub fn start_wasm(buf: &[u8], name: &str, ext: &str) -> Result<(), JsValue> {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     console_log::init_with_level(log::Level::Debug).ok();
 
@@ -528,7 +541,7 @@ pub fn start_wasm(buf: &[u8], ext: &str) -> Result<(), JsValue> {
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
 
     let event_loop = EventLoop::new().map_err(|err| JsValue::from_str(&err.to_string()))?;
-    let app = App::new(mapper, false, false, Some(attach_canvas));
+    let app = App::new(name.to_string(), mapper, false, false, Some(attach_canvas));
 
     event_loop.spawn_app(app);
     Ok(())

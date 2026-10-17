@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use web_time::{Duration, Instant};
 
 /// Helper to count the fps at which a gui application is running.
 ///

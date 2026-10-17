@@ -18,3 +18,4 @@ flexi_logger = { version = "0.31", features = ["async"] }
 winit = "0.30"
 pixels = "0.17"
 winit_input_helper = "0.17"
+web-time = "1"

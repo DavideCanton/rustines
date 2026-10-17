@@ -17,11 +17,13 @@
             const status = document.getElementById("status");
             let romBytes;
             let romExtension;
+            let romName;
 
             romInput.addEventListener("change", async () => {
                 const file = romInput.files[0];
                 romBytes = undefined;
                 romExtension = undefined;
+                romName = undefined;
                 btn.disabled = true;
 
                 if (!file) {
@@ -31,6 +33,7 @@
                 try {
                     romBytes = new Uint8Array(await file.arrayBuffer());
                     const extensionSeparator = file.name.lastIndexOf(".");
+                    romName = file.name;
                     romExtension = extensionSeparator < 0
                         ? ""
                         : file.name.slice(extensionSeparator + 1).toLowerCase();
@@ -43,14 +46,17 @@
 
             btn.addEventListener("click", async () => {
                 btn.disabled = true;
+                romInput.disabled = true;
 
                 try {
                     await init();
-                    start_wasm(romBytes, romExtension);
+                    start_wasm(romBytes, romName, romExtension);
                 } catch (error) {
                     status.textContent = `Could not start ROM: ${error}`;
                     btn.disabled = false;
                 }
+
+                document.getElementById("game_canvas").focus();
             });
         </script>
     </body>

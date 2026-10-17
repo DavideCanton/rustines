@@ -2022,6 +2022,9 @@ dependencies = [
 [[package]]
 name = "rustines-gui-utils"
 version = "0.1.0"
+dependencies = [
+ "web-time",
+]
 
 [[package]]
 name = "rustines-macro"
