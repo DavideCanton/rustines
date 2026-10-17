@@ -12,7 +12,7 @@ pub fn implied(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let p = cpu.registers.get_p_force_b(true);
     cpu.push8(bus, p);
 
-    cpu.poll_non_maskable_interrupts(bus);
+    cpu.poll_nmi(bus);
 
     let address = if cpu.pending_nmi_execution {
         cpu.clear_nmi(bus);

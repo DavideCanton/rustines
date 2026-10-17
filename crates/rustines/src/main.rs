@@ -16,6 +16,7 @@ use rustines_core::{self as core, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
 use std::{
     collections::HashMap,
+    fs::File,
     path::Path,
     sync::Arc,
     time::{Duration, Instant},
@@ -208,7 +209,7 @@ impl ApplicationHandler for App {
 
                 if app_state.main_window_helper.process_window_event(&event) {
                     // Draw the current frame
-                    app_state.bus.ppu_mut().renderer().draw();
+                    app_state.bus.ppu_mut().renderer_mut().draw();
 
                     app_state.render_counter.update();
 
@@ -275,7 +276,8 @@ pub fn main() {
 
     info!("Using input file: {}", args.file_path);
 
-    let (_, mapper) = read_file(Path::new(&args.file_path)).unwrap();
+    let file_path = Path::new(&args.file_path);
+    let (_, mapper) = read_file(file_path).unwrap();
 
     info!(
         "Zapper {}",
@@ -284,7 +286,12 @@ pub fn main() {
 
     let event_loop = EventLoop::new().unwrap();
 
-    let mut app = App::new(args.file_path, mapper, args.trace_boot, args.zapper);
+    let mut app = App::new(
+        file_path.file_name().unwrap().to_str().unwrap().to_string(),
+        mapper,
+        args.trace_boot,
+        args.zapper,
+    );
 
     let _ = event_loop.run_app(&mut app);
 }
@@ -342,6 +349,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     if input.held_shift() {
         if input.key_pressed(KeyCode::KeyD) {
             core::debug_utils::debug_dump_nametables(bus);
+            core::debug_utils::debug_dump_attribute_tables(bus);
         }
 
         if input.key_pressed(KeyCode::KeyP) {
@@ -349,7 +357,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         }
 
         if input.key_pressed(KeyCode::KeyO) {
-            core::debug_utils::debug_dump_oam(bus);
+            core::debug_utils::debug_dump_oam(bus.ppu());
         }
 
         if input.key_pressed(KeyCode::KeyX) {
@@ -359,6 +367,14 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         if input.key_pressed(KeyCode::KeyQ) {
             core::debug_utils::debug_dump_state(bus, cpu);
             core::debug_utils::debug_dump_scrolling_state(bus);
+        }
+
+        if input.key_pressed(KeyCode::KeyF) {
+            let mut file = File::create("frame.ppm").expect("cannot create file");
+            bus.ppu()
+                .renderer()
+                .dump_frame(&mut file)
+                .expect("cannot dump frame");
         }
 
         if input.key_pressed(KeyCode::KeyT) {

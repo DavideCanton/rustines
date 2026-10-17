@@ -1,5 +1,7 @@
+use std::{fs::File, io::Write};
+
 use pixels::Pixels;
-use rustines_core::renderer::Renderer;
+use rustines_core::{arch::utils::generate_ppm, renderer::Renderer};
 
 pub struct PixelsRenderer {
     pixels: Pixels<'static>,
@@ -27,5 +29,12 @@ impl Renderer for PixelsRenderer {
 
     fn draw(&mut self) {
         self.pixels.render().unwrap();
+    }
+
+    fn dump_frame(&self, file: &mut File) -> std::io::Result<()> {
+        let buf = self.pixels.frame();
+        let data = generate_ppm(256, 240, buf, true);
+        file.write_all(&data)?;
+        Ok(())
     }
 }
