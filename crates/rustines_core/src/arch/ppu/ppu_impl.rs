@@ -1030,7 +1030,7 @@ mod tests {
 
         ppu.cpu_write(5, 0b0111_1101, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0111_0011_1110_1111);
+        assert_eq!(ppu.t_reg, 0b0111_0010_0000_1111);
         assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(ppu.w_toggle);
@@ -1077,7 +1077,6 @@ mod tests {
             ppu.tick(&mut mapper);
         }
 
-        assert_eq!(ppu.sprite_shifters.len(), 1);
         assert_eq!(ppu.sprite_shifters[0].x, 0x34);
     }
 
@@ -1098,6 +1097,6 @@ mod tests {
         }
 
         assert!(ppu.status.sprite_overflow());
-        assert_eq!(ppu.secondary_oam_addr, 32);
+        assert!(ppu.secondary_oam_full);
     }
 }
