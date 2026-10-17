@@ -349,6 +349,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     if input.held_shift() {
         if input.key_pressed(KeyCode::KeyD) {
             core::debug_utils::debug_dump_nametables(bus);
+            core::debug_utils::debug_dump_attribute_tables(bus);
         }
 
         if input.key_pressed(KeyCode::KeyP) {

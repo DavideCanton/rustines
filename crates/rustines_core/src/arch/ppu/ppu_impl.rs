@@ -609,26 +609,26 @@ impl Ppu {
         ret
     }
 
-    pub fn vram_read(&self, mut addr: u16, mapper: &dyn Mapper) -> u8 {
+    pub fn vram_read(&self, addr: u16, mapper: &dyn Mapper) -> u8 {
         let orig_addr = addr;
 
-        addr &= 0x3FFF;
+        let resolved_addr = addr & 0x3FFF;
 
-        let ret = match addr {
-            0x0000..=0x1FFF => mapper.fetch_ppu(addr),
+        let ret = match resolved_addr {
+            0x0000..=0x1FFF => mapper.fetch_ppu(resolved_addr),
             0x2000..=0x3EFF => {
-                let idx = mirror_nametable_addr(addr, mapper.mirroring_mode());
+                let idx = mirror_nametable_addr(resolved_addr, mapper.mirroring_mode());
                 self.nametables[idx]
             }
             0x3F00..=0x3FFF => {
-                let palette_addr = normalize_palette_address(addr);
+                let palette_addr = normalize_palette_address(resolved_addr);
                 self.palette_table[palette_addr]
             }
             _ => 0,
         };
 
         if self.tracing_enabled {
-            trace!("PPU VRAM READ {orig_addr:04X} {addr:04X} {ret:04X}");
+            trace!("PPU VRAM READ {orig_addr:04X} {resolved_addr:04X} {ret:04X}");
         }
 
         ret
