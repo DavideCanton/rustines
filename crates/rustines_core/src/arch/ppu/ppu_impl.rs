@@ -513,11 +513,11 @@ impl Ppu {
             5 => {
                 if self.w_toggle {
                     self.t_reg = (self.t_reg & 0x0C1F)
-                        | (((value & 0x7) as u16) << 12)
+                        | (((value & 0x07) as u16) << 12)
                         | (((value & 0xF8) as u16) << 2);
                 } else {
                     self.x_reg = value & 0x7;
-                    self.t_reg = (self.t_reg & !0x1F) | ((value >> 3) as u16);
+                    self.t_reg = (self.t_reg & 0x7E00) | ((value >> 3) as u16);
                 }
                 self.w_toggle = !self.w_toggle;
             }
@@ -676,9 +676,10 @@ impl Ppu {
         let mut sprite_pixel = 0;
         let mut sprite_palette = 0;
         let mut sprite_behind = false;
+        let mut sprite_zero = false;
 
         if self.mask.show_sprites() {
-            for sprite in self.sprite_shifters.iter_mut() {
+            for (i, sprite) in self.sprite_shifters.iter_mut().enumerate() {
                 if !sprite.reached_x() {
                     sprite.dec_x();
                 } else {
@@ -688,6 +689,7 @@ impl Ppu {
                         sprite_pixel = pixel;
                         sprite_palette = sprite.palette();
                         sprite_behind = sprite.behind();
+                        sprite_zero = i == 0;
                     }
                 }
             }
@@ -701,7 +703,7 @@ impl Ppu {
             (0, _) => sp_data,
             (_, 0) => bg_data,
             _ => {
-                if self.sprite_zero_current {
+                if self.sprite_zero_current && sprite_zero {
                     let left_allowed =
                         self.mask.show_background_leftmost() && self.mask.show_sprites_leftmost();
 
