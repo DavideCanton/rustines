@@ -69,6 +69,7 @@ pub struct AppState {
     cursor_position: Option<(f64, f64)>,
     zapper_trigger_pressed: bool,
     zapper_needs_update: bool,
+    enable_debug_keys: bool,
 
     pause: bool,
     next_frame_time: Instant,
@@ -109,6 +110,7 @@ pub struct App {
     platform: Box<dyn Platform>,
     size: PhysicalSize<u32>,
     gilrs: Gilrs,
+    enable_debug_keys: bool,
 }
 
 impl App {
@@ -119,6 +121,7 @@ impl App {
         zapper: bool,
         width: u32,
         platform: Box<dyn Platform>,
+        enable_debug_keys: bool,
     ) -> Self {
         App {
             info: Some(AppStateInfo { mapper, rom_name }),
@@ -130,6 +133,7 @@ impl App {
             pending_window: None,
             pending_renderer: Rc::new(RefCell::new(None)),
             gilrs: Gilrs::new().unwrap(),
+            enable_debug_keys,
         }
     }
 
@@ -178,6 +182,7 @@ impl App {
             next_frame_time: Instant::now(),
             frame_duration: Duration::from_secs_f64(1.0 / TARGET_FPS),
             speedup: SpeedupState::default(),
+            enable_debug_keys: self.enable_debug_keys,
         }
     }
 }
@@ -320,7 +325,9 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     if esc_pressed || input.close_requested() {
         event_loop.exit();
     } else {
-        handle_debug_keys(app_state, event_loop);
+        if app_state.enable_debug_keys {
+            handle_debug_keys(app_state, event_loop);
+        }
 
         // reborrow
         let input = &app_state.main_window_helper;

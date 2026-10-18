@@ -57,6 +57,7 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
         zapper,
         WIDTH,
         Box::new(platform::WasmPlatform),
+        false,
     );
 
     event_loop.spawn_app(app);

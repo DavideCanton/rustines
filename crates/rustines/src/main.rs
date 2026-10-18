@@ -35,6 +35,7 @@ pub fn main() {
         args.zapper,
         WIDTH,
         Box::new(platform::DesktopPlatform),
+        true,
     );
 
     let _ = event_loop.run_app(&mut app);
