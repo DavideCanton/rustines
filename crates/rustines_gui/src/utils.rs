@@ -38,7 +38,8 @@ pub fn init_logger(file: Option<String>, trace: HashSet<TraceTargets>) -> Logger
         .default(LevelFilter::Debug)
         .module("wgpu", LevelFilter::Warn)
         .module("winit", LevelFilter::Warn)
-        .module("naga", LevelFilter::Warn);
+        .module("naga", LevelFilter::Warn)
+        .module("gilrs", LevelFilter::Warn);
 
     if trace.contains(&TraceTargets::Cpu) {
         log_spec_builder.module("rustines_core::arch::instr_tracer", LevelFilter::Trace);
