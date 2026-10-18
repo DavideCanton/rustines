@@ -33,35 +33,26 @@ mod tests {
     use super::ZipLoader;
     use crate::loaders::loader::Loader;
     use rand::{Rng, SeedableRng, rngs::StdRng};
-    use std::{env::temp_dir, fs::OpenOptions, io::Write};
+    use std::io::{Cursor, Write};
     use zip::{ZipWriter, write::SimpleFileOptions};
 
     #[test]
     fn test_load() {
         let mut rng = get_rng();
-        let mut buf = vec![0u8; 1 << 16];
-        rng.fill_bytes(&mut buf);
+        let mut rom_data = vec![0u8; 1 << 16];
+        rng.fill_bytes(&mut rom_data);
 
-        let dir = temp_dir();
-        let zip_path = dir.join("test.zip");
-        let archive = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(&zip_path)
-            .unwrap();
-
-        let mut zip = ZipWriter::new(archive);
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
         zip.start_file("test.rom", SimpleFileOptions::default())
             .unwrap();
-        zip.write_all(&buf).unwrap();
-        zip.finish().unwrap();
+        zip.write_all(&rom_data).unwrap();
+        let archive = zip.finish().unwrap().into_inner();
 
         let loader = ZipLoader;
-        let data = loader.load_rom(&buf).unwrap();
+        let data = loader.load_rom(&archive).unwrap();
 
-        assert_eq!(data.len(), buf.len());
-        assert_eq!(data, buf);
+        assert_eq!(data.len(), rom_data.len());
+        assert_eq!(data, rom_data);
     }
 
     fn get_rng() -> StdRng {
