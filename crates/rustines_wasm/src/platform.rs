@@ -10,14 +10,26 @@ use winit::window::Window;
 
 pub struct WasmPlatform;
 
+fn format_fps(fps: f64) -> String {
+    format!("{:.1}", fps)
+}
+
 impl Platform for WasmPlatform {
-    fn set_title(&self, _app_state: &AppState, title: &str) {
+    fn set_title(&self, app_state: &AppState) {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
+
         document
-            .get_element_by_id("status")
-            .unwrap()
-            .set_text_content(Some(title));
+            .get_element_by_id("filename")
+            .map(|e| e.set_text_content(Some(app_state.rom_name())));
+
+        document
+            .get_element_by_id("r_fps")
+            .map(|e| e.set_text_content(Some(&format_fps(app_state.render_fps()))));
+
+        document
+            .get_element_by_id("u_fps")
+            .map(|e| e.set_text_content(Some(&format_fps(app_state.update_fps()))));
     }
 
     fn init_window_hook(&self, window: Arc<Window>, size: PhysicalSize<u32>) {

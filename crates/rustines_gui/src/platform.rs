@@ -6,7 +6,7 @@ use winit::{dpi::PhysicalSize, window::Window};
 use crate::app::AppState;
 
 pub trait Platform {
-    fn set_title(&self, app_state: &AppState, title: &str);
+    fn set_title(&self, app_state: &AppState);
     fn init_window_hook(&self, window: Arc<Window>, size: PhysicalSize<u32>);
     fn init_pending_renderer(
         &self,

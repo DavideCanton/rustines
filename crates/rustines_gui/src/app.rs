@@ -72,6 +72,18 @@ impl AppState {
     pub fn main_window(&self) -> &Window {
         &self.main_window
     }
+
+    pub fn rom_name(&self) -> &str {
+        &self.rom_name
+    }
+
+    pub fn render_fps(&self) -> f64 {
+        self.render_counter.current_fps()
+    }
+
+    pub fn update_fps(&self) -> f64 {
+        self.update_counter.current_fps()
+    }
 }
 
 struct AppStateInfo {
@@ -228,16 +240,8 @@ impl ApplicationHandler for App {
                 if app_state.main_window_helper.process_window_event(&event) {
                     // Draw the current frame
                     app_state.bus.ppu_mut().renderer_mut().draw();
-
                     app_state.render_counter.update();
-
-                    let r_fps = format_fps(app_state.render_counter.current_fps(), "FPS");
-                    let u_fps =
-                        format_fps(app_state.update_counter.current_fps(), "Simulation FPS");
-
-                    let title = format!("{} | {r_fps} | {u_fps}", app_state.rom_name);
-
-                    self.platform.set_title(app_state, &title);
+                    self.platform.set_title(app_state);
                 }
             } else if app_state.pattern_window.owns_window_event(window_id) {
                 app_state.pattern_window.window_event(&event);
@@ -471,8 +475,4 @@ fn handle_input_keys(
             ctrl.released(*key_map.get(k).unwrap());
         }
     }
-}
-
-fn format_fps(fps: f64, msg: &str) -> String {
-    format!("{}: {:.1}", msg, fps)
 }
