@@ -29,7 +29,7 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const TARGET_FPS: f64 = 60.0;
+const TARGET_FPS: u64 = 60;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 type GamepadMap = HashMap<Button, rustines_core::NesKey>;
@@ -72,9 +72,10 @@ pub struct AppState {
     enable_debug_keys: bool,
 
     pause: bool,
-    next_frame_time: Instant,
     frame_duration: Duration,
     speedup: SpeedupState,
+    last_frame_time: Instant,
+    accumulator: Duration,
 }
 
 impl AppState {
@@ -179,10 +180,11 @@ impl App {
             cursor_position: None,
             zapper_trigger_pressed: false,
             zapper_needs_update: false,
-            next_frame_time: Instant::now(),
-            frame_duration: Duration::from_secs_f64(1.0 / TARGET_FPS),
+            frame_duration: Duration::from_nanos(1_000_000_000 / TARGET_FPS),
             speedup: SpeedupState::default(),
             enable_debug_keys: self.enable_debug_keys,
+            accumulator: Duration::ZERO,
+            last_frame_time: Instant::now(),
         }
     }
 }
@@ -254,8 +256,15 @@ impl ApplicationHandler for App {
                 }
 
                 if app_state.main_window_helper.process_window_event(&event) {
+                    // check how much time has passed since last frame
+                    let now = Instant::now();
+                    let dt = now.duration_since(app_state.last_frame_time);
+                    app_state.last_frame_time = now;
+                    app_state.accumulator += dt;
+
                     // Draw the current frame
                     app_state.bus.ppu_mut().renderer_mut().draw();
+
                     app_state.render_counter.update();
                     self.platform.set_title(app_state);
                 }
@@ -266,36 +275,31 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        if self.app_state.is_none() {
-            let renderer = self.pending_renderer.borrow_mut().take();
-            if let Some(renderer) = renderer {
-                let window = self.pending_window.take().unwrap();
-                self.app_state = Some(self.init_app_state(window, renderer));
+        match self.app_state.as_mut() {
+            None => {
+                let renderer = self.pending_renderer.borrow_mut().take();
+                if let Some(renderer) = renderer {
+                    let window = self.pending_window.take().unwrap();
+                    self.app_state = Some(self.init_app_state(window, renderer));
+                }
             }
-        }
+            Some(app_state) => {
+                handle_inputs(app_state, self.platform.as_ref(), event_loop);
+                handle_gamepad(app_state, &mut self.gilrs);
 
-        if let Some(app_state) = self.app_state.as_mut() {
-            handle_inputs(app_state, self.platform.as_ref(), event_loop);
-            handle_gamepad(app_state, &mut self.gilrs);
-
-            let now = Instant::now();
-            let next_frame = now >= app_state.next_frame_time;
-
-            if app_state.speedup.active || next_frame {
-                update_logic(app_state);
-            }
-            if app_state.speedup.active {
-                event_loop.set_control_flow(ControlFlow::Poll);
-            } else if next_frame {
-                if app_state.speedup.changed {
-                    app_state.next_frame_time = now + app_state.frame_duration;
-                } else {
-                    app_state.next_frame_time += app_state.frame_duration;
+                // run as many updates as possible in the delta that has passed
+                while app_state.accumulator >= app_state.frame_duration {
+                    update_logic(app_state);
+                    app_state.accumulator -= app_state.frame_duration;
                 }
 
-                event_loop.set_control_flow(ControlFlow::WaitUntil(app_state.next_frame_time));
+                // request redraw for next
+                app_state.main_window.request_redraw();
+                app_state.pattern_window.render();
             }
         }
+
+        event_loop.set_control_flow(ControlFlow::Poll);
     }
 }
 
@@ -310,9 +314,6 @@ fn update_logic(app_state: &mut AppState) {
             app_state.bus.ppu_mut().clear_frame_ready();
         }
     }
-
-    app_state.main_window.request_redraw();
-    app_state.pattern_window.render();
 }
 
 fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: &ActiveEventLoop) {
@@ -325,9 +326,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     if esc_pressed || input.close_requested() {
         event_loop.exit();
     } else {
-        if app_state.enable_debug_keys {
-            handle_debug_keys(app_state, event_loop);
-        }
+        handle_debug_keys(app_state, event_loop);
 
         // reborrow
         let input = &app_state.main_window_helper;
@@ -398,9 +397,10 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     let bus = &mut app_state.bus;
     let cpu = &mut app_state.cpu;
 
+    // keep this enabled even when debug keys are disabled
     app_state.speedup.update(input.key_held(KeyCode::Backquote));
 
-    if input.held_shift() {
+    if app_state.enable_debug_keys && input.held_shift() {
         if input.key_pressed(KeyCode::KeyD) {
             core::debug_utils::debug_dump_nametables(bus);
             core::debug_utils::debug_dump_attribute_tables(bus);
