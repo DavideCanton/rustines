@@ -9,7 +9,7 @@ pub struct NesController {
     strobe: bool,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NesKey {
     A = 0,
     B = 1,
