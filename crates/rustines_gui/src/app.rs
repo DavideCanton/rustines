@@ -1,11 +1,10 @@
 use crate::{
     Platform,
-    constants::{INNER_H, INNER_W, width_to_size},
+    constants::{INNER_SIZE, width_to_size},
     pattern_window::PatternTableWindow,
-    renderer::PixelsRenderer,
 };
 use log::info;
-use pixels::{PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
+use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{self as core, Renderer, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
@@ -331,8 +330,8 @@ fn update_zapper_input(app_state: &mut AppState) {
     let position = app_state.cursor_position.and_then(|(x, y)| {
         (size.width > 0 && size.height > 0).then(|| {
             (
-                (x * f64::from(INNER_W) / f64::from(size.width)) as usize,
-                (y * f64::from(INNER_H) / f64::from(size.height)) as usize,
+                (x * f64::from(INNER_SIZE.width) / f64::from(size.width)) as usize,
+                (y * f64::from(INNER_SIZE.height) / f64::from(size.height)) as usize,
             )
         })
     });
@@ -401,11 +400,11 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 }
 
-pub async fn create_renderer(
+pub async fn create_pixels(
     window: Arc<Window>,
     size: PhysicalSize<u32>,
     texture_format: Option<TextureFormat>,
-) -> Result<PixelsRenderer, String> {
+) -> Result<Pixels<'static>, String> {
     if size.width == 0 || size.height == 0 {
         return Err(format!(
             "Window surface has invalid size: {}x{}",
@@ -415,7 +414,7 @@ pub async fn create_renderer(
 
     let surface_texture = SurfaceTexture::new(size.width, size.height, window);
 
-    let mut builder = PixelsBuilder::new(INNER_W, INNER_H, surface_texture);
+    let mut builder = PixelsBuilder::new(INNER_SIZE.width, INNER_SIZE.height, surface_texture);
     if let Some(texture_format) = texture_format {
         builder = builder.surface_texture_format(texture_format);
     }
@@ -423,11 +422,7 @@ pub async fn create_renderer(
     let mut pixels = builder.build_async().await.map_err(|e| format!("{}", e))?;
     pixels.set_scaling_mode(ScalingMode::Fill);
 
-    Ok(PixelsRenderer::new(
-        pixels,
-        INNER_W as usize,
-        INNER_H as usize,
-    ))
+    Ok(pixels)
 }
 
 fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {

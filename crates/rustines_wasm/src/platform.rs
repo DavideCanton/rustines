@@ -1,8 +1,9 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
-use rustines_gui::{AppState, Platform, create_renderer};
+use rustines_gui::{AppState, INNER_SIZE, Platform, create_pixels};
 
+use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
 use winit::dpi::PhysicalSize;
 use winit::platform::web::WindowExtWebSys;
@@ -56,13 +57,18 @@ impl Platform for WasmPlatform {
         size: PhysicalSize<u32>,
     ) {
         wasm_bindgen_futures::spawn_local(async move {
-            let renderer = create_renderer(
+            let pixels = create_pixels(
                 Arc::clone(&main_window),
                 size,
                 Some(TextureFormat::Bgra8Unorm),
             )
             .await
             .unwrap();
+            let renderer = WasmRenderer::new(
+                pixels,
+                INNER_SIZE.width as usize,
+                INNER_SIZE.height as usize,
+            );
             *pending_renderer.borrow_mut() = Some(Box::new(renderer));
             main_window.request_redraw();
         });

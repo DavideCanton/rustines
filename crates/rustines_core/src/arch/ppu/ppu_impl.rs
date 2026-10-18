@@ -11,6 +11,7 @@ use crate::{
         },
         rom_structs::MirroringType,
     },
+    compose_rgba, decompose_rgba,
     renderer::Renderer,
     utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, set_flag},
 };
@@ -905,10 +906,11 @@ fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
 }
 
 fn is_zapper_light(rgba: u32) -> bool {
-    let red = (rgba >> 24) & 0xFF;
-    let green = (rgba >> 16) & 0xFF;
-    let blue = (rgba >> 8) & 0xFF;
-    (red * 299 + green * 587 + blue * 114) / 1000 >= ZAPPER_LIGHT_THRESHOLD
+    let [r, g, b, _] = decompose_rgba(rgba);
+    let r = r as u32;
+    let g = g as u32;
+    let b = b as u32;
+    (r * 299 + g * 587 + b * 114) / 1000 >= ZAPPER_LIGHT_THRESHOLD
 }
 
 fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
@@ -923,16 +925,14 @@ fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
 }
 
 fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
-    let r = (color >> 24) & 0xFF;
-    let g = (color >> 16) & 0xFF;
-    let b = (color >> 8) & 0xFF;
+    let [r, g, b, a] = decompose_rgba(color);
 
     let mut r2 = r;
     let mut g2 = g;
     let mut b2 = b;
 
-    fn emphasize(col: u32) -> u32 {
-        (col + 0x55).min(0xFF)
+    fn emphasize(col: u8) -> u8 {
+        col + 0x55
     }
 
     if mask.emphasis_red() {
@@ -945,7 +945,7 @@ fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
         b2 = emphasize(b2);
     }
 
-    (r2 << 24) | (g2 << 16) | (b2 << 8) | 0xFF
+    compose_rgba(r2, g2, b2, a)
 }
 
 const NES_PALETTE: [u32; 64] = [

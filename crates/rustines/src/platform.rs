@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
-use rustines_gui::{AppState, Platform, create_renderer};
+use rustines_gui::{AppState, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
 use winit::{dpi::PhysicalSize, window::Window};
 
 pub struct DesktopPlatform;
@@ -26,8 +26,15 @@ impl Platform for DesktopPlatform {
         pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
         size: PhysicalSize<u32>,
     ) {
-        let renderer =
-            pollster::block_on(create_renderer(Arc::clone(&main_window), size, None)).unwrap();
+        let pixels =
+            pollster::block_on(create_pixels(Arc::clone(&main_window), size, None)).unwrap();
+
+        let renderer = PixelsRenderer::new(
+            pixels,
+            INNER_SIZE.width as usize,
+            INNER_SIZE.height as usize,
+        );
+
         *pending_renderer.borrow_mut() = Some(Box::new(renderer));
     }
 
