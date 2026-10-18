@@ -16,3 +16,5 @@ winit = { workspace = true }
 rustines-core = { path = "../rustines_core" }
 rustines-gui = { path = "../rustines_gui" }
 log = { workspace = true }
+wasm-bindgen-futures = "0.4"
+pixels = { workspace = true }

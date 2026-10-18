@@ -1,4 +1,5 @@
 mod args;
+mod platform;
 
 use std::path::Path;
 
@@ -7,6 +8,8 @@ use clap::Parser;
 use log::info;
 use rustines_gui::{App, init_logger, read_file};
 use winit::event_loop::EventLoop;
+
+const WIDTH: u32 = 1024;
 
 pub fn main() {
     let args = RustinesArgs::parse();
@@ -30,7 +33,8 @@ pub fn main() {
         mapper,
         args.trace_boot,
         args.zapper,
-        None,
+        WIDTH,
+        Box::new(platform::DesktopPlatform),
     );
 
     let _ = event_loop.run_app(&mut app);

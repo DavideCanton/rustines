@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
 pixels = { workspace = true }
 winit = { workspace = true }
@@ -17,7 +14,3 @@ rustines-gui-utils = { path = "../rustines_gui_utils" }
 flexi_logger = { workspace = true }
 pollster = "1"
 web-time = { workspace = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { workspace = true }
-wasm-bindgen-futures = "0.4"

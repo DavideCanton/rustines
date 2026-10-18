@@ -1,4 +1,9 @@
-use crate::{pattern_window::PatternTableWindow, renderer::PixelsRenderer};
+use crate::{
+    Platform,
+    constants::{INNER_H, INNER_W, width_to_size},
+    pattern_window::PatternTableWindow,
+    renderer::PixelsRenderer,
+};
 use log::info;
 use pixels::{PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
@@ -18,11 +23,6 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-const INNER_W: u32 = 256;
-const INNER_H: u32 = 240;
-const WIDTH: u32 = 1024;
-const RATIO: f64 = INNER_H as f64 / INNER_W as f64;
-const HEIGHT: u32 = (WIDTH as f64 * RATIO) as u32;
 const TARGET_FPS: f64 = 60.0;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
@@ -40,7 +40,7 @@ impl SpeedupState {
     }
 }
 
-struct AppState {
+pub struct AppState {
     rom_name: String,
 
     bus: core::Bus,
@@ -68,6 +68,12 @@ struct AppState {
     speedup: SpeedupState,
 }
 
+impl AppState {
+    pub fn main_window(&self) -> &Window {
+        &self.main_window
+    }
+}
+
 struct AppStateInfo {
     mapper: core::MapperBox,
     rom_name: String,
@@ -78,9 +84,10 @@ pub struct App {
     info: Option<AppStateInfo>,
     trace_boot: bool,
     zapper: bool,
-    init_window_hook: Option<fn(Arc<Window>)>,
     pending_window: Option<Arc<Window>>,
     pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
+    platform: Box<dyn Platform>,
+    size: PhysicalSize<u32>,
 }
 
 impl App {
@@ -89,14 +96,16 @@ impl App {
         mapper: core::MapperBox,
         trace_boot: bool,
         zapper: bool,
-        init_window_hook: Option<fn(Arc<Window>)>,
+        width: u32,
+        platform: Box<dyn Platform>,
     ) -> Self {
         App {
             info: Some(AppStateInfo { mapper, rom_name }),
             app_state: None,
             trace_boot,
             zapper,
-            init_window_hook,
+            platform,
+            size: width_to_size(width),
             pending_window: None,
             pending_renderer: Rc::new(RefCell::new(None)),
         }
@@ -156,50 +165,27 @@ impl ApplicationHandler for App {
             return;
         }
 
-        let size = PhysicalSize::new(WIDTH, HEIGHT);
         let main_window = Arc::new(
             event_loop
                 .create_window(
                     WindowAttributes::default()
                         .with_title("Rustines")
-                        .with_inner_size(size)
-                        .with_min_inner_size(size),
+                        .with_inner_size(self.size)
+                        .with_min_inner_size(self.size),
                 )
                 .unwrap(),
         );
 
-        if let Some(init_hook) = self.init_window_hook {
-            (init_hook)(Arc::clone(&main_window));
-        }
+        self.platform
+            .init_window_hook(Arc::clone(&main_window), self.size);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.pending_window = Some(Arc::clone(&main_window));
-            let renderer = pollster::block_on(create_renderer(
-                Arc::clone(&main_window),
-                main_window.inner_size(),
-                None,
-            ))
-            .unwrap();
-            *self.pending_renderer.borrow_mut() = Some(Box::new(renderer));
-        }
+        self.pending_window = Some(Arc::clone(&main_window));
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.pending_window = Some(Arc::clone(&main_window));
-            let pending_renderer = Rc::clone(&self.pending_renderer);
-            wasm_bindgen_futures::spawn_local(async move {
-                let renderer = create_renderer(
-                    Arc::clone(&main_window),
-                    size,
-                    Some(TextureFormat::Bgra8Unorm),
-                )
-                .await
-                .unwrap();
-                *pending_renderer.borrow_mut() = Some(Box::new(renderer));
-                main_window.request_redraw();
-            });
-        }
+        self.platform.init_pending_renderer(
+            Arc::clone(&main_window),
+            Rc::clone(&self.pending_renderer),
+            self.size,
+        );
     }
 
     fn new_events(&mut self, _: &ActiveEventLoop, _: StartCause) {
@@ -251,20 +237,7 @@ impl ApplicationHandler for App {
 
                     let title = format!("{} | {r_fps} | {u_fps}", app_state.rom_name);
 
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        let window = web_sys::window().unwrap();
-                        let document = window.document().unwrap();
-                        document
-                            .get_element_by_id("status")
-                            .unwrap()
-                            .set_text_content(Some(&title));
-                    }
-
-                    #[cfg(not(target_arch = "wasm32"))]
-                    app_state
-                        .main_window
-                        .set_title(&format!("Rustines | {title}"));
+                    self.platform.set_title(app_state, &title);
                 }
             } else if app_state.pattern_window.owns_window_event(window_id) {
                 app_state.pattern_window.window_event(&event);
@@ -282,7 +255,7 @@ impl ApplicationHandler for App {
         }
 
         if let Some(app_state) = self.app_state.as_mut() {
-            handle_inputs(app_state, event_loop);
+            handle_inputs(app_state, self.platform.as_ref(), event_loop);
 
             let now = Instant::now();
             let next_frame = now >= app_state.next_frame_time;
@@ -321,15 +294,12 @@ fn update_logic(app_state: &mut AppState) {
     app_state.pattern_window.render();
 }
 
-fn handle_inputs(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: &ActiveEventLoop) {
     let input = &mut app_state.main_window_helper;
 
     input.end_step();
 
-    #[cfg(not(target_arch = "wasm32"))]
-    let esc_pressed = input.key_pressed(KeyCode::Escape);
-    #[cfg(target_arch = "wasm32")]
-    let esc_pressed = false;
+    let esc_pressed = platform.esc_pressed_enabled() && input.key_pressed(KeyCode::Escape);
 
     if esc_pressed || input.close_requested() {
         event_loop.exit();
@@ -427,7 +397,7 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 }
 
-async fn create_renderer(
+pub async fn create_renderer(
     window: Arc<Window>,
     size: PhysicalSize<u32>,
     texture_format: Option<TextureFormat>,

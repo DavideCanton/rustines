@@ -1,13 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
     <head>
         <title>Rustines</title>
+
+        <style>
+            body {
+                background-color: #d2ffff;
+                margin: 0;
+                font-family: monospace;
+                font-size: 2em;
+            }
+
+            #main {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                height: 100vh;
+                justify-content: center;
+            }
+
+            input[type="file"] {
+                display: none;
+            }
+
+            #label {
+                cursor: pointer;
+                padding: 0.1em;
+                text-align: center;
+                display: inline-block;
+            }
+
+            #start {
+                cursor: pointer;
+                text-align: center;
+            }
+
+            #status {
+                color: green;
+            }
+
+            #game_canvas {
+                flex: 0 0 auto;
+            }
+        </style>
     </head>
     <body>
-        Rom: <input type="file" id="rom" />
-        <br />
-        <button disabled id="start">Start</button>
-        <p id="status" role="status"></p>
+        <div id="main">
+            <div id="header">
+                <label for="rom" id="label">Click here to select ROM</label>
+                <input type="file" id="rom" />
+            </div>
+            <p id="status" role="status"></p>
+            <span style="display: none" id="start">Play!</span>
+        </div>
 
         <script type="module">
             import init, { start_wasm } from "./assets/rustines_wasm.js";
@@ -16,28 +61,21 @@
             const btn = document.getElementById("start");
             const status = document.getElementById("status");
             let romBytes;
-            let romExtension;
             let romName;
 
             romInput.addEventListener("change", async () => {
                 const file = romInput.files[0];
                 romBytes = undefined;
-                romExtension = undefined;
-                romName = undefined;
-                btn.disabled = true;
 
                 if (!file) {
                     return;
                 }
 
+                romName = file.name;
+
                 try {
                     romBytes = new Uint8Array(await file.arrayBuffer());
-                    const extensionSeparator = file.name.lastIndexOf(".");
-                    romName = file.name;
-                    romExtension = extensionSeparator < 0
-                        ? ""
-                        : file.name.slice(extensionSeparator + 1).toLowerCase();
-                    btn.disabled = false;
+                    btn.style.display = "unset";
                     status.textContent = `Loaded ${file.name}`;
                 } catch (error) {
                     status.textContent = `Could not read file: ${error}`;
@@ -45,15 +83,13 @@
             });
 
             btn.addEventListener("click", async () => {
-                btn.disabled = true;
-                romInput.disabled = true;
-
                 try {
                     await init();
-                    start_wasm(romBytes, romName, romExtension);
+                    start_wasm(romBytes, romName);
+                    document.getElementById("header").style.display = "none";
+                    btn.style.display = "none";
                 } catch (error) {
                     status.textContent = `Could not start ROM: ${error}`;
-                    btn.disabled = false;
                 }
 
                 document.getElementById("game_canvas").focus();

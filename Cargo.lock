@@ -1977,6 +1977,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "log",
+ "pollster 1.0.1",
+ "rustines-core",
  "rustines-gui",
  "winit",
 ]
@@ -2018,8 +2020,6 @@ dependencies = [
  "pollster 1.0.1",
  "rustines-core",
  "rustines-gui-utils",
- "wasm-bindgen-futures",
- "web-sys",
  "web-time",
  "winit",
  "winit_input_helper",
@@ -2047,9 +2047,11 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "log",
+ "pixels",
  "rustines-core",
  "rustines-gui",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
  "winit",
 ]
