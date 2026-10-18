@@ -10,6 +10,7 @@
                 font-family: monospace;
                 font-size: 2em;
                 color: white;
+                user-select: none;
             }
 
             #main {
@@ -30,10 +31,13 @@
             }
 
             #label {
-                cursor: pointer;
                 padding: 0.1em;
                 text-align: center;
                 display: inline-block;
+            }
+
+            label {
+                cursor: pointer;
             }
 
             #start {
@@ -75,6 +79,16 @@
                 text-align: right;
                 margin-right: 10px;
             }
+
+            #zapper_container {
+                margin-bottom: 1em;
+            }
+
+            
+
+            #zapper {
+                transform: scale(1.5);
+            }
         </style>
     </head>
     <body>
@@ -83,6 +97,10 @@
                 <label for="rom" id="label">Click here to select ROM</label>
                 <input type="file" id="rom" />
                 <p id="loaded" class="status"></p>
+            </div>
+            <div id="zapper_container" style="display: none">
+                <input id="zapper" type="checkbox" />
+                <label for="zapper">Enable zapper</span>
             </div>
             <span style="display: none" id="start">Play!</span>
             <div id="run_status">
@@ -97,7 +115,7 @@
                 </div>
             </div>
         </div>
-
+        
         <script type="module">
             import init, { start_wasm } from "./assets/rustines_wasm.js";
 
@@ -105,7 +123,7 @@
             const btn = document.getElementById("start");
             const loaded = document.getElementById("loaded");
             let romBytes;
-            let romName;
+            let romName;            
 
             romInput.addEventListener("change", async () => {
                 const file = romInput.files[0];
@@ -121,16 +139,20 @@
                     romBytes = new Uint8Array(await file.arrayBuffer());
                     btn.style.display = "unset";
                     loaded.textContent = `Loaded ${file.name}`;
+                    document.getElementById("zapper_container").style.display =
+                        "block";
                 } catch (error) {
                     loaded.textContent = `Could not read file: ${error}`;
                 }
             });
 
             btn.addEventListener("click", async () => {
+                let zapper = document.getElementById("zapper").checked;
                 try {
                     await init();
-                    start_wasm(romBytes, romName);
+                    start_wasm(romBytes, romName, zapper);
                     document.getElementById("header").style.display = "none";
+                    document.getElementById("zapper_container").style.display = "none";
                     btn.style.display = "none";
                     document.getElementById("run_status").style.display =
                         "flex";

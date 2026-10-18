@@ -14,7 +14,7 @@ use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
 const WIDTH: u32 = 1024;
 
 #[wasm_bindgen]
-pub fn start_wasm(buf: &[u8], name: &str) -> Result<(), JsValue> {
+pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
     // std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     console_log::init_with_level(log::Level::Debug).ok();
 
@@ -35,7 +35,7 @@ pub fn start_wasm(buf: &[u8], name: &str) -> Result<(), JsValue> {
         name.to_string(),
         mapper,
         false,
-        false,
+        zapper,
         WIDTH,
         Box::new(platform::WasmPlatform),
     );
