@@ -68,14 +68,14 @@ impl PatternTableWindow {
         });
     }
 
-    pub(crate) fn owns_window_event(&self, window_id: WindowId) -> bool {
+    pub fn owns_window_event(&self, window_id: WindowId) -> bool {
         self.state
             .as_ref()
             .map(|s| s.window.id() == window_id)
             .unwrap_or(false)
     }
 
-    pub(crate) fn window_event(&mut self, event: &WindowEvent) {
+    pub fn window_event(&mut self, event: &WindowEvent) {
         if let Some(state) = self.state.as_mut()
             && state.helper.process_window_event(event)
         {
@@ -83,7 +83,7 @@ impl PatternTableWindow {
         }
     }
 
-    pub(crate) fn update(&mut self) {
+    pub fn update(&mut self) {
         let mut close = false;
 
         if let Some(state) = self.state.as_mut() {
@@ -111,13 +111,13 @@ impl PatternTableWindow {
         }
     }
 
-    pub(crate) fn render(&mut self) {
+    pub fn render(&mut self) {
         if let Some(state) = self.state.as_mut() {
             state.window.request_redraw();
         }
     }
 
-    pub(crate) fn step(&mut self) {
+    pub fn step(&mut self) {
         if let Some(state) = self.state.as_mut() {
             state.helper.step();
         }

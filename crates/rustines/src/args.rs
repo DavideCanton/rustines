@@ -1,27 +1,7 @@
-use std::{collections::HashSet, str::FromStr};
+use std::collections::HashSet;
 
 use clap::Parser;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub enum TraceTargets {
-    Cpu,
-    Bus,
-    Ppu,
-}
-
-impl FromStr for TraceTargets {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use TraceTargets::*;
-        match &*s.to_lowercase() {
-            "c" => Ok(Cpu),
-            "b" => Ok(Bus),
-            "p" => Ok(Ppu),
-            _ => Err(format!("Invalid value {}", s)),
-        }
-    }
-}
+use rustines_gui::TraceTargets;
 
 fn parse_trace_targets(value: &str) -> Result<HashSet<TraceTargets>, String> {
     let mut targets = HashSet::new();

@@ -1,4 +1,3 @@
-use crate::args::TraceTargets;
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
 use log::{LevelFilter, Record, debug};
 use rustines_core::{self as core, arch::mappers::mapper::MapperBox};
@@ -7,7 +6,29 @@ use std::{
     fs,
     io::{self, Read},
     path,
+    str::FromStr,
 };
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum TraceTargets {
+    Cpu,
+    Bus,
+    Ppu,
+}
+
+impl FromStr for TraceTargets {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use TraceTargets::*;
+        match &*s.to_lowercase() {
+            "c" => Ok(Cpu),
+            "b" => Ok(Bus),
+            "p" => Ok(Ppu),
+            _ => Err(format!("Invalid value {}", s)),
+        }
+    }
+}
 
 #[must_use]
 pub fn init_logger(file: Option<String>, trace: HashSet<TraceTargets>) -> LoggerHandle {
@@ -48,7 +69,7 @@ pub fn init_logger(file: Option<String>, trace: HashSet<TraceTargets>) -> Logger
 
     logger_builder
         .write_mode(WriteMode::Async)
-        .format(my_format)
+        .format(log_format)
         .start()
         .expect("Failed to start logger")
 }
@@ -75,7 +96,7 @@ pub fn read_file(file_path: &path::Path) -> Result<(core::NesRom, MapperBox), St
     Ok(loaded)
 }
 
-fn my_format(
+fn log_format(
     w: &mut dyn io::Write,
     _now: &mut DeferredNow,
     record: &Record,

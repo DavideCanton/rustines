@@ -1,0 +1,18 @@
+[package]
+name = "rustines_wasm"
+version = "0.1.0"
+authors = ["DavideCanton <davide.canton5@gmail.com>"]
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+web-sys = { workspace = true }
+console_error_panic_hook = { version = "0.1" }
+console_log = "1.0"
+winit = { workspace = true }
+rustines-core = { path = "../rustines_core" }
+rustines-gui = { path = "../rustines_gui" }
+log = { workspace = true }

@@ -1976,20 +1976,9 @@ name = "rustines"
 version = "0.1.0"
 dependencies = [
  "clap",
- "console_error_panic_hook",
- "console_log",
- "flexi_logger",
  "log",
- "pixels",
- "pollster 1.0.1",
- "rustines-core",
- "rustines-gui-utils",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
+ "rustines-gui",
  "winit",
- "winit_input_helper",
 ]
 
 [[package]]
@@ -2020,6 +2009,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustines-gui"
+version = "0.1.0"
+dependencies = [
+ "flexi_logger",
+ "log",
+ "pixels",
+ "pollster 1.0.1",
+ "rustines-core",
+ "rustines-gui-utils",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
+ "winit",
+ "winit_input_helper",
+]
+
+[[package]]
 name = "rustines-gui-utils"
 version = "0.1.0"
 dependencies = [
@@ -2032,6 +2038,20 @@ version = "0.1.0"
 dependencies = [
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "rustines_wasm"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "console_log",
+ "log",
+ "rustines-core",
+ "rustines-gui",
+ "wasm-bindgen",
+ "web-sys",
+ "winit",
 ]
 
 [[package]]

@@ -1,17 +1,11 @@
 mod args;
-mod pattern_window;
-mod renderer;
-mod utils;
 
 use std::path::Path;
 
-use crate::{
-    args::RustinesArgs,
-    utils::{init_logger, read_file},
-};
+use crate::args::RustinesArgs;
 use clap::Parser;
 use log::info;
-use rustines_lib::App;
+use rustines_gui::{App, init_logger, read_file};
 use winit::event_loop::EventLoop;
 
 pub fn main() {

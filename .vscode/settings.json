@@ -10,6 +10,7 @@
         "scanlines",
         "unisystem",
         "vblank",
+        "Winit",
         "Zeroable"
     ],
     "[rust]": {

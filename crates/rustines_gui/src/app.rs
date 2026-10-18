@@ -1,8 +1,3 @@
-mod args;
-mod pattern_window;
-mod renderer;
-mod utils;
-
 use crate::{pattern_window::PatternTableWindow, renderer::PixelsRenderer};
 use log::info;
 use pixels::{PixelsBuilder, ScalingMode, SurfaceTexture};
@@ -24,13 +19,6 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 use winit_input_helper::WinitInputHelper;
-
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowExtWebSys;
-#[cfg(target_arch = "wasm32")]
-use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
 
 const INNER_W: u32 = 256;
 const INNER_H: u32 = 240;
@@ -511,38 +499,4 @@ fn handle_input_keys(
 
 fn format_fps(fps: f64, msg: &str) -> String {
     format!("{}: {:.1}", msg, fps)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn attach_canvas(window: Arc<Window>) {
-    let web_window = web_sys::window().expect("no global `window` exists");
-    let document = web_window
-        .document()
-        .expect("should have a document on window");
-    let body = document.body().expect("HTML body missing");
-
-    let canvas = window.canvas().expect("Canvas generation failed");
-    canvas.set_width(WIDTH);
-    canvas.set_height(HEIGHT);
-    canvas.set_id("game_canvas");
-    body.append_child(&canvas).expect("Canvas append failed");
-}
-
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-pub fn start_wasm(buf: &[u8], name: &str, ext: &str) -> Result<(), JsValue> {
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    console_log::init_with_level(log::Level::Debug).ok();
-
-    let loader = core::decode_loader(ext);
-
-    let (_, mapper) = loader
-        .load_rom_struct(buf)
-        .map_err(|err| JsValue::from_str(&err.to_string()))?;
-
-    let event_loop = EventLoop::new().map_err(|err| JsValue::from_str(&err.to_string()))?;
-    let app = App::new(name.to_string(), mapper, false, false, Some(attach_canvas));
-
-    event_loop.spawn_app(app);
-    Ok(())
 }
