@@ -6,3 +6,4 @@ mod utils;
 
 pub use ppu_impl::{Ppu, get_color_index};
 pub use sprites::OamSprite;
+pub use utils::{compose_rgba, decompose_rgba};

@@ -9,7 +9,7 @@ pub use arch::controller::{NesController, NesKey};
 pub use arch::cpu::Cpu;
 pub use arch::debug_utils;
 pub use arch::mappers::mapper::{Mapper, MapperBox};
-pub use arch::ppu::Ppu;
+pub use arch::ppu::{Ppu, compose_rgba, decompose_rgba};
 pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
 pub use loaders::loader::Loader;
 pub use loaders::loaders_factory::decode_loader;

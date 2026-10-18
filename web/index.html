@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Rustines</title>
+
+        <style>
+            body {
+                background-color: black;
+                margin: 0;
+                font-family: monospace;
+                font-size: 2em;
+                color: white;
+            }
+
+            #main {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                height: 100vh;
+                justify-content: center;
+            }
+
+            #header {
+                display: flex;
+                flex-direction: column;
+            }
+
+            input[type="file"] {
+                display: none;
+            }
+
+            #label {
+                cursor: pointer;
+                padding: 0.1em;
+                text-align: center;
+                display: inline-block;
+            }
+
+            #start {
+                cursor: pointer;
+                text-align: center;
+            }
+
+            .status {
+                color: green;
+            }
+
+            #game_canvas {
+                flex: 0 0 auto;
+                border: 3px solid red;
+                border-radius: 6px;
+                outline: none;
+            }
+
+            #run_status {
+                display: none;
+                margin-bottom: 60px;
+                flex-direction: column;
+            }
+
+            .counter {
+                display: flex;
+            }
+
+            #loaded {
+                text-align: center;
+            }
+
+            #filename {
+                text-align: right;
+            }
+
+            .fps {
+                flex: 1 1 0;
+                text-align: right;
+                margin-right: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="main">
+            <div id="header">
+                <label for="rom" id="label">Click here to select ROM</label>
+                <input type="file" id="rom" />
+                <p id="loaded" class="status"></p>
+            </div>
+            <span style="display: none" id="start">Play!</span>
+            <div id="run_status">
+                <span id="filename" class="status"></span>
+                <div class="counter">
+                    <span class="status fps">FPS:</span>
+                    <span id="r_fps" class="status"></span>
+                </div>
+                <div class="counter">
+                    <span class="status fps">Simulation FPS:</span>
+                    <span id="u_fps" class="status"></span>
+                </div>
+            </div>
+        </div>
+
+        <script type="module">
+            import init, { start_wasm } from "./assets/rustines_wasm.js";
+
+            const romInput = document.getElementById("rom");
+            const btn = document.getElementById("start");
+            const loaded = document.getElementById("loaded");
+            let romBytes;
+            let romName;
+
+            romInput.addEventListener("change", async () => {
+                const file = romInput.files[0];
+                romBytes = undefined;
+
+                if (!file) {
+                    return;
+                }
+
+                romName = file.name;
+
+                try {
+                    romBytes = new Uint8Array(await file.arrayBuffer());
+                    btn.style.display = "unset";
+                    loaded.textContent = `Loaded ${file.name}`;
+                } catch (error) {
+                    loaded.textContent = `Could not read file: ${error}`;
+                }
+            });
+
+            btn.addEventListener("click", async () => {
+                try {
+                    await init();
+                    start_wasm(romBytes, romName);
+                    document.getElementById("header").style.display = "none";
+                    btn.style.display = "none";
+                    document.getElementById("run_status").style.display =
+                        "flex";
+                } catch (error) {
+                    loaded.textContent = `Could not start ROM: ${error}`;
+                }
+
+                document.getElementById("game_canvas").focus();
+            });
+        </script>
+    </body>
+</html>

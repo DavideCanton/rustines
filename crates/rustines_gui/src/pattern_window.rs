@@ -51,8 +51,12 @@ impl PatternTableWindow {
         let window_size = window.inner_size();
         let surface_texture =
             SurfaceTexture::new(window_size.width, window_size.height, Arc::clone(&window));
-        let mut pixels = Pixels::new(pattern_width as u32, pattern_height as u32, surface_texture)
-            .expect("Cannot create pixels buffer");
+        let mut pixels = pollster::block_on(Pixels::new_async(
+            pattern_width as u32,
+            pattern_height as u32,
+            surface_texture,
+        ))
+        .expect("Cannot create pixels buffer");
         pixels.set_scaling_mode(ScalingMode::Fill);
 
         pixels.frame_mut().copy_from_slice(&buf);
@@ -64,14 +68,14 @@ impl PatternTableWindow {
         });
     }
 
-    pub(crate) fn owns_window_event(&self, window_id: WindowId) -> bool {
+    pub fn owns_window_event(&self, window_id: WindowId) -> bool {
         self.state
             .as_ref()
             .map(|s| s.window.id() == window_id)
             .unwrap_or(false)
     }
 
-    pub(crate) fn window_event(&mut self, event: &WindowEvent) {
+    pub fn window_event(&mut self, event: &WindowEvent) {
         if let Some(state) = self.state.as_mut()
             && state.helper.process_window_event(event)
         {
@@ -79,7 +83,7 @@ impl PatternTableWindow {
         }
     }
 
-    pub(crate) fn update(&mut self) {
+    pub fn update(&mut self) {
         let mut close = false;
 
         if let Some(state) = self.state.as_mut() {
@@ -107,13 +111,13 @@ impl PatternTableWindow {
         }
     }
 
-    pub(crate) fn render(&mut self) {
+    pub fn render(&mut self) {
         if let Some(state) = self.state.as_mut() {
             state.window.request_redraw();
         }
     }
 
-    pub(crate) fn step(&mut self) {
+    pub fn step(&mut self) {
         if let Some(state) = self.state.as_mut() {
             state.helper.step();
         }

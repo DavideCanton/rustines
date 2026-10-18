@@ -6,11 +6,9 @@ edition = "2024"
 default-run = "rustines"
 
 [dependencies]
-winit = { workspace = true }
-pixels = { workspace = true }
-winit_input_helper = { workspace = true }
-log = { workspace = true }
-clap = { version = "4.6", features = ["derive"] }
+clap = "4"
+rustines-gui = { path = "../rustines_gui" }
 rustines-core = { path = "../rustines_core" }
-rustines-gui-utils = { path = "../rustines_gui_utils" }
-flexi_logger = { workspace = true }
+log = { workspace = true }
+winit = { workspace = true }
+pollster = "1"
