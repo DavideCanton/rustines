@@ -3,12 +3,19 @@ use crate::{
     constants::{INNER_SIZE, width_to_size},
     pattern_window::PatternTableWindow,
 };
+use gilrs::{Button, EventType, Gilrs};
 use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{self as core, Renderer, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
-use std::{cell::RefCell, collections::HashMap, fs::File, rc::Rc, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    fs::File,
+    rc::Rc,
+    sync::Arc,
+};
 
 use web_time::{Duration, Instant};
 
@@ -25,6 +32,7 @@ use winit_input_helper::WinitInputHelper;
 const TARGET_FPS: f64 = 60.0;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
+type GamepadMap = HashMap<Button, rustines_core::NesKey>;
 
 #[derive(Default)]
 struct SpeedupState {
@@ -51,6 +59,7 @@ pub struct AppState {
 
     key_map1: KeyMap,
     key_map2: KeyMap,
+    gamepad_map1: GamepadMap,
 
     pattern_window: PatternTableWindow,
 
@@ -99,6 +108,7 @@ pub struct App {
     pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
     platform: Box<dyn Platform>,
     size: PhysicalSize<u32>,
+    gilrs: Gilrs,
 }
 
 impl App {
@@ -119,6 +129,7 @@ impl App {
             size: width_to_size(width),
             pending_window: None,
             pending_renderer: Rc::new(RefCell::new(None)),
+            gilrs: Gilrs::new().unwrap(),
         }
     }
 
@@ -155,6 +166,7 @@ impl App {
             cpu,
             key_map1: build_keymap_c1(),
             key_map2: build_keymap_c2(),
+            gamepad_map1: build_gamepadmap_c1(),
             log_point: 1,
             pattern_window: PatternTableWindow::new(),
             main_window,
@@ -259,6 +271,7 @@ impl ApplicationHandler for App {
 
         if let Some(app_state) = self.app_state.as_mut() {
             handle_inputs(app_state, self.platform.as_ref(), event_loop);
+            handle_gamepad(app_state, &mut self.gilrs);
 
             let now = Instant::now();
             let next_frame = now >= app_state.next_frame_time;
@@ -323,6 +336,37 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     }
 
     app_state.pattern_window.update();
+}
+
+fn handle_gamepad(app_state: &mut AppState, gilrs: &mut Gilrs) {
+    let mut released = HashSet::new();
+    let mut pressed = HashSet::new();
+    let map = &app_state.gamepad_map1;
+
+    while let Some(ev) = gilrs.next_event() {
+        match ev.event {
+            EventType::ButtonPressed(b, _) => {
+                if let Some(v) = map.get(&b) {
+                    pressed.insert(*v);
+                }
+            }
+            EventType::ButtonReleased(b, _) => {
+                if let Some(v) = map.get(&b) {
+                    released.insert(*v);
+                }
+            }
+            // for now let's ignore axis
+            _ => {}
+        }
+    }
+
+    let ctrl = app_state.bus.controller1_mut();
+    for r in released.difference(&pressed) {
+        ctrl.released(*r);
+    }
+    for p in pressed {
+        ctrl.pressed(p);
+    }
 }
 
 fn update_zapper_input(app_state: &mut AppState) {
@@ -425,7 +469,7 @@ pub async fn create_pixels(
     Ok(pixels)
 }
 
-fn build_keymap_c1() -> HashMap<KeyCode, core::NesKey> {
+fn build_keymap_c1() -> KeyMap {
     // TODO read from config file
     use core::NesKey;
 
@@ -457,17 +501,35 @@ fn build_keymap_c2() -> KeyMap {
     key_map
 }
 
+fn build_gamepadmap_c1() -> GamepadMap {
+    // TODO read from config file
+    use core::NesKey;
+
+    let mut key_map = HashMap::new();
+    key_map.insert(Button::East, NesKey::A);
+    key_map.insert(Button::West, NesKey::A);
+    key_map.insert(Button::North, NesKey::B);
+    key_map.insert(Button::South, NesKey::B);
+    key_map.insert(Button::Select, NesKey::Select);
+    key_map.insert(Button::Start, NesKey::Start);
+    key_map.insert(Button::DPadUp, NesKey::Up);
+    key_map.insert(Button::DPadDown, NesKey::Down);
+    key_map.insert(Button::DPadLeft, NesKey::Left);
+    key_map.insert(Button::DPadRight, NesKey::Right);
+    key_map
+}
+
 fn handle_input_keys(
     input: &WinitInputHelper,
     ctrl: &mut core::NesController,
     key_map: &HashMap<KeyCode, core::NesKey>,
 ) {
-    for k in key_map.keys() {
+    for (k, v) in key_map.iter() {
         if input.key_pressed(*k) {
-            ctrl.pressed(*key_map.get(k).unwrap());
+            ctrl.pressed(*v);
         }
         if input.key_released(*k) {
-            ctrl.released(*key_map.get(k).unwrap());
+            ctrl.released(*v);
         }
     }
 }

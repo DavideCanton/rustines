@@ -14,3 +14,4 @@ rustines-gui-utils = { path = "../rustines_gui_utils" }
 flexi_logger = { workspace = true }
 pollster = "1"
 web-time = { workspace = true }
+gilrs = "0.11"
