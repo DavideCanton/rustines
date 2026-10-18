@@ -1,12 +1,10 @@
 use crate::{pattern_window::PatternTableWindow, renderer::PixelsRenderer};
 use log::info;
-use pixels::{PixelsBuilder, ScalingMode, SurfaceTexture};
+use pixels::{PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
-use rustines_core::{self as core, arch::bus::Controller2};
+use rustines_core::{self as core, Renderer, arch::bus::Controller2};
 use rustines_gui_utils::FpsCounter;
-#[cfg(target_arch = "wasm32")]
-use std::{cell::RefCell, rc::Rc};
-use std::{collections::HashMap, fs::File, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, fs::File, rc::Rc, sync::Arc};
 
 use web_time::{Duration, Instant};
 
@@ -81,10 +79,8 @@ pub struct App {
     trace_boot: bool,
     zapper: bool,
     init_window_hook: Option<fn(Arc<Window>)>,
-    #[cfg(target_arch = "wasm32")]
     pending_window: Option<Arc<Window>>,
-    #[cfg(target_arch = "wasm32")]
-    pending_renderer: Rc<RefCell<Option<Result<PixelsRenderer, String>>>>,
+    pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
 }
 
 impl App {
@@ -101,15 +97,17 @@ impl App {
             trace_boot,
             zapper,
             init_window_hook,
-            #[cfg(target_arch = "wasm32")]
             pending_window: None,
-            #[cfg(target_arch = "wasm32")]
             pending_renderer: Rc::new(RefCell::new(None)),
         }
     }
 
-    fn init_app_state(&mut self, main_window: Arc<Window>, renderer: PixelsRenderer) -> AppState {
-        let ppu = core::Ppu::new(Box::new(renderer));
+    fn init_app_state(
+        &mut self,
+        main_window: Arc<Window>,
+        renderer: Box<dyn Renderer>,
+    ) -> AppState {
+        let ppu = core::Ppu::new(renderer);
         let apu = core::Apu::default();
 
         let ctrl2 = if self.zapper {
@@ -158,7 +156,7 @@ impl ApplicationHandler for App {
             return;
         }
 
-        let size = PhysicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = PhysicalSize::new(WIDTH, HEIGHT);
         let main_window = Arc::new(
             event_loop
                 .create_window(
@@ -176,8 +174,14 @@ impl ApplicationHandler for App {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let renderer = pollster::block_on(create_renderer(Arc::clone(&main_window))).unwrap();
-            self.app_state = Some(self.init_app_state(main_window, renderer));
+            self.pending_window = Some(Arc::clone(&main_window));
+            let renderer = pollster::block_on(create_renderer(
+                Arc::clone(&main_window),
+                main_window.inner_size(),
+                None,
+            ))
+            .unwrap();
+            *self.pending_renderer.borrow_mut() = Some(Box::new(renderer));
         }
 
         #[cfg(target_arch = "wasm32")]
@@ -185,8 +189,14 @@ impl ApplicationHandler for App {
             self.pending_window = Some(Arc::clone(&main_window));
             let pending_renderer = Rc::clone(&self.pending_renderer);
             wasm_bindgen_futures::spawn_local(async move {
-                let renderer = create_renderer(Arc::clone(&main_window)).await;
-                *pending_renderer.borrow_mut() = Some(renderer);
+                let renderer = create_renderer(
+                    Arc::clone(&main_window),
+                    size,
+                    Some(TextureFormat::Bgra8Unorm),
+                )
+                .await
+                .unwrap();
+                *pending_renderer.borrow_mut() = Some(Box::new(renderer));
                 main_window.request_redraw();
             });
         }
@@ -263,15 +273,11 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            if self.app_state.is_none() {
-                let renderer = self.pending_renderer.borrow_mut().take();
-                if let Some(renderer) = renderer {
-                    let window = self.pending_window.take().unwrap();
-                    let renderer = renderer.expect("Failed to initialize renderer");
-                    self.app_state = Some(self.init_app_state(window, renderer));
-                }
+        if self.app_state.is_none() {
+            let renderer = self.pending_renderer.borrow_mut().take();
+            if let Some(renderer) = renderer {
+                let window = self.pending_window.take().unwrap();
+                self.app_state = Some(self.init_app_state(window, renderer));
             }
         }
 
@@ -421,12 +427,11 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 }
 
-async fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> {
-    #[cfg(target_arch = "wasm32")]
-    let size = PhysicalSize::new(WIDTH, HEIGHT);
-    #[cfg(not(target_arch = "wasm32"))]
-    let size = window.inner_size();
-
+async fn create_renderer(
+    window: Arc<Window>,
+    size: PhysicalSize<u32>,
+    texture_format: Option<TextureFormat>,
+) -> Result<PixelsRenderer, String> {
     if size.width == 0 || size.height == 0 {
         return Err(format!(
             "Window surface has invalid size: {}x{}",
@@ -436,9 +441,10 @@ async fn create_renderer(window: Arc<Window>) -> Result<PixelsRenderer, String> 
 
     let surface_texture = SurfaceTexture::new(size.width, size.height, window);
 
-    let builder = PixelsBuilder::new(INNER_W, INNER_H, surface_texture);
-    #[cfg(target_arch = "wasm32")]
-    let builder = builder.surface_texture_format(pixels::wgpu::TextureFormat::Bgra8Unorm);
+    let mut builder = PixelsBuilder::new(INNER_W, INNER_H, surface_texture);
+    if let Some(texture_format) = texture_format {
+        builder = builder.surface_texture_format(texture_format);
+    }
 
     let mut pixels = builder.build_async().await.map_err(|e| format!("{}", e))?;
     pixels.set_scaling_mode(ScalingMode::Fill);
