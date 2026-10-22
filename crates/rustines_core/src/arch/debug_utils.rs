@@ -128,7 +128,7 @@ pub fn debug_dump_scrolling_state(bus: &Bus) {
     let mapper = bus.mapper_ref();
 
     println!(
-        "PPU scroll: scanline={} cycle={} v={:#06X} t={:#06X} fine_x={} mirroring={:?}",
+        "PPU scroll: scanline={} cycle={} v={:?} t={:?} x={} mirroring={:?}",
         ppu.scanline,
         ppu.cycle,
         ppu.v_reg,

@@ -1,6 +1,60 @@
 use bitfield::bitfield;
 
 bitfield! {
+    /// ```text
+    /// yyy NN YYYYY XXXXX
+    /// ||| || ||||| +++++-- coarse X scroll
+    /// ||| || +++++-------- coarse Y scroll
+    /// ||| ++-------------- nametable select
+    /// +++----------------- fine Y scroll
+    /// ```
+    #[derive(Clone, Copy)]
+    pub(crate) struct PpuScrollRegister(pub u16);
+    impl Debug;
+    u8;
+    pub coarse_x, set_coarse_x: 4, 0;
+    pub coarse_y, set_coarse_y: 9, 5;
+    pub nametable_select, set_nametable_select: 11, 10;
+    pub fine_y, set_fine_y: 14, 12;
+    pub unused, set_unused: 15;
+}
+
+impl PpuScrollRegister {
+    pub fn address(&self) -> u16 {
+        self.0 & 0x3FFF
+    }
+
+    pub fn set_address_high(&mut self, value: u8) {
+        self.set_unused(false);
+        self.set_nametable_select(value >> 2 & 0x03);
+        self.set_fine_y(value >> 4 & 0x07);
+        self.set_coarse_y((self.coarse_y() & 0x07) | ((value & 0x03) << 3));
+    }
+
+    pub fn set_address_low(&mut self, value: u8) {
+        self.set_unused(false);
+        self.set_coarse_x(value & 0x1F);
+        self.set_coarse_y((self.coarse_y() & 0x18) | value >> 5);
+    }
+
+    pub fn set_scroll_x(&mut self, value: u8) {
+        self.set_unused(false);
+        self.set_coarse_x(value >> 3);
+        self.set_coarse_y(self.coarse_y() & 0x10);
+    }
+
+    pub fn set_scroll_y(&mut self, value: u8) {
+        self.set_unused(false);
+        self.set_fine_y(value & 0x07);
+        self.set_coarse_y(value >> 3);
+    }
+
+    pub fn increment_address(&mut self, increment: u16) {
+        self.0 = self.0.wrapping_add(increment) & 0x7FFF;
+    }
+}
+
+bitfield! {
     #[derive(Clone, Copy)]
     pub(crate) struct PpuCtrl(pub u8);
     impl Debug;

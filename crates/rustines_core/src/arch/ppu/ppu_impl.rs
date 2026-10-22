@@ -6,7 +6,7 @@ use crate::{
         ppu::{
             OamSprite,
             background::BackgroundData,
-            registers::{PpuCtrl, PpuMask, PpuStatus},
+            registers::{PpuCtrl, PpuMask, PpuScrollRegister, PpuStatus},
             sprites::SpriteShifters,
         },
         rom_structs::MirroringType,
@@ -30,15 +30,8 @@ pub struct Ppu {
     pub(crate) open_bus_value: u8,
     open_bus_decay_timer: u8,
 
-    /// ```text
-    /// yyy NN YYYYY XXXXX
-    /// ||| || ||||| +++++-- coarse X scroll
-    /// ||| || +++++-------- coarse Y scroll
-    /// ||| ++-------------- nametable select
-    /// +++----------------- fine Y scroll
-    /// ```
-    pub(crate) v_reg: u16,
-    pub(crate) t_reg: u16,
+    pub(crate) v_reg: PpuScrollRegister,
+    pub(crate) t_reg: PpuScrollRegister,
     pub(crate) x_reg: u8,
     pub(crate) w_toggle: bool,
 
@@ -91,8 +84,8 @@ impl Ppu {
             open_bus_value: 0,
             open_bus_decay_timer: 0,
 
-            v_reg: 0,
-            t_reg: 0,
+            v_reg: PpuScrollRegister(0),
+            t_reg: PpuScrollRegister(0),
             x_reg: 0,
             w_toggle: false,
 
@@ -405,25 +398,28 @@ impl Ppu {
         match self.cycle % 8 {
             // cycles 1-2: load nametable data
             2 => {
-                let nt_address = 0x2000 | (self.v_reg & 0x0FFF);
+                let nt_address = 0x2000
+                    | ((self.v_reg.nametable_select() as u16) << 10)
+                    | ((self.v_reg.coarse_y() as u16) << 5)
+                    | (self.v_reg.coarse_x() as u16);
                 self.bg_data.latch_nt = self.vram_read(nt_address, mapper);
             }
             // cycles 3-4: load attribute table data
             4 => {
                 let at_address = 0x23C0
-                    | (self.v_reg & 0x0C00)
-                    | ((self.v_reg >> 4) & 0x38)
-                    | ((self.v_reg >> 2) & 0x07);
+                    | ((self.v_reg.nametable_select() as u16) << 10)
+                    | (((self.v_reg.coarse_y() as u16) >> 2) & 0x07) << 3
+                    | (((self.v_reg.coarse_x() as u16) >> 2) & 0x07);
                 let attribute = self.vram_read(at_address, mapper);
 
-                let coarse_x = self.v_reg & 0x001F;
-                let coarse_y = (self.v_reg >> 5) & 0x001F;
+                let coarse_x = self.v_reg.coarse_x();
+                let coarse_y = self.v_reg.coarse_y();
                 let shift = ((coarse_y & 0x02) << 1) | (coarse_x & 0x02);
                 self.bg_data.latch_at = (attribute >> shift) & 0x03;
             }
             // cycles 5-6: load bg low part
             6 => {
-                let end_y = (self.v_reg >> 12) & 0x07;
+                let end_y = self.v_reg.fine_y() as u16;
 
                 let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
                 let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y;
@@ -432,7 +428,7 @@ impl Ppu {
             // cycles 7-8: load bg high part, then transfer everything in the shifters
             // then increment vram x scroll
             0 => {
-                let end_y = (self.v_reg >> 12) & 0x07;
+                let end_y = self.v_reg.fine_y() as u16;
 
                 let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
                 let address =
@@ -446,11 +442,19 @@ impl Ppu {
     }
 
     fn transfer_scroll_x(&mut self) {
-        self.v_reg = (self.v_reg & 0x7BE0) | (self.t_reg & 0x041F);
+        self.v_reg.set_unused(false);
+        self.v_reg.set_coarse_x(self.t_reg.coarse_x());
+        self.v_reg.set_nametable_select(
+            (self.v_reg.nametable_select() & 0x02) | (self.t_reg.nametable_select() & 0x01),
+        );
     }
 
     fn transfer_scroll_y(&mut self) {
-        self.v_reg = (self.v_reg & 0x041F) | (self.t_reg & 0x7BE0);
+        self.v_reg.set_unused(false);
+        self.v_reg.set_coarse_y(self.t_reg.coarse_y());
+        self.v_reg
+            .set_nametable_select(self.t_reg.nametable_select());
+        self.v_reg.set_fine_y(self.t_reg.fine_y());
     }
 
     fn increase_cycle(&mut self) {
@@ -493,7 +497,7 @@ impl Ppu {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
                 self.ctrl = ctrl;
-                self.t_reg = (self.t_reg & !0xC00) | (((value & 0x3) as u16) << 10);
+                self.t_reg.set_nametable_select(value & 0x03);
 
                 if !old_nmi_enable && self.ctrl.vblank_nmi_enable() && self.status.vblank_started()
                 {
@@ -513,31 +517,29 @@ impl Ppu {
             }
             5 => {
                 if self.w_toggle {
-                    self.t_reg = (self.t_reg & 0x0C1F)
-                        | (((value & 0x07) as u16) << 12)
-                        | (((value & 0xF8) as u16) << 2);
+                    self.t_reg.set_scroll_y(value);
                 } else {
                     self.x_reg = value & 0x7;
-                    self.t_reg = (self.t_reg & 0x7E00) | ((value >> 3) as u16);
+                    self.t_reg.set_scroll_x(value);
                 }
                 self.w_toggle = !self.w_toggle;
             }
             6 => {
                 if self.w_toggle {
-                    self.t_reg = (self.t_reg & 0xFF00) | (value as u16);
+                    self.t_reg.set_address_low(value);
                     self.v_reg = self.t_reg;
                 } else {
-                    self.t_reg = (self.t_reg & 0x00FF) | (((value & 0x3F) as u16) << 8);
+                    self.t_reg.set_address_high(value);
                 }
                 self.w_toggle = !self.w_toggle;
             }
             7 => {
-                let current_addr = self.v_reg & 0x3FFF;
+                let current_addr = self.v_reg.address();
 
                 self.vram_write(current_addr, value, mapper);
 
                 let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
-                self.v_reg = (self.v_reg.wrapping_add(increment)) & 0x7FFF;
+                self.v_reg.increment_address(increment);
             }
             _ => unreachable!(),
         }
@@ -585,7 +587,7 @@ impl Ppu {
             7 => {
                 let mut data = self.vram_buffer_shadow(mapper);
 
-                let current_addr = self.v_reg & 0x3FFF;
+                let current_addr = self.v_reg.address();
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
@@ -598,7 +600,7 @@ impl Ppu {
 
                 let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
 
-                self.v_reg = self.v_reg.wrapping_add(increment) & 0x7FFF;
+                self.v_reg.increment_address(increment);
                 self.write_open_bus(data);
                 data
             }
@@ -797,37 +799,37 @@ impl Ppu {
     }
 
     fn increment_vram_address_x(&mut self) {
-        let mut v = self.v_reg;
-        if (v & 0x1F) == 0x1F {
+        let coarse_x = self.v_reg.coarse_x();
+        if coarse_x == 0x1F {
             // in this case, wraps the last 5 bits to 0
-            v &= !0x1F;
+            self.v_reg.set_coarse_x(0);
             // switch the horizontal nametable
-            v ^= 0x0400;
+            self.v_reg
+                .set_nametable_select(self.v_reg.nametable_select() ^ 1);
         } else {
             // increments the x part, that are the last 5 bits
-            v += 1;
+            self.v_reg.set_coarse_x(coarse_x + 1);
         }
-        self.v_reg = v;
     }
 
     fn increment_vram_address_y(&mut self) {
-        let mut v = self.v_reg;
-
-        if (v & 0x7000) != 0x7000 {
+        let fine_y = self.v_reg.fine_y();
+        if fine_y != 7 {
             // if the y part is not maxed, simply increment it
-            v += 0x1000;
+            self.v_reg.set_fine_y(fine_y + 1);
         } else {
             // in this case, wrap the y bits to 0
-            v &= !0x7000;
+            self.v_reg.set_fine_y(0);
 
             // compute coarse y
-            let mut y = (v & 0x3E0) >> 5;
+            let mut y = self.v_reg.coarse_y();
 
             if y == 29 {
                 // clear coarse y
                 y = 0;
                 // switch the vertical nametable
-                v ^= 0x0800;
+                self.v_reg
+                    .set_nametable_select(self.v_reg.nametable_select() ^ 2);
             } else if y == 31 {
                 // clear coarse y without switching
                 y = 0;
@@ -837,9 +839,8 @@ impl Ppu {
             }
 
             // put back coarse y
-            v = (v & !0x03E0) | (y << 5);
+            self.v_reg.set_coarse_y(y);
         }
-        self.v_reg = v;
     }
 
     pub(crate) fn oam_data(&self) -> &[u8; 256] {
@@ -855,7 +856,7 @@ impl Ppu {
     }
 
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
-        let current_addr = self.v_reg & 0b0011_1111_1111_1111;
+        let current_addr = self.v_reg.address();
         if current_addr >= 0x3F00 {
             self.vram_read(current_addr, mapper)
         } else {
@@ -963,7 +964,7 @@ const NES_PALETTE: [u32; 64] = [
 
 #[cfg(test)]
 mod tests {
-    use super::PpuMask;
+    use super::{PpuMask, PpuScrollRegister};
     use crate::{Mapper, MirroringType, NoopRenderer, Ppu, utils::named::Named};
 
     struct FakeMapper;
@@ -1009,8 +1010,8 @@ mod tests {
         let renderer = NoopRenderer;
         let mut ppu = Ppu::new(Box::new(renderer));
 
-        ppu.t_reg = 0b0111_1111_1111_1111;
-        ppu.v_reg = 0b0111_1111_1111_1111;
+        ppu.t_reg = PpuScrollRegister(0b0111_1111_1111_1111);
+        ppu.v_reg = PpuScrollRegister(0b0111_1111_1111_1111);
         ppu.x_reg = 0b1111_1111;
         ppu.w_toggle = true;
 
@@ -1018,45 +1019,71 @@ mod tests {
 
         ppu.cpu_write(0, 0, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0111_0011_1111_1111);
-        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.t_reg.0, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b1111_1111);
         assert!(ppu.w_toggle);
 
         ppu.cpu_read(2, &mapper);
 
-        assert_eq!(ppu.t_reg, 0b0111_0011_1111_1111);
-        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.t_reg.0, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b1111_1111);
         assert!(!ppu.w_toggle);
 
         ppu.cpu_write(5, 0b0111_1101, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0111_0010_0000_1111);
-        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.t_reg.0, 0b0111_0010_0000_1111);
+        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(ppu.w_toggle);
 
         ppu.cpu_write(5, 0b0101_1110, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0110_0001_0110_1111);
-        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.t_reg.0, 0b0110_0001_0110_1111);
+        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(!ppu.w_toggle);
 
         ppu.cpu_write(6, 0b0011_1101, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0011_1101_0110_1111);
-        assert_eq!(ppu.v_reg, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.t_reg.0, 0b0011_1101_0110_1111);
+        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(ppu.w_toggle);
 
         ppu.cpu_write(6, 0b11110000, &mut mapper);
 
-        assert_eq!(ppu.t_reg, 0b0011_1101_1111_0000);
-        assert_eq!(ppu.v_reg, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.t_reg.0, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.v_reg.0, 0b0011_1101_1111_0000);
         assert_eq!(ppu.x_reg, 0b0000_0101);
         assert!(!ppu.w_toggle);
+    }
+
+    #[test]
+    fn vram_scroll_increments_wrap_coarse_coordinates_and_toggle_nametables() {
+        let mut ppu = Ppu::new(Box::new(NoopRenderer));
+        ppu.v_reg.set_coarse_x(0x1F);
+        ppu.v_reg.set_coarse_y(29);
+        ppu.v_reg.set_nametable_select(1);
+        ppu.v_reg.set_fine_y(7);
+
+        ppu.increment_vram_address_x();
+        assert_eq!(ppu.v_reg.coarse_x(), 0);
+        assert_eq!(ppu.v_reg.nametable_select(), 0);
+
+        ppu.increment_vram_address_y();
+        assert_eq!(ppu.v_reg.fine_y(), 0);
+        assert_eq!(ppu.v_reg.coarse_y(), 0);
+        assert_eq!(ppu.v_reg.nametable_select(), 2);
+
+        ppu.v_reg.set_coarse_y(31);
+        ppu.v_reg.set_nametable_select(3);
+        ppu.v_reg.set_fine_y(7);
+        ppu.increment_vram_address_y();
+        assert_eq!(ppu.v_reg.fine_y(), 0);
+        assert_eq!(ppu.v_reg.coarse_y(), 0);
+        assert_eq!(ppu.v_reg.nametable_select(), 3);
     }
 
     #[test]
