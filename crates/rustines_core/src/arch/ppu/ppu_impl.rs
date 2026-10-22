@@ -596,7 +596,9 @@ impl Ppu {
                     self.data_buffer = self.vram_read(current_addr, mapper);
                 }
 
-                self.v_reg += if self.ctrl.vram_address_incr() { 32 } else { 1 };
+                let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
+
+                self.v_reg = self.v_reg.wrapping_add(increment) & 0x7FFF;
                 self.write_open_bus(data);
                 data
             }
