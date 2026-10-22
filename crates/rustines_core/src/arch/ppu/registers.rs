@@ -2,7 +2,7 @@ use bitfield::bitfield;
 
 bitfield! {
     #[derive(Clone, Copy)]
-    pub(crate) struct PpuCtrl(u8);
+    pub(crate) struct PpuCtrl(pub u8);
     impl Debug;
     /** 7 -> Vblank NMI enable (0: off, 1: on) */
     pub vblank_nmi_enable, _: 7;
@@ -28,7 +28,7 @@ impl PpuCtrl {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    pub(crate) struct PpuMask(u8);
+    pub(crate) struct PpuMask(pub u8);
     impl Debug;
     /** 7 -> Emphasize blue */
     pub emphasis_blue, set_emphasis_blue: 7;
@@ -56,7 +56,7 @@ impl PpuMask {
 
 bitfield! {
     #[derive(Clone, Copy)]
-    pub(crate) struct PpuStatus(u8);
+    pub(crate) struct PpuStatus(pub u8);
     impl Debug;
     /** 7 -> Vblank flag, cleared on read. Unreliable. */
     pub vblank_started, set_vblank_started: 7;

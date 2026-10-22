@@ -5,13 +5,13 @@ authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
 
 [dependencies]
-zip = "8.6"
+zip = { version = "9.0", features = ["deflate"], default-features = false }
 arrayref = "0.3"
 bytemuck = { version = "1.25", features = ["derive"] }
 anyhow = { workspace = true }
 log = { workspace = true }
 rustines-macro = { path = "../rustines_macro" }
-bitfield = "0.19"
+bitfield = "0.20"
 
 [dev-dependencies]
 rand = "0.10"

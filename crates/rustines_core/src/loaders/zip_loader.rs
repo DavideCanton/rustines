@@ -18,7 +18,14 @@ impl Loader for ZipLoader {
 
         let mut rom_file = archive.by_index(0)?;
 
-        info!("Read file \"{}\"", rom_file.name());
+        match rom_file.enclosed_name() {
+            Some(name) => {
+                info!("Read file \"{}\"", name.display());
+            }
+            None => {
+                info!("Cannot display file name");
+            }
+        }
 
         let mut buf: Vec<u8> = Vec::with_capacity(rom_file.size() as usize);
 
