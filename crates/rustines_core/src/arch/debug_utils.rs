@@ -150,10 +150,16 @@ pub fn debug_dump_palette(bus: &Bus) {
 }
 
 pub fn debug_dump_oam(ppu: &Ppu) {
+    println!("Scanline: {}", ppu.scanline);
     println!("=== DUMP OAM ===");
     print_oam(ppu.oam_data());
     println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.cycle);
     print_oam(ppu.secondary_oam_data());
+    println!("\n===============\n");
+    println!("=== SHIFTERS ===");
+    for s in ppu.sprite_shifters {
+        println!("{}", s);
+    }
     println!("\n===============\n");
 }
 

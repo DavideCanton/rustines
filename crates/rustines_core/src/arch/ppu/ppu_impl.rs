@@ -46,7 +46,7 @@ pub struct Ppu {
 
     bg_data: BackgroundData,
 
-    sprite_shifters: [SpriteShifters; 8],
+    pub(crate) sprite_shifters: [SpriteShifters; 8],
     secondary_oam: [u8; 32],
     sprite_in_range: [bool; 8],
     secondary_oam_addr: u8,
