@@ -17,6 +17,15 @@ use crate::{
 };
 use log::trace;
 
+enum RenderType {
+    Sprite,
+    Background,
+    NoRender,
+}
+
+const RENDER_SPRITE_ENABLED: bool = true;
+const RENDER_BACKGROUND_ENABLED: bool = true;
+
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
 pub struct Ppu {
@@ -700,13 +709,10 @@ impl Ppu {
             }
         }
 
-        let bg_data = (bg_palette, bg_pixel);
-        let sp_data = (sprite_palette, sprite_pixel);
-
-        let (palette, pixel) = match (bg_pixel, sprite_pixel) {
-            (0, 0) => (0, 0),
-            (0, _) => sp_data,
-            (_, 0) => bg_data,
+        let render_type = match (bg_pixel, sprite_pixel) {
+            (0, 0) => RenderType::NoRender,
+            (0, _) => RenderType::Sprite,
+            (_, 0) => RenderType::Background,
             _ => {
                 if self.sprite_zero_current && sprite_zero {
                     let left_allowed =
@@ -720,8 +726,18 @@ impl Ppu {
                     }
                 }
 
-                if sprite_behind { bg_data } else { sp_data }
+                if sprite_behind {
+                    RenderType::Background
+                } else {
+                    RenderType::Sprite
+                }
             }
+        };
+
+        let (palette, pixel) = match render_type {
+            RenderType::Background if RENDER_BACKGROUND_ENABLED => (bg_palette, bg_pixel),
+            RenderType::Sprite if RENDER_SPRITE_ENABLED => (sprite_palette, sprite_pixel),
+            _ => (0, 0),
         };
 
         let palette_addr = compute_palette_vram_address(palette, pixel);
