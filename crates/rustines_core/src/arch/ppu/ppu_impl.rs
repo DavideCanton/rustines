@@ -249,7 +249,7 @@ impl Ppu {
                 }
 
                 if is_visible_scanline {
-                    self.handle_sprites(mapper);
+                    self.do_sprite_evaluation(mapper);
                 }
             }
         }
@@ -269,7 +269,7 @@ impl Ppu {
         self.increase_cycle();
     }
 
-    fn handle_sprites(&mut self, mapper: &mut dyn Mapper) {
+    fn do_sprite_evaluation(&mut self, mapper: &mut dyn Mapper) {
         let cycle = self.cycle;
 
         match cycle {
@@ -811,7 +811,11 @@ impl Ppu {
             hi_shifter = 0;
         }
 
-        self.sprite_shifters[sprite_idx].load(oam_sprite, lo_shifter, hi_shifter);
+        // load the shifters only if the next scanline is visible, to avoid rendering of scanline
+        // 240 on scanline 0
+        if self.scanline < 239 {
+            self.sprite_shifters[sprite_idx].load(oam_sprite, lo_shifter, hi_shifter);
+        }
     }
 
     fn increment_vram_address_x(&mut self) {

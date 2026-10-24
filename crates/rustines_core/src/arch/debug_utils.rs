@@ -151,7 +151,14 @@ pub fn debug_dump_palette(bus: &Bus) {
 
 pub fn debug_dump_oam(ppu: &Ppu) {
     println!("=== DUMP OAM ===");
-    for (i, sprite_bytes) in ppu.oam_data().as_chunks::<4>().0.iter().enumerate() {
+    print_oam(ppu.oam_data());
+    println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.cycle);
+    print_oam(ppu.secondary_oam_data());
+    println!("\n===============\n");
+}
+
+fn print_oam<const N: usize>(oam: &[u8; N]) {
+    for (i, sprite_bytes) in oam.as_chunks::<4>().0.iter().enumerate() {
         let sprite: &OamSprite = bytemuck::cast_ref(sprite_bytes);
         println!(
             "Sprite {} = {:?} {}",
@@ -160,18 +167,6 @@ pub fn debug_dump_oam(ppu: &Ppu) {
             format_sprite_bytes(sprite_bytes)
         );
     }
-    println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.cycle);
-    println!(
-        "{}",
-        ppu.secondary_oam_data()
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|c| format_sprite_bytes(c))
-            .collect::<Vec<_>>()
-            .join(" | ")
-    );
-    println!("\n===============\n");
 }
 
 fn format_sprite_bytes(bytes: &[u8]) -> String {
