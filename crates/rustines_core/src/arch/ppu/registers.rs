@@ -1,11 +1,14 @@
 use bitfield::bitfield;
 
+use crate::utils::bit_utils::{BitIndex, extract_flag};
+
 bitfield! {
     /// ```text
-    /// yyy NN YYYYY XXXXX
-    /// ||| || ||||| +++++-- coarse X scroll
-    /// ||| || +++++-------- coarse Y scroll
-    /// ||| ++-------------- nametable select
+    /// yyy N N YYYYY XXXXX
+    /// ||| | | ||||| +++++-- coarse X scroll
+    /// ||| | | +++++-------- coarse Y scroll
+    /// ||| | +-------------- nametable select X
+    /// ||| +---------------- nametable select Y
     /// +++----------------- fine Y scroll
     /// ```
     #[derive(Clone, Copy)]
@@ -14,7 +17,8 @@ bitfield! {
     u8;
     pub coarse_x, set_coarse_x: 4, 0;
     pub coarse_y, set_coarse_y: 9, 5;
-    pub nametable_select, set_nametable_select: 11, 10;
+    pub nametable_select_x, set_nametable_select_x: 10;
+    pub nametable_select_y, set_nametable_select_y: 11;
     pub fine_y, set_fine_y: 14, 12;
     pub unused, set_unused: 15;
 }
@@ -24,32 +28,47 @@ impl PpuScrollRegister {
         self.0 & 0x3FFF
     }
 
+    pub fn nametable_select(&self) -> u8 {
+        let y = self.nametable_select_y() as u8;
+        let x = self.nametable_select_x() as u8;
+        (y << 1) | x
+    }
+
+    pub fn switch_nametable_y(&mut self) {
+        self.set_nametable_select_y(!self.nametable_select_y());
+    }
+
+    pub fn switch_nametable_x(&mut self) {
+        self.set_nametable_select_x(!self.nametable_select_x());
+    }
+
+    pub fn set_nametable_select(&mut self, value: u8) {
+        self.set_nametable_select_x(extract_flag(value, BitIndex::_0));
+        self.set_nametable_select_y(extract_flag(value, BitIndex::_1));
+    }
+
     pub fn set_address_high(&mut self, value: u8) {
+        let value = value & 0x3F;
+        self.0 = ((value as u16) << 8) | (self.0 & 0xFF);
         self.set_unused(false);
-        self.set_nametable_select(value >> 2 & 0x03);
-        self.set_fine_y(value >> 4 & 0x07);
-        self.set_coarse_y((self.coarse_y() & 0x07) | ((value & 0x03) << 3));
     }
 
     pub fn set_address_low(&mut self, value: u8) {
-        self.set_unused(false);
-        self.set_coarse_x(value & 0x1F);
-        self.set_coarse_y((self.coarse_y() & 0x18) | value >> 5);
+        self.0 = (self.0 & 0xFF00) | (value as u16);
     }
 
     pub fn set_scroll_x(&mut self, value: u8) {
         self.set_unused(false);
         self.set_coarse_x(value >> 3);
-        self.set_coarse_y(self.coarse_y() & 0x10);
     }
 
     pub fn set_scroll_y(&mut self, value: u8) {
-        self.set_unused(false);
         self.set_fine_y(value & 0x07);
         self.set_coarse_y(value >> 3);
     }
 
     pub fn increment_address(&mut self, increment: u16) {
+        // TODO check coarse y and x increment
         self.0 = self.0.wrapping_add(increment) & 0x7FFF;
     }
 }

@@ -431,7 +431,7 @@ impl Ppu {
             6 => {
                 let end_y = self.v_reg.fine_y() as u16;
 
-                let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
+                let table_select = self.ctrl.bg_pattern_table() as u16;
                 let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y;
                 self.bg_data.latch_pl = self.vram_read(address, mapper);
             }
@@ -440,7 +440,7 @@ impl Ppu {
             0 => {
                 let end_y = self.v_reg.fine_y() as u16;
 
-                let table_select = if self.ctrl.bg_pattern_table() { 1 } else { 0 };
+                let table_select = self.ctrl.bg_pattern_table() as u16;
                 let address =
                     (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y | 8;
                 self.bg_data.latch_ph = self.vram_read(address, mapper);
@@ -454,16 +454,15 @@ impl Ppu {
     fn transfer_scroll_x(&mut self) {
         self.v_reg.set_unused(false);
         self.v_reg.set_coarse_x(self.t_reg.coarse_x());
-        self.v_reg.set_nametable_select(
-            (self.v_reg.nametable_select() & 0x02) | (self.t_reg.nametable_select() & 0x01),
-        );
+        self.v_reg
+            .set_nametable_select_x(self.t_reg.nametable_select_x());
     }
 
     fn transfer_scroll_y(&mut self) {
         self.v_reg.set_unused(false);
         self.v_reg.set_coarse_y(self.t_reg.coarse_y());
         self.v_reg
-            .set_nametable_select(self.t_reg.nametable_select());
+            .set_nametable_select_y(self.t_reg.nametable_select_y());
         self.v_reg.set_fine_y(self.t_reg.fine_y());
     }
 
@@ -537,6 +536,7 @@ impl Ppu {
             6 => {
                 if self.w_toggle {
                     self.t_reg.set_address_low(value);
+                    // TODO delay this?
                     self.v_reg = self.t_reg;
                 } else {
                     self.t_reg.set_address_high(value);
@@ -825,8 +825,7 @@ impl Ppu {
             // in this case, wraps the last 5 bits to 0
             self.v_reg.set_coarse_x(0);
             // switch the horizontal nametable
-            self.v_reg
-                .set_nametable_select(self.v_reg.nametable_select() ^ 1);
+            self.v_reg.switch_nametable_x();
         } else {
             // increments the x part, that are the last 5 bits
             self.v_reg.set_coarse_x(coarse_x + 1);
@@ -835,7 +834,7 @@ impl Ppu {
 
     fn increment_vram_address_y(&mut self) {
         let fine_y = self.v_reg.fine_y();
-        if fine_y != 7 {
+        if fine_y < 7 {
             // if the y part is not maxed, simply increment it
             self.v_reg.set_fine_y(fine_y + 1);
         } else {
@@ -849,8 +848,7 @@ impl Ppu {
                 // clear coarse y
                 y = 0;
                 // switch the vertical nametable
-                self.v_reg
-                    .set_nametable_select(self.v_reg.nametable_select() ^ 2);
+                self.v_reg.switch_nametable_y();
             } else if y == 31 {
                 // clear coarse y without switching
                 y = 0;

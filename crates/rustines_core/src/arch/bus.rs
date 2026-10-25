@@ -385,6 +385,6 @@ impl DummyReadResult {
     }
 
     pub fn page_boundary_crossed_as_u8(&self) -> u8 {
-        if self.page_boundary_crossed { 1 } else { 0 }
+        self.page_boundary_crossed as u8
     }
 }
