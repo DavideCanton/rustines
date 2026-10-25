@@ -495,7 +495,7 @@ impl Ppu {
 
     pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &mut dyn Mapper) {
         if self.tracing_enabled {
-            trace!("PPU CPU WRITE {reg_index:04X} {value:04X}");
+            trace!("PPU CPU WRITE {reg_index:04X} <- {value:04X}");
         }
         self.write_open_bus(value);
         match reg_index {
@@ -643,7 +643,7 @@ impl Ppu {
         };
 
         if self.tracing_enabled {
-            trace!("PPU VRAM READ {orig_addr:04X} {resolved_addr:04X} {ret:04X}");
+            trace!("PPU VRAM READ {resolved_addr:04X}({orig_addr:04X}) -> {ret:04X}");
         }
 
         ret
@@ -654,7 +654,7 @@ impl Ppu {
         addr &= 0x3FFF;
 
         if self.tracing_enabled {
-            trace!("PPU VRAM WRITE {orig_addr:04X} {addr:04X} {value:04X}");
+            trace!("PPU VRAM WRITE {addr:04X}({orig_addr:04X}) <- {value:04X}");
         }
 
         match addr {
