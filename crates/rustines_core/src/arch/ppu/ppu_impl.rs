@@ -17,6 +17,7 @@ use crate::{
 };
 use log::trace;
 
+#[derive(Debug)]
 enum RenderType {
     Sprite,
     Background,
@@ -44,7 +45,7 @@ pub struct Ppu {
     pub(crate) x_reg: u8,
     pub(crate) w_toggle: bool,
 
-    bg_data: BackgroundData,
+    pub(crate) bg_data: BackgroundData,
 
     pub(crate) sprite_shifters: [SpriteShifters; 8],
     secondary_oam: [u8; 32],

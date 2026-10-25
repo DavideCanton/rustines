@@ -20,16 +20,6 @@ pub fn to_u8_lh(v: u16) -> (u8, u8) {
     (low, high)
 }
 
-/// Converts the two values provided `low` and `high` to an `u32`
-/// by making `(high << 16) | low`.
-#[inline(always)]
-pub fn to_u32(low: u16, high: u16) -> u32 {
-    let low = low as u32;
-    let high = high as u32;
-
-    (high << 16) | low
-}
-
 /// Converts the provided value `v` into a pair of `u16`,
 /// returning `(low, high)`.
 #[inline(always)]
@@ -40,19 +30,24 @@ pub fn to_u16_lh(v: u32) -> (u16, u16) {
     (low, high)
 }
 
-#[macro_export]
-macro_rules! hex {
-    ( $val:expr ) => {{ format!("{:02X}", $val) }};
+#[inline(always)]
+pub fn hex(v: u8) -> String {
+    format!("{:02X}", v)
 }
 
-#[macro_export]
-macro_rules! hex16 {
-    ( $val:expr ) => {{ format!("{:04X}", $val) }};
+#[inline(always)]
+pub fn hex16(v: u16) -> String {
+    format!("{:04X}", v)
 }
 
-#[macro_export]
-macro_rules! bin {
-    ( $val:expr ) => {{ format!("{:08b}", $val) }};
+#[inline(always)]
+pub fn bin(v: u8) -> String {
+    format!("{:08b}", v)
+}
+
+#[inline(always)]
+pub fn bin16(v: u16) -> String {
+    format!("{:016b}", v)
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -215,9 +210,7 @@ pub fn extract_bits_mask_lsb(value: u8, count: BitCount) -> u8 {
 #[cfg(test)]
 #[allow(clippy::assertions_on_constants)]
 mod tests {
-    use crate::utils::bit_utils::{BitCount, BitIndex, set_flag};
-
-    use super::{extract_bits_mask_lsb, extract_bits_mask_msb, extract_bits_shift, extract_flag};
+    use super::*;
 
     #[test]
     fn test_extract_flag() {
@@ -294,5 +287,14 @@ mod tests {
     #[test]
     fn test_bit_count_invalid() {
         BitCount::try_from(9).expect_err("bit count must be 0..=8");
+    }
+
+    #[test]
+    fn test_format_fn() {
+        assert_eq!(bin(0xFF), "11111111");
+        assert_eq!(bin16(0xFFFF), "1111111111111111");
+
+        assert_eq!(hex(255), "FF");
+        assert_eq!(hex16(65535), "FFFF");
     }
 }

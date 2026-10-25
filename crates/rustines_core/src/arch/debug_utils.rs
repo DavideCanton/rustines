@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
 
+use crate::MirroringType;
 use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
 use crate::arch::utils::generate_ppm;
-use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
-use crate::{MirroringType, hex};
+use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift, hex};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize, save_file: bool) -> Vec<u8> {
     assert!(scale > 0, "Pattern table scale must be greater than zero");
@@ -125,21 +125,6 @@ pub fn debug_dump_attribute_tables(bus: &Bus) {
     }
 }
 
-pub fn debug_dump_scrolling_state(bus: &Bus) {
-    let ppu = bus.ppu();
-    let mapper = bus.mapper_ref();
-
-    println!(
-        "PPU scroll: scanline={} cycle={} v={:?} t={:?} x={} mirroring={:?}",
-        ppu.scanline,
-        ppu.cycle,
-        ppu.v_reg,
-        ppu.t_reg,
-        ppu.x_reg,
-        mapper.mirroring_mode()
-    );
-}
-
 pub fn debug_dump_palette(bus: &Bus) {
     println!("=== DUMP PALETTE ===");
     for (i, color) in bus.ppu().palette_table().iter().enumerate() {
@@ -178,7 +163,7 @@ fn print_oam<const N: usize>(oam: &[u8; N]) {
 }
 
 fn format_sprite_bytes(bytes: &[u8]) -> String {
-    bytes.iter().map(|v| hex!(v)).collect::<Vec<_>>().join("-")
+    bytes.iter().copied().map(hex).collect::<Vec<_>>().join("-")
 }
 
 pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
@@ -208,6 +193,11 @@ pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
     println!("PPUCTRL = {:?}", ppu.ctrl);
     println!("PPUMASK = {:?}", ppu.mask);
     println!("PPUSTATUS = {:?}", ppu.status);
+    println!("scanline={} cycle={}", ppu.scanline, ppu.cycle);
+    println!("V = {:?}", ppu.v_reg);
+    println!("X = {}", ppu.x_reg);
+    println!("T = {:?}", ppu.t_reg);
+    println!("BG = {:?}", ppu.bg_data);
 }
 
 #[macro_export]

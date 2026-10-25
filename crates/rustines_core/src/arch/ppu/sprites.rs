@@ -3,7 +3,7 @@ use std::fmt;
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{arch::ppu::utils::get_bits_mask, bin};
+use crate::{arch::ppu::utils::get_bits_mask, utils::bit_utils::bin};
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -97,8 +97,8 @@ impl fmt::Display for SpriteShifters {
         write!(
             f,
             "SpriteShifters[lo={}, hi={}, x={}, attributes={:?}]",
-            bin!(self.lo_shifter),
-            bin!(self.hi_shifter),
+            bin(self.lo_shifter),
+            bin(self.hi_shifter),
             self.x,
             self.attributes
         )

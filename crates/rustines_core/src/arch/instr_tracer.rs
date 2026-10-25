@@ -6,7 +6,7 @@ use crate::{
         instrs::instr_table::{INSTR_TABLE, Instr},
         registers::Registers,
     },
-    hex16,
+    utils::bit_utils::hex16,
 };
 
 pub struct InstructionTracer {
@@ -42,7 +42,7 @@ impl InstructionTracer {
             return;
         }
 
-        let msg = format!("{} -> ${}", irq_type, hex16!(address));
+        let msg = format!("{} -> ${}", irq_type, hex16(address));
         self._trace(registers, clock, old_clock, msg);
     }
 
