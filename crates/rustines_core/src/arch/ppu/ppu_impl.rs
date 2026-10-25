@@ -408,10 +408,7 @@ impl Ppu {
         match self.cycle % 8 {
             // cycles 1-2: load nametable data
             2 => {
-                let nt_address = 0x2000
-                    | ((self.v_reg.nametable_select() as u16) << 10)
-                    | ((self.v_reg.coarse_y() as u16) << 5)
-                    | (self.v_reg.coarse_x() as u16);
+                let nt_address = 0x2000 | (self.v_reg.0 & 0x0FFF);
                 self.bg_data.latch_nt = self.vram_read(nt_address, mapper);
             }
             // cycles 3-4: load attribute table data
@@ -429,10 +426,9 @@ impl Ppu {
             }
             // cycles 5-6: load bg low part
             6 => {
-                let end_y = self.v_reg.fine_y() as u16;
-
+                let fine_y = self.v_reg.fine_y() as u16;
                 let table_select = self.ctrl.bg_pattern_table() as u16;
-                let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y;
+                let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | fine_y;
                 self.bg_data.latch_pl = self.vram_read(address, mapper);
             }
             // cycles 7-8: load bg high part, then transfer everything in the shifters

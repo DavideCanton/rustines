@@ -50,11 +50,12 @@ impl PpuScrollRegister {
     pub fn set_address_high(&mut self, value: u8) {
         let value = value & 0x3F;
         self.0 = ((value as u16) << 8) | (self.0 & 0xFF);
-        self.set_unused(false);
+        self.0 &= 0x3FFF;
     }
 
     pub fn set_address_low(&mut self, value: u8) {
         self.0 = (self.0 & 0xFF00) | (value as u16);
+        self.0 &= 0x3FFF;
     }
 
     pub fn set_scroll_x(&mut self, value: u8) {
