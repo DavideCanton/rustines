@@ -9,7 +9,7 @@ use crate::arch::utils::generate_ppm;
 use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift};
 use crate::{MirroringType, hex};
 
-pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
+pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize, save_file: bool) -> Vec<u8> {
     assert!(scale > 0, "Pattern table scale must be greater than zero");
 
     let width = 256 * scale;
@@ -47,9 +47,11 @@ pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize) -> Vec<u8> {
         }
     }
 
-    let mut file = File::create("pattern_table.ppm").expect("Failed to create file");
-    let data = generate_ppm(width, height, &buf, true);
-    file.write_all(&data).expect("Failed to write file");
+    if save_file {
+        let mut file = File::create("pattern_table.ppm").expect("Failed to create file");
+        let data = generate_ppm(width, height, &buf, true);
+        file.write_all(&data).expect("Failed to write file");
+    }
 
     buf
 }

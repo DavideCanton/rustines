@@ -33,7 +33,7 @@ impl PatternTableWindow {
 
         let pattern_width = 256 * scale;
         let pattern_height = 128 * scale;
-        let buf = dump_pattern_tables(mapper, scale);
+        let buf = dump_pattern_tables(mapper, scale, false);
 
         let size = LogicalSize::new(pattern_width as f64, pattern_height as f64);
         let window = Arc::new(
