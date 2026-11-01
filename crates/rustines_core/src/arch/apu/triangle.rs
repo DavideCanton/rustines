@@ -1,11 +1,10 @@
 use crate::{
-    arch::apu::constants::LENGTH_TABLE,
+    arch::apu::common::{LengthCounter, Sequencer},
     utils::bit_utils::{
         BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
     },
 };
 
-#[derive(Default)]
 pub struct Triangle {
     counter_ctl: bool,
     counter_load: u8,
@@ -16,12 +15,30 @@ pub struct Triangle {
 
     // Internal state
     timer_counter: u16,
-    length_counter: u8,
+    length_counter: LengthCounter,
 
     linear_counter: u8,
     linear_counter_reload: bool,
 
-    sequence_position: u8,
+    sequencer: Sequencer,
+}
+
+impl Default for Triangle {
+    fn default() -> Self {
+        Self {
+            counter_ctl: false,
+            counter_load: 0,
+            timer_low: 0,
+            timer_high: 0,
+            length_counter_load: 0,
+            enabled: false,
+            timer_counter: 0,
+            length_counter: LengthCounter::default(),
+            linear_counter: 0,
+            linear_counter_reload: false,
+            sequencer: Sequencer::new(32),
+        }
+    }
 }
 
 impl Triangle {
@@ -41,16 +58,14 @@ impl Triangle {
         self.linear_counter_reload = true;
 
         if self.enabled {
-            self.length_counter = LENGTH_TABLE[self.length_counter_load as usize];
+            self.length_counter
+                .update(self.length_counter_load as usize);
         }
     }
 
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
-
-        if !enabled {
-            self.length_counter = 0;
-        }
+        self.length_counter.enabled_change(enabled);
     }
 
     pub fn clock_linear_counter(&mut self) {
@@ -66,21 +81,21 @@ impl Triangle {
     }
 
     pub fn clock_length_counter(&mut self) {
-        if !self.counter_ctl && self.length_counter > 0 {
-            self.length_counter -= 1;
+        if !self.counter_ctl {
+            self.length_counter.decrement();
         }
     }
 
-    pub fn length_counter_load(&self) -> u8 {
-        self.length_counter_load
+    pub fn length_counter(&self) -> &LengthCounter {
+        &self.length_counter
     }
 
     pub fn tick_timer(&mut self) {
         if self.timer_counter == 0 {
             self.timer_counter = self.timer_period();
 
-            if self.linear_counter > 0 && self.length_counter > 0 {
-                self.sequence_position = (self.sequence_position + 1) & 0x1F;
+            if self.linear_counter > 0 && self.length_counter.running() {
+                self.sequencer.increment();
             }
         } else {
             self.timer_counter -= 1;
@@ -88,7 +103,7 @@ impl Triangle {
     }
 
     pub fn output(&self) -> u8 {
-        TRIANGLE_SEQUENCE[self.sequence_position as usize]
+        TRIANGLE_SEQUENCE[self.sequencer.value() as usize]
     }
 
     fn timer_period(&self) -> u16 {

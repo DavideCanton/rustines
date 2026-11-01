@@ -1,5 +1,5 @@
 mod apu_impl;
-mod constants;
+mod common;
 mod dmc;
 mod filter;
 mod noise;

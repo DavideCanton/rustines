@@ -220,10 +220,10 @@ impl Apu {
                 ret = set_flag(ret, BitIndex::_6, self.frame_irq_active);
                 ret = set_flag(ret, BitIndex::_5, open_bus_5);
                 ret = set_flag(ret, BitIndex::_4, self.dmc.enabled());
-                ret = set_flag(ret, BitIndex::_3, self.noise.length_counter() > 0);
-                ret = set_flag(ret, BitIndex::_2, self.triangle.length_counter_load() > 0);
-                ret = set_flag(ret, BitIndex::_1, self.pulse2.length_counter_load() > 0);
-                ret = set_flag(ret, BitIndex::_0, self.pulse1.length_counter_load() > 0);
+                ret = set_flag(ret, BitIndex::_3, self.noise.length_counter().running());
+                ret = set_flag(ret, BitIndex::_2, self.triangle.length_counter().running());
+                ret = set_flag(ret, BitIndex::_1, self.pulse2.length_counter().running());
+                ret = set_flag(ret, BitIndex::_0, self.pulse1.length_counter().running());
 
                 self.frame_irq_active = false;
                 self.dmc.set_irq_active(false);
