@@ -49,7 +49,7 @@ impl NesController {
         let value = self.peek_state();
 
         if !self.strobe {
-            self.shift_register = (self.shift_register >> 1).set_flag(BI::_7, true);
+            self.shift_register = (self.shift_register >> 1).set_bit(BI::_7, true);
         }
 
         value
@@ -66,6 +66,6 @@ impl NesController {
     }
 
     pub fn peek_state(&self) -> u8 {
-        (self.shift_register & 1).set_flag(BI::_6, true)
+        (self.shift_register & 1).set_bit(BI::_6, true)
     }
 }

@@ -46,8 +46,8 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 pub(crate) fn do_lsr(cpu: &mut Cpu, val: u8) -> u8 {
-    cpu.registers.set_c(val.extract_flag(BitIndex::_0));
-    let res = (val >> 1).set_flag(BitIndex::_7, false);
+    cpu.registers.set_c(val.get_bit(BitIndex::_0));
+    let res = (val >> 1).set_bit(BitIndex::_7, false);
     cpu.registers.update_nz_flags(res);
     cpu.registers.set_n(false);
     res

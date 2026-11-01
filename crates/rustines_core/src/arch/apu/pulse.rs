@@ -52,16 +52,16 @@ impl Pulse {
     pub fn update_1(&mut self, value: u8) {
         self.duty = value.extract_bits_shift(BitIndex::_6, BitCount::_2);
         self.envelope.update(
-            value.extract_flag(BitIndex::_5),
-            value.extract_flag(BitIndex::_4),
+            value.get_bit(BitIndex::_5),
+            value.get_bit(BitIndex::_4),
             value.extract_bits_mask_lsb(BitCount::_4),
         );
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.sweep_enabled = value.extract_flag(BitIndex::_7);
+        self.sweep_enabled = value.get_bit(BitIndex::_7);
         self.sweep_period = value.extract_bits_shift(BitIndex::_4, BitCount::_3);
-        self.sweep_negate = value.extract_flag(BitIndex::_3);
+        self.sweep_negate = value.get_bit(BitIndex::_3);
         self.sweep_shift = value.extract_bits_mask_lsb(BitCount::_3);
         self.sweep_reload = true;
     }

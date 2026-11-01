@@ -6,6 +6,6 @@ use crate::{
 pub fn immediate(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let val = cpu.decode_immediate(bus);
     let res = do_and(cpu, val);
-    cpu.registers.set_c(res.extract_flag(BitIndex::_7));
+    cpu.registers.set_c(res.get_bit(BitIndex::_7));
     2
 }

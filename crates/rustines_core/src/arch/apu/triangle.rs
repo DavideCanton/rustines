@@ -41,7 +41,7 @@ impl Default for Triangle {
 
 impl Triangle {
     pub fn update_1(&mut self, value: u8) {
-        self.counter_ctl = value.extract_flag(BitIndex::_7);
+        self.counter_ctl = value.get_bit(BitIndex::_7);
         self.counter_load = value.extract_bits_mask_lsb(BitCount::_7);
     }
 

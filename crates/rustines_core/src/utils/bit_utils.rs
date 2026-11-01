@@ -147,8 +147,8 @@ pub trait BitManip {
     type Index;
     type Count;
 
-    fn extract_flag(&self, offset: Self::Index) -> bool;
-    fn set_flag(&self, offset: Self::Index, flag: bool) -> Self;
+    fn get_bit(&self, offset: Self::Index) -> bool;
+    fn set_bit(&self, offset: Self::Index, bit: bool) -> Self;
     fn extract_bits_shift(&self, shift: Self::Index, count: Self::Count) -> Self;
     fn extract_bits_mask_msb(&self, count: Self::Count) -> u8;
     fn extract_bits_mask_lsb(&self, count: Self::Count) -> u8;
@@ -162,16 +162,16 @@ impl BitManip for u8 {
     ///
     /// `offset` is counted from the right, so 0 is the rightmost bit.
     #[inline(always)]
-    fn extract_flag(&self, offset: BitIndex) -> bool {
+    fn get_bit(&self, offset: Self::Index) -> bool {
         let offset = offset as u8;
         (*self & (1 << offset)) > 0
     }
 
-    /// Sets the bit at offset `offset` of `value` to 1 if `flag` is true, else to 0.
+    /// Sets the bit at offset `offset` of `value` to 1 if `bit` is true, else to 0.
     #[inline(always)]
-    fn set_flag(&self, offset: BitIndex, flag: bool) -> u8 {
+    fn set_bit(&self, offset: Self::Index, bit: bool) -> u8 {
         let offset = offset as u8;
-        if flag {
+        if bit {
             *self | (1 << offset)
         } else {
             *self & !(1 << offset)
@@ -184,7 +184,7 @@ impl BitManip for u8 {
     ///
     /// If `shift` is 0, the value is returned unchanged.
     #[inline(always)]
-    fn extract_bits_shift(&self, shift: BitIndex, count: BitCount) -> u8 {
+    fn extract_bits_shift(&self, shift: Self::Index, count: Self::Count) -> u8 {
         let value = *self >> (shift as u8);
         value.extract_bits_mask_lsb(count)
     }
@@ -195,7 +195,7 @@ impl BitManip for u8 {
     ///
     /// If `count` is 0, 0 is returned.
     #[inline(always)]
-    fn extract_bits_mask_msb(&self, count: BitCount) -> u8 {
+    fn extract_bits_mask_msb(&self, count: Self::Count) -> u8 {
         let count = count as u8;
         if count == 0 {
             0
@@ -211,7 +211,7 @@ impl BitManip for u8 {
     ///
     /// If `count` is 0, 0 is returned.
     #[inline(always)]
-    fn extract_bits_mask_lsb(&self, count: BitCount) -> u8 {
+    fn extract_bits_mask_lsb(&self, count: Self::Count) -> u8 {
         let count = count as u8;
         if count == 0 {
             0
@@ -226,82 +226,63 @@ impl BitManip for u8 {
 #[allow(clippy::assertions_on_constants)]
 mod tests {
     use super::*;
+    use BitCount as BC;
+    use BitIndex as BI;
 
     #[test]
-    fn test_extract_flag() {
+    fn test_get_bit() {
         let v: u8 = 0b0000_1111;
-        assert!(v.extract_flag(BitIndex::_0));
-        assert!(v.extract_flag(BitIndex::_1));
-        assert!(!v.extract_flag(BitIndex::_5));
+        assert!(v.get_bit(BI::_0));
+        assert!(v.get_bit(BI::_1));
+        assert!(!v.get_bit(BI::_5));
     }
 
     #[test]
-    fn test_set_flag() {
+    fn test_set_bit() {
         let v: u8 = 0b0000_1111;
-        assert_eq!(v.set_flag(BitIndex::_0, false), 0b0000_1110);
-        assert_eq!(v.set_flag(BitIndex::_1, false), 0b0000_1101);
-        assert_eq!(v.set_flag(BitIndex::_5, true), 0b0010_1111);
+        assert_eq!(v.set_bit(BI::_0, false), 0b0000_1110);
+        assert_eq!(v.set_bit(BI::_1, false), 0b0000_1101);
+        assert_eq!(v.set_bit(BI::_5, true), 0b0010_1111);
     }
 
     #[test]
     fn test_extract_bits_shift() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_4, BitCount::_4),
-            0b0000_1010
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_2, BitCount::_6),
-            0b0010_1010
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_2, BitCount::_5),
-            0b0000_1010
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_0, BitCount::_8),
-            0b1010_1011
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_0, BitCount::_6),
-            0b0010_1011
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_3, BitCount::_5),
-            0b0001_0101
-        );
-        assert_eq!(
-            v.extract_bits_shift(BitIndex::_3, BitCount::_1),
-            0b0000_0001
-        );
+        assert_eq!(v.extract_bits_shift(BI::_4, BC::_4), 0b0000_1010);
+        assert_eq!(v.extract_bits_shift(BI::_2, BC::_6), 0b0010_1010);
+        assert_eq!(v.extract_bits_shift(BI::_2, BC::_5), 0b0000_1010);
+        assert_eq!(v.extract_bits_shift(BI::_0, BC::_8), 0b1010_1011);
+        assert_eq!(v.extract_bits_shift(BI::_0, BC::_6), 0b0010_1011);
+        assert_eq!(v.extract_bits_shift(BI::_3, BC::_5), 0b0001_0101);
+        assert_eq!(v.extract_bits_shift(BI::_3, BC::_1), 0b0000_0001);
     }
 
     #[test]
     fn test_extract_bits_mask_msb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(v.extract_bits_mask_msb(BitCount::_4), 0b1010_0000);
-        assert_eq!(v.extract_bits_mask_msb(BitCount::_2), 0b1000_0000);
-        assert_eq!(v.extract_bits_mask_msb(BitCount::_5), 0b1010_1000);
-        assert_eq!(v.extract_bits_mask_msb(BitCount::_8), 0b1010_1011);
+        assert_eq!(v.extract_bits_mask_msb(BC::_4), 0b1010_0000);
+        assert_eq!(v.extract_bits_mask_msb(BC::_2), 0b1000_0000);
+        assert_eq!(v.extract_bits_mask_msb(BC::_5), 0b1010_1000);
+        assert_eq!(v.extract_bits_mask_msb(BC::_8), 0b1010_1011);
     }
 
     #[test]
     fn test_extract_bits_mask_lsb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(v.extract_bits_mask_lsb(BitCount::_4), 0b0000_1011);
-        assert_eq!(v.extract_bits_mask_lsb(BitCount::_2), 0b0000_0011);
-        assert_eq!(v.extract_bits_mask_lsb(BitCount::_7), 0b0010_1011);
-        assert_eq!(v.extract_bits_mask_lsb(BitCount::_8), 0b1010_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BC::_4), 0b0000_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BC::_2), 0b0000_0011);
+        assert_eq!(v.extract_bits_mask_lsb(BC::_7), 0b0010_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BC::_8), 0b1010_1011);
     }
 
     #[test]
     fn test_bit_index_invalid() {
-        BitIndex::try_from(8).expect_err("bit index must be 0..=7");
+        BI::try_from(8).expect_err("bit index must be 0..=7");
     }
 
     #[test]
     fn test_bit_count_invalid() {
-        BitCount::try_from(9).expect_err("bit count must be 0..=8");
+        BC::try_from(9).expect_err("bit count must be 0..=8");
     }
 
     #[test]

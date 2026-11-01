@@ -80,7 +80,7 @@ impl Registers {
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n(value.extract_flag(BitIndex::_7));
+        self.set_n(value.get_bit(BitIndex::_7));
         self.set_z(value == 0);
     }
 

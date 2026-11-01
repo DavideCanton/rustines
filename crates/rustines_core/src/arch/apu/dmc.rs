@@ -70,8 +70,8 @@ impl Dmc {
     }
 
     pub fn update_1(&mut self, value: u8) {
-        self.irq_enable = value.extract_flag(BitIndex::_7);
-        self.loop_flag = value.extract_flag(BitIndex::_6);
+        self.irq_enable = value.get_bit(BitIndex::_7);
+        self.loop_flag = value.get_bit(BitIndex::_6);
         self.freq = value.extract_bits_mask_lsb(BitCount::_4);
 
         if !self.irq_enable {

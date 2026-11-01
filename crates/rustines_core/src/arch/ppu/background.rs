@@ -23,13 +23,13 @@ impl BackgroundData {
         self.shifter_pattern_hi = (self.shifter_pattern_hi & 0xFF00) | self.latch_ph as u16;
 
         self.shifter_attrib_lo = (self.shifter_attrib_lo & 0xFF00)
-            | if self.latch_at.extract_flag(BI::_0) {
+            | if self.latch_at.get_bit(BI::_0) {
                 0xFF
             } else {
                 0x00
             };
         self.shifter_attrib_hi = (self.shifter_attrib_hi & 0xFF00)
-            | if self.latch_at.extract_flag(BI::_1) {
+            | if self.latch_at.get_bit(BI::_1) {
                 0xFF
             } else {
                 0x00

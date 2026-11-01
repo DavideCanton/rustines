@@ -73,7 +73,7 @@ pub(crate) fn do_adc(cpu: &mut Cpu, val: u8) {
 
 fn compute_v(a: u8, res_a: u8, m: u8) -> bool {
     let v = (a ^ res_a) & (m ^ res_a);
-    v.extract_flag(BitIndex::_7)
+    v.get_bit(BitIndex::_7)
 }
 
 fn compute_c(res: u16) -> bool {

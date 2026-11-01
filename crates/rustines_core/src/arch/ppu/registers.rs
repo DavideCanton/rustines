@@ -43,8 +43,8 @@ impl PpuScrollRegister {
     }
 
     pub fn set_nametable_select(&mut self, value: u8) {
-        self.set_nametable_select_x(value.extract_flag(BitIndex::_0));
-        self.set_nametable_select_y(value.extract_flag(BitIndex::_1));
+        self.set_nametable_select_x(value.get_bit(BitIndex::_0));
+        self.set_nametable_select_y(value.get_bit(BitIndex::_1));
     }
 
     pub fn set_address_high(&mut self, value: u8) {

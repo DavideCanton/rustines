@@ -32,14 +32,14 @@ impl Default for Noise {
 impl Noise {
     pub fn update_1(&mut self, value: u8) {
         self.envelope.update(
-            value.extract_flag(BitIndex::_5),
-            value.extract_flag(BitIndex::_4),
+            value.get_bit(BitIndex::_5),
+            value.get_bit(BitIndex::_4),
             value.extract_bits_mask_lsb(BitCount::_4),
         );
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.noise_mode = value.extract_flag(BitIndex::_7);
+        self.noise_mode = value.get_bit(BitIndex::_7);
         self.period = value.extract_bits_mask_lsb(BitCount::_4);
     }
 

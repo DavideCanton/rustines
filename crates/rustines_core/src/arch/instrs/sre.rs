@@ -64,7 +64,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_sre(cpu: &mut Cpu, val: u8) -> u8 {
-    cpu.registers.set_c(val.extract_flag(BitIndex::_0));
+    cpu.registers.set_c(val.get_bit(BitIndex::_0));
     let res = val >> 1;
     let res_a = cpu.registers.a_reg ^ res;
     cpu.registers.a_reg = res_a;

@@ -565,7 +565,7 @@ impl Ppu {
                     // in this case the read happens before the vblank is actually set, so force
                     // it to false
                     if self.cycle == 1 {
-                        data = data.set_flag(BI::_7, false);
+                        data = data.set_bit(BI::_7, false);
                     }
                     // reading $2002 at this scanline skips the vblank for this frame
                     if self.cycle <= 1 {

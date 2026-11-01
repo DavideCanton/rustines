@@ -46,7 +46,7 @@ pub fn absolute_x(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_asl(cpu: &mut Cpu, mut val: u8) -> u8 {
-    cpu.registers.set_c(val.extract_flag(BitIndex::_7));
+    cpu.registers.set_c(val.get_bit(BitIndex::_7));
     val <<= 1;
     cpu.registers.update_nz_flags(val);
     val
