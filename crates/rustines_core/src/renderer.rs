@@ -15,3 +15,5 @@ impl Renderer for NoopRenderer {
         Ok(())
     }
 }
+
+pub type RendererBox = Box<dyn Renderer>;

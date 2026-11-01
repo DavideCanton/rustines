@@ -1,12 +1,13 @@
 use bytemuck::Zeroable;
 
-use crate::arch::apu::Apu;
-use crate::arch::bus::{Bus, Controller2};
-use crate::arch::cpu::Cpu;
-use crate::arch::mappers::Mapper0;
-use crate::arch::ppu::Ppu;
-use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, INesHeader, PRG_ROM_BANK_SIZE};
-use crate::renderer::NoopRenderer;
+use crate::{
+    Apu, Cpu, NoAudio, NoopRenderer, Ppu,
+    arch::{
+        bus::{Bus, Controller2},
+        mappers::Mapper0,
+        rom_structs::{CHR_ROM_BANK_SIZE, HEADER, INesHeader, PRG_ROM_BANK_SIZE},
+    },
+};
 
 pub fn setup_tests() -> (Cpu, Bus) {
     let mut header = INesHeader::zeroed();
@@ -21,7 +22,7 @@ pub fn setup_tests() -> (Cpu, Bus) {
     let bus = Bus::new(
         mapper,
         Ppu::new(Box::new(NoopRenderer)),
-        Apu::default(),
+        Apu::new(Box::new(NoAudio)),
         Controller2::nes_controller(),
     );
     let mut cpu = Cpu::new();

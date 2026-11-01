@@ -1,5 +1,5 @@
 use crate::{
-    Platform,
+    CpalOutput, Platform,
     constants::{INNER_SIZE, width_to_size},
     pattern_window::PatternTableWindow,
 };
@@ -144,7 +144,10 @@ impl App {
         renderer: Box<dyn Renderer>,
     ) -> AppState {
         let ppu = core::Ppu::new(renderer);
-        let apu = core::Apu::default();
+        let mut cpal = CpalOutput::new().expect("Cannot initialize audio");
+        cpal.play().expect("Can't play");
+
+        let apu = core::Apu::new(Box::new(cpal));
 
         let ctrl2 = if self.zapper {
             Controller2::zapper()

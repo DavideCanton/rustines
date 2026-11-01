@@ -1,13 +1,16 @@
 use log::trace;
 
-use crate::arch::apu::Apu;
-use crate::arch::controller::NesController;
-use crate::arch::mappers::mapper::{Mapper, MapperBox};
-
-use crate::arch::common::replace;
-use crate::arch::ppu::Ppu;
-use crate::arch::zapper::Zapper;
-use crate::utils::bit_utils::to_u16;
+use crate::{
+    arch::{
+        apu::Apu,
+        common::replace,
+        controller::NesController,
+        mappers::mapper::{Mapper, MapperBox},
+        ppu::Ppu,
+        zapper::Zapper,
+    },
+    utils::bit_utils::to_u16,
+};
 
 pub enum Controller2 {
     NesController(NesController),
@@ -36,6 +39,7 @@ pub struct Bus {
     total_cycles: usize,
     tracing_enabled: bool,
     oam_dma_state: OamDmaState,
+    dmc_dma_state: DmcDmaState,
 }
 
 impl Bus {
@@ -52,6 +56,7 @@ impl Bus {
             total_cycles: 0,
             tracing_enabled: false,
             oam_dma_state: OamDmaState::NotRunning,
+            dmc_dma_state: DmcDmaState::NotRunning,
         }
     }
 
@@ -71,6 +76,10 @@ impl Bus {
         } else {
             None
         }
+    }
+
+    pub fn total_cycles(&self) -> usize {
+        self.total_cycles
     }
 
     pub fn push(&mut self, sp: u8, val: u8) {
@@ -150,7 +159,20 @@ impl Bus {
         for _ in 0..3 {
             self.ppu.tick(mapper);
         }
+
+        self.apu_tick();
+    }
+
+    fn apu_tick(&mut self) {
         self.apu.tick();
+
+        let dmc = self.apu.dmc();
+
+        if self.dmc_dma_state == DmcDmaState::NotRunning && dmc.needs_dma() {
+            self.dmc_dma_state = DmcDmaState::Halt {
+                address: dmc.current_address(),
+            };
+        }
     }
 
     /// Peek the value at the given address without affecting the open bus value or triggering
@@ -327,6 +349,10 @@ impl Bus {
         DummyReadResult::new(raw_addr, boundary_crossed)
     }
 
+    pub fn dmc_needs_dma(&self) -> bool {
+        self.apu.dmc().needs_dma()
+    }
+
     pub fn oam_dma_state(&self) -> OamDmaState {
         self.oam_dma_state
     }
@@ -335,8 +361,20 @@ impl Bus {
         !matches!(self.oam_dma_state, OamDmaState::NotRunning)
     }
 
-    pub(crate) fn set_dma_state(&mut self, next_state: OamDmaState) {
+    pub(crate) fn set_oam_dma_state(&mut self, next_state: OamDmaState) {
         self.oam_dma_state = next_state;
+    }
+
+    pub(crate) fn is_dmc_dma_state_running(&self) -> bool {
+        !matches!(self.dmc_dma_state, DmcDmaState::NotRunning)
+    }
+
+    pub fn dmc_dma_state(&self) -> DmcDmaState {
+        self.dmc_dma_state
+    }
+
+    pub(crate) fn set_dmc_dma_state(&mut self, next_state: DmcDmaState) {
+        self.dmc_dma_state = next_state;
     }
 }
 
@@ -361,6 +399,15 @@ pub enum OamDmaState {
         address: u16,
         data: u8,
     },
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum DmcDmaState {
+    NotRunning,
+    Halt { address: u16 },
+    Dummy { address: u16 },
+    Alignment { address: u16 },
+    Read { address: u16 },
 }
 
 pub struct DummyReadResult {
