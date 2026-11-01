@@ -2,7 +2,7 @@ use log::warn;
 
 use crate::{
     arch::{
-        bus::{Bus, DummyReadResult, OamDmaState},
+        bus::{Bus, DmcDmaState, DummyReadResult, OamDmaState},
         instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
         registers::*,
@@ -35,6 +35,11 @@ impl Cpu {
     pub fn tick(&mut self, bus: &mut Bus) {
         if bus.is_oam_dma_state_running() {
             self.run_oam_dma_cycle(bus);
+            return;
+        }
+
+        if bus.is_dmc_dma_state_running() {
+            self.run_dmc_dma_cycle(bus);
             return;
         }
 
@@ -316,7 +321,39 @@ impl Cpu {
             NotRunning => unreachable!(),
         };
 
-        bus.set_dma_state(next_state);
+        bus.set_oam_dma_state(next_state);
+        self.clock += 1;
+    }
+
+    fn run_dmc_dma_cycle(&mut self, bus: &mut Bus) {
+        use DmcDmaState::*;
+
+        let next_state = match bus.dmc_dma_state() {
+            Halt { address } => {
+                bus.read(self.registers.pc);
+                Dummy { address }
+            }
+            Dummy { address } => {
+                bus.read(self.registers.pc);
+                if bus.total_cycles().is_multiple_of(2) {
+                    Alignment { address }
+                } else {
+                    Read { address }
+                }
+            }
+            Alignment { address } => {
+                bus.read(self.registers.pc);
+                Read { address }
+            }
+            Read { address } => {
+                let value = bus.read(address);
+                bus.apu_mut().dmc_mut().load_sample(value);
+                NotRunning
+            }
+            NotRunning => unreachable!(),
+        };
+
+        bus.set_dmc_dma_state(next_state);
         self.clock += 1;
     }
 }

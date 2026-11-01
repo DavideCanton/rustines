@@ -58,7 +58,7 @@ impl Apu {
             pulse2: Pulse::new(false),
             triangle: Triangle::default(),
             noise: Noise::default(),
-            dmc: Dmc::default(),
+            dmc: Dmc::new(),
             irq_disabled: false,
             mode: ApuMode::FourStep,
             frame_irq_active: false,
@@ -276,5 +276,13 @@ impl Apu {
         };
 
         pulse_out + tnd_out
+    }
+
+    pub fn dmc_mut(&mut self) -> &mut Dmc {
+        &mut self.dmc
+    }
+
+    pub fn dmc(&self) -> &Dmc {
+        &self.dmc
     }
 }

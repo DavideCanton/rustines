@@ -5,19 +5,42 @@ pub struct Dmc {
     irq_active: bool,
     loop_flag: bool,
     freq: u8,
-    load_counter: u8,
+    direct_load: u8,
     address: u16,
     bytes_remaining: u16,
     bits_remaining: u8,
     sample_length: u16,
     timer: u16,
     enabled: bool,
+
+    sample_buffer: Option<u8>,
+    shift_register: u8,
+    silence: bool,
+    output_level: u8,
+    current_address: u16,
 }
 
 impl Dmc {
-    const PERIODS: [u16; 16] = [
-        428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54,
-    ];
+    pub fn new() -> Self {
+        Self {
+            irq_enable: false,
+            irq_active: false,
+            loop_flag: false,
+            freq: 0,
+            direct_load: 0,
+            address: 0,
+            bytes_remaining: 0,
+            bits_remaining: 0,
+            sample_length: 0,
+            timer: PERIODS[0],
+            enabled: false,
+            output_level: 0,
+            sample_buffer: None,
+            shift_register: 0,
+            silence: true,
+            current_address: 0,
+        }
+    }
 
     pub fn tick_timer(&mut self) {
         if !self.enabled {
@@ -28,49 +51,22 @@ impl Dmc {
             self.timer -= 1;
         } else {
             self.timer = self.get_period();
-
-            if self.bits_remaining > 0 {
-                self.bits_remaining -= 1;
-            }
-
-            if self.bits_remaining == 0 {
-                self.bits_remaining = 8;
-
-                if self.bytes_remaining > 0 {
-                    self.bytes_remaining -= 1;
-
-                    if self.bytes_remaining == 0 {
-                        if self.loop_flag {
-                            self.bytes_remaining = self.sample_length;
-                        } else if self.irq_enable {
-                            self.irq_active = true;
-                        }
-                    }
-                }
-            }
+            self.clock_output_unit();
         }
     }
 
     pub fn set_enabled(&mut self, enabled: bool) {
-        let previous_enabled = self.enabled;
         self.enabled = enabled;
 
         if !enabled {
             self.bytes_remaining = 0;
         } else {
-            if !previous_enabled {
-                self.bits_remaining = 8;
-                self.timer = self.get_period();
-            }
-
-            if self.bytes_remaining == 0 {
-                self.bytes_remaining = self.sample_length;
-            }
+            self.restart_sample();
         }
     }
 
     fn get_period(&self) -> u16 {
-        Dmc::PERIODS[self.freq as usize]
+        PERIODS[self.freq as usize]
     }
 
     pub fn update_1(&mut self, value: u8) {
@@ -84,11 +80,12 @@ impl Dmc {
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.load_counter = extract_bits_mask_lsb(value, BitCount::_7);
+        self.direct_load = extract_bits_mask_lsb(value, BitCount::_7);
+        self.output_level = self.direct_load;
     }
 
     pub fn update_3(&mut self, value: u8) {
-        self.address = value as u16;
+        self.address = 0xC000 | ((value as u16) << 6);
     }
 
     pub fn update_4(&mut self, value: u8) {
@@ -96,6 +93,11 @@ impl Dmc {
         if !self.enabled {
             self.bytes_remaining = self.sample_length;
         }
+    }
+
+    fn restart_sample(&mut self) {
+        self.current_address = self.address;
+        self.bytes_remaining = self.sample_length;
     }
 
     pub fn irq_active(&self) -> bool {
@@ -111,24 +113,64 @@ impl Dmc {
     }
 
     pub fn output(&self) -> u8 {
-        0
+        self.output_level
+    }
+
+    pub fn needs_dma(&self) -> bool {
+        self.enabled && self.sample_buffer.is_none() && self.bytes_remaining > 0
+    }
+
+    pub fn current_address(&self) -> u16 {
+        self.current_address
+    }
+
+    pub fn load_sample(&mut self, value: u8) {
+        self.sample_buffer = Some(value);
+
+        self.current_address = if self.current_address == 0xFFFF {
+            0x8000
+        } else {
+            self.current_address + 1
+        };
+
+        self.bytes_remaining -= 1;
+
+        if self.bytes_remaining == 0 {
+            if self.loop_flag {
+                self.restart_sample();
+            } else if self.irq_enable {
+                self.irq_active = true;
+            }
+        }
+    }
+
+    fn clock_output_unit(&mut self) {
+        if self.bits_remaining == 0 {
+            self.bits_remaining = 8;
+
+            if let Some(sample) = self.sample_buffer.take() {
+                self.shift_register = sample;
+                self.silence = false;
+            } else {
+                self.silence = true;
+            }
+        }
+
+        if !self.silence {
+            if self.shift_register & 1 != 0 {
+                if self.output_level <= 125 {
+                    self.output_level += 2;
+                }
+            } else if self.output_level >= 2 {
+                self.output_level -= 2;
+            }
+        }
+
+        self.shift_register >>= 1;
+        self.bits_remaining -= 1;
     }
 }
 
-impl Default for Dmc {
-    fn default() -> Self {
-        Self {
-            irq_enable: false,
-            irq_active: false,
-            loop_flag: false,
-            freq: 0,
-            load_counter: 0,
-            address: 0,
-            bytes_remaining: 0,
-            bits_remaining: 0,
-            sample_length: 0,
-            timer: Dmc::PERIODS[0],
-            enabled: false,
-        }
-    }
-}
+const PERIODS: [u16; 16] = [
+    428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54,
+];
