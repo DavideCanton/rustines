@@ -1,6 +1,6 @@
 use crate::{
     arch::{bus::Bus, cpu::Cpu},
-    utils::bit_utils::{BitIndex, extract_flag},
+    utils::bit_utils::{BitIndex, BitManip},
 };
 
 pub fn immediate(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
@@ -72,7 +72,8 @@ pub(crate) fn do_adc(cpu: &mut Cpu, val: u8) {
 }
 
 fn compute_v(a: u8, res_a: u8, m: u8) -> bool {
-    extract_flag((a ^ res_a) & (m ^ res_a), BitIndex::_7)
+    let v = (a ^ res_a) & (m ^ res_a);
+    v.extract_flag(BitIndex::_7)
 }
 
 fn compute_c(res: u16) -> bool {

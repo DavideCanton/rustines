@@ -1,6 +1,6 @@
 use crate::{
     arch::{bus::Bus, cpu::Cpu, instrs::utils::store_with_dummy_write},
-    utils::bit_utils::{BitIndex, extract_flag},
+    utils::bit_utils::{BitIndex, BitManip},
 };
 
 pub fn zeropage(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
@@ -64,7 +64,7 @@ pub fn indirect_y(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
 }
 
 fn do_slo(cpu: &mut Cpu, mut val: u8) -> u8 {
-    cpu.registers.set_c(extract_flag(val, BitIndex::_7));
+    cpu.registers.set_c(val.extract_flag(BitIndex::_7));
     val <<= 1;
     cpu.registers.a_reg |= val;
     cpu.registers.update_nz_flags(val);

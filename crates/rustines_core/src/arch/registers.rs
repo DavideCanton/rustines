@@ -1,7 +1,7 @@
 use bitfield::bitfield;
 use std::fmt;
 
-use crate::utils::bit_utils::{BitIndex, extract_flag};
+use crate::utils::bit_utils::{BitIndex, BitManip};
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -80,7 +80,7 @@ impl Registers {
     }
 
     pub fn update_nz_flags(&mut self, value: u8) {
-        self.set_n(extract_flag(value, BitIndex::_7));
+        self.set_n(value.extract_flag(BitIndex::_7));
         self.set_z(value == 0);
     }
 

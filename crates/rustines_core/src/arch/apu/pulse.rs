@@ -1,8 +1,6 @@
 use crate::{
     arch::apu::common::{Envelope, LengthCounter, Sequencer},
-    utils::bit_utils::{
-        BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
-    },
+    utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
 pub struct Pulse {
@@ -52,19 +50,19 @@ impl Pulse {
     }
 
     pub fn update_1(&mut self, value: u8) {
-        self.duty = extract_bits_shift(value, BitIndex::_6, BitCount::_2);
+        self.duty = value.extract_bits_shift(BitIndex::_6, BitCount::_2);
         self.envelope.update(
-            extract_flag(value, BitIndex::_5),
-            extract_flag(value, BitIndex::_4),
-            extract_bits_mask_lsb(value, BitCount::_4),
+            value.extract_flag(BitIndex::_5),
+            value.extract_flag(BitIndex::_4),
+            value.extract_bits_mask_lsb(BitCount::_4),
         );
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.sweep_enabled = extract_flag(value, BitIndex::_7);
-        self.sweep_period = extract_bits_shift(value, BitIndex::_4, BitCount::_3);
-        self.sweep_negate = extract_flag(value, BitIndex::_3);
-        self.sweep_shift = extract_bits_mask_lsb(value, BitCount::_3);
+        self.sweep_enabled = value.extract_flag(BitIndex::_7);
+        self.sweep_period = value.extract_bits_shift(BitIndex::_4, BitCount::_3);
+        self.sweep_negate = value.extract_flag(BitIndex::_3);
+        self.sweep_shift = value.extract_bits_mask_lsb(BitCount::_3);
         self.sweep_reload = true;
     }
 
@@ -73,8 +71,8 @@ impl Pulse {
     }
 
     pub fn update_4(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, BitCount::_3);
-        self.length_counter_load = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
+        self.timer_high = value.extract_bits_mask_lsb(BitCount::_3);
+        self.length_counter_load = value.extract_bits_shift(BitIndex::_3, BitCount::_5);
         self.envelope.start();
 
         if self.enabled {

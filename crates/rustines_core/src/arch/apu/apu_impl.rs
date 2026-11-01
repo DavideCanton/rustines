@@ -7,7 +7,7 @@ use crate::{
         pulse::Pulse,
         triangle::Triangle,
     },
-    utils::bit_utils::{BitIndex, extract_flag, set_flag},
+    utils::bit_utils::{BitIndex, BitManip},
 };
 
 // 48 kHz
@@ -113,8 +113,8 @@ impl Apu {
             None => None,
             Some(0) => {
                 let val = self.delayed_write_value;
-                self.mode = extract_flag(val, BitIndex::_7).into();
-                self.irq_disabled = extract_flag(val, BitIndex::_6);
+                self.mode = val.extract_flag(BitIndex::_7).into();
+                self.irq_disabled = val.extract_flag(BitIndex::_6);
                 self.frame_cycles = 0;
 
                 if self.mode == ApuMode::FiveStep {
@@ -185,11 +185,11 @@ impl Apu {
             0x13 => self.dmc.update_4(value),
             0x15 => {
                 self.dmc.set_irq_active(false);
-                self.dmc.set_enabled(extract_flag(value, BitIndex::_4));
-                self.noise.set_enabled(extract_flag(value, BitIndex::_3));
-                self.triangle.set_enabled(extract_flag(value, BitIndex::_2));
-                self.pulse2.set_enabled(extract_flag(value, BitIndex::_1));
-                self.pulse1.set_enabled(extract_flag(value, BitIndex::_0));
+                self.dmc.set_enabled(value.extract_flag(BitIndex::_4));
+                self.noise.set_enabled(value.extract_flag(BitIndex::_3));
+                self.triangle.set_enabled(value.extract_flag(BitIndex::_2));
+                self.pulse2.set_enabled(value.extract_flag(BitIndex::_1));
+                self.pulse1.set_enabled(value.extract_flag(BitIndex::_0));
             }
             0x17 => {
                 self.delayed_write_value = value;
@@ -200,7 +200,7 @@ impl Apu {
                     self.delayed_reset_cycles = Some(4);
                 }
 
-                if extract_flag(value, BitIndex::_6) {
+                if value.extract_flag(BitIndex::_6) {
                     self.frame_irq_active = false;
                 }
             }
@@ -214,16 +214,16 @@ impl Apu {
                 let mut ret = 0;
 
                 // bit 5 is always open bus
-                let open_bus_5 = extract_flag(open_bus_value, BitIndex::_5);
+                let open_bus_5 = open_bus_value.extract_flag(BitIndex::_5);
 
-                ret = set_flag(ret, BitIndex::_7, self.dmc.irq_active());
-                ret = set_flag(ret, BitIndex::_6, self.frame_irq_active);
-                ret = set_flag(ret, BitIndex::_5, open_bus_5);
-                ret = set_flag(ret, BitIndex::_4, self.dmc.enabled());
-                ret = set_flag(ret, BitIndex::_3, self.noise.length_counter().running());
-                ret = set_flag(ret, BitIndex::_2, self.triangle.length_counter().running());
-                ret = set_flag(ret, BitIndex::_1, self.pulse2.length_counter().running());
-                ret = set_flag(ret, BitIndex::_0, self.pulse1.length_counter().running());
+                ret = ret.set_flag(BitIndex::_7, self.dmc.irq_active());
+                ret = ret.set_flag(BitIndex::_6, self.frame_irq_active);
+                ret = ret.set_flag(BitIndex::_5, open_bus_5);
+                ret = ret.set_flag(BitIndex::_4, self.dmc.enabled());
+                ret = ret.set_flag(BitIndex::_3, self.noise.length_counter().running());
+                ret = ret.set_flag(BitIndex::_2, self.triangle.length_counter().running());
+                ret = ret.set_flag(BitIndex::_1, self.pulse2.length_counter().running());
+                ret = ret.set_flag(BitIndex::_0, self.pulse1.length_counter().running());
 
                 self.frame_irq_active = false;
                 self.dmc.set_irq_active(false);

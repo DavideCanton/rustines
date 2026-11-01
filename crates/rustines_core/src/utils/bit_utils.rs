@@ -143,66 +143,82 @@ impl From<BitCount> for u8 {
     }
 }
 
-/// Extracts the bit at offset `offset` of `value` and returns true if it was 1, false else.
-///
-/// `offset` is counted from the right, so 0 is the rightmost bit.
-#[inline(always)]
-pub fn extract_flag(value: u8, offset: BitIndex) -> bool {
-    let offset = offset as u8;
-    (value & (1 << offset)) > 0
+pub trait BitManip {
+    type Index;
+    type Count;
+
+    fn extract_flag(&self, offset: Self::Index) -> bool;
+    fn set_flag(&self, offset: Self::Index, flag: bool) -> Self;
+    fn extract_bits_shift(&self, shift: Self::Index, count: Self::Count) -> Self;
+    fn extract_bits_mask_msb(&self, count: Self::Count) -> u8;
+    fn extract_bits_mask_lsb(&self, count: Self::Count) -> u8;
 }
 
-/// Sets the bit at offset `offset` of `value` to 1 if `flag` is true, else to 0.
-#[inline(always)]
-pub fn set_flag(value: u8, offset: BitIndex, flag: bool) -> u8 {
-    let offset = offset as u8;
-    if flag {
-        value | (1 << offset)
-    } else {
-        value & !(1 << offset)
+impl BitManip for u8 {
+    type Index = BitIndex;
+    type Count = BitCount;
+
+    /// Extracts the bit at offset `offset` of `value` and returns true if it was 1, false else.
+    ///
+    /// `offset` is counted from the right, so 0 is the rightmost bit.
+    #[inline(always)]
+    fn extract_flag(&self, offset: BitIndex) -> bool {
+        let offset = offset as u8;
+        (*self & (1 << offset)) > 0
     }
-}
 
-/// Shifts to the right `value` of `shift` bits, then keeps only `count`.
-///
-/// For example, if value is `12345678`, shift is `3` and count is `2`, the result is `00000045`.
-///
-/// If `shift` is 0, the value is returned unchanged.
-#[inline(always)]
-pub fn extract_bits_shift(value: u8, shift: BitIndex, count: BitCount) -> u8 {
-    let value = value >> (shift as u8);
-    extract_bits_mask_lsb(value, count)
-}
-
-/// Extracts the MSB `count` bits of `value`.
-///
-/// For example, if value is `12345678` and count is `3`, the result is `12300000`.
-///
-/// If `count` is 0, 0 is returned.
-#[inline(always)]
-pub fn extract_bits_mask_msb(value: u8, count: BitCount) -> u8 {
-    let count = count as u8;
-    if count == 0 {
-        0
-    } else {
-        let mask = !0 << (8 - count);
-        value & mask
+    /// Sets the bit at offset `offset` of `value` to 1 if `flag` is true, else to 0.
+    #[inline(always)]
+    fn set_flag(&self, offset: BitIndex, flag: bool) -> u8 {
+        let offset = offset as u8;
+        if flag {
+            *self | (1 << offset)
+        } else {
+            *self & !(1 << offset)
+        }
     }
-}
 
-/// Extracts the LSB `count` bits of `value`.
-///
-/// For example, if value is `12345678` and count is `3`, the result is `00000678`.
-///
-/// If `count` is 0, 0 is returned.
-#[inline(always)]
-pub fn extract_bits_mask_lsb(value: u8, count: BitCount) -> u8 {
-    let count = count as u8;
-    if count == 0 {
-        0
-    } else {
-        let mask = !0 >> (8 - count);
-        value & mask
+    /// Shifts to the right `value` of `shift` bits, then keeps only `count`.
+    ///
+    /// For example, if value is `12345678`, shift is `3` and count is `2`, the result is `00000045`.
+    ///
+    /// If `shift` is 0, the value is returned unchanged.
+    #[inline(always)]
+    fn extract_bits_shift(&self, shift: BitIndex, count: BitCount) -> u8 {
+        let value = *self >> (shift as u8);
+        value.extract_bits_mask_lsb(count)
+    }
+
+    /// Extracts the MSB `count` bits of `value`.
+    ///
+    /// For example, if value is `12345678` and count is `3`, the result is `12300000`.
+    ///
+    /// If `count` is 0, 0 is returned.
+    #[inline(always)]
+    fn extract_bits_mask_msb(&self, count: BitCount) -> u8 {
+        let count = count as u8;
+        if count == 0 {
+            0
+        } else {
+            let mask = !0 << (8 - count);
+            *self & mask
+        }
+    }
+
+    /// Extracts the LSB `count` bits of `value`.
+    ///
+    /// For example, if value is `12345678` and count is `3`, the result is `00000678`.
+    ///
+    /// If `count` is 0, 0 is returned.
+    #[inline(always)]
+    fn extract_bits_mask_lsb(&self, count: BitCount) -> u8 {
+        let count = count as u8;
+        if count == 0 {
+            0
+        } else {
+            let mask = !0 >> (8 - count);
+            *self & mask
+        }
     }
 }
 
@@ -214,48 +230,48 @@ mod tests {
     #[test]
     fn test_extract_flag() {
         let v: u8 = 0b0000_1111;
-        assert!(extract_flag(v, BitIndex::_0));
-        assert!(extract_flag(v, BitIndex::_1));
-        assert!(!extract_flag(v, BitIndex::_5));
+        assert!(v.extract_flag(BitIndex::_0));
+        assert!(v.extract_flag(BitIndex::_1));
+        assert!(!v.extract_flag(BitIndex::_5));
     }
 
     #[test]
     fn test_set_flag() {
         let v: u8 = 0b0000_1111;
-        assert_eq!(set_flag(v, BitIndex::_0, false), 0b0000_1110);
-        assert_eq!(set_flag(v, BitIndex::_1, false), 0b0000_1101);
-        assert_eq!(set_flag(v, BitIndex::_5, true), 0b0010_1111);
+        assert_eq!(v.set_flag(BitIndex::_0, false), 0b0000_1110);
+        assert_eq!(v.set_flag(BitIndex::_1, false), 0b0000_1101);
+        assert_eq!(v.set_flag(BitIndex::_5, true), 0b0010_1111);
     }
 
     #[test]
     fn test_extract_bits_shift() {
         let v: u8 = 0b1010_1011;
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_4, BitCount::_4),
+            v.extract_bits_shift(BitIndex::_4, BitCount::_4),
             0b0000_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_2, BitCount::_6),
+            v.extract_bits_shift(BitIndex::_2, BitCount::_6),
             0b0010_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_2, BitCount::_5),
+            v.extract_bits_shift(BitIndex::_2, BitCount::_5),
             0b0000_1010
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_0, BitCount::_8),
+            v.extract_bits_shift(BitIndex::_0, BitCount::_8),
             0b1010_1011
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_0, BitCount::_6),
+            v.extract_bits_shift(BitIndex::_0, BitCount::_6),
             0b0010_1011
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_3, BitCount::_5),
+            v.extract_bits_shift(BitIndex::_3, BitCount::_5),
             0b0001_0101
         );
         assert_eq!(
-            extract_bits_shift(v, BitIndex::_3, BitCount::_1),
+            v.extract_bits_shift(BitIndex::_3, BitCount::_1),
             0b0000_0001
         );
     }
@@ -263,19 +279,19 @@ mod tests {
     #[test]
     fn test_extract_bits_mask_msb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_msb(v, BitCount::_4), 0b1010_0000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::_2), 0b1000_0000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::_5), 0b1010_1000);
-        assert_eq!(extract_bits_mask_msb(v, BitCount::_8), 0b1010_1011);
+        assert_eq!(v.extract_bits_mask_msb(BitCount::_4), 0b1010_0000);
+        assert_eq!(v.extract_bits_mask_msb(BitCount::_2), 0b1000_0000);
+        assert_eq!(v.extract_bits_mask_msb(BitCount::_5), 0b1010_1000);
+        assert_eq!(v.extract_bits_mask_msb(BitCount::_8), 0b1010_1011);
     }
 
     #[test]
     fn test_extract_bits_mask_lsb() {
         let v: u8 = 0b1010_1011;
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::_4), 0b0000_1011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::_2), 0b0000_0011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::_7), 0b0010_1011);
-        assert_eq!(extract_bits_mask_lsb(v, BitCount::_8), 0b1010_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BitCount::_4), 0b0000_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BitCount::_2), 0b0000_0011);
+        assert_eq!(v.extract_bits_mask_lsb(BitCount::_7), 0b0010_1011);
+        assert_eq!(v.extract_bits_mask_lsb(BitCount::_8), 0b1010_1011);
     }
 
     #[test]

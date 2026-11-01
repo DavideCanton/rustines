@@ -1,6 +1,6 @@
 use bitfield::bitfield;
 
-use crate::utils::bit_utils::{BitIndex, extract_flag};
+use crate::utils::bit_utils::{BitIndex, BitManip};
 
 bitfield! {
     /// ```text
@@ -43,8 +43,8 @@ impl PpuScrollRegister {
     }
 
     pub fn set_nametable_select(&mut self, value: u8) {
-        self.set_nametable_select_x(extract_flag(value, BitIndex::_0));
-        self.set_nametable_select_y(extract_flag(value, BitIndex::_1));
+        self.set_nametable_select_x(value.extract_flag(BitIndex::_0));
+        self.set_nametable_select_y(value.extract_flag(BitIndex::_1));
     }
 
     pub fn set_address_high(&mut self, value: u8) {

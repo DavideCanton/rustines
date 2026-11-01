@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     arch::ppu::utils::get_bits_mask,
-    utils::bit_utils::{BitIndex as BI, NumberFormat, extract_flag},
+    utils::bit_utils::{BitIndex as BI, BitManip, NumberFormat},
 };
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -23,13 +23,13 @@ impl BackgroundData {
         self.shifter_pattern_hi = (self.shifter_pattern_hi & 0xFF00) | self.latch_ph as u16;
 
         self.shifter_attrib_lo = (self.shifter_attrib_lo & 0xFF00)
-            | if extract_flag(self.latch_at, BI::_0) {
+            | if self.latch_at.extract_flag(BI::_0) {
                 0xFF
             } else {
                 0x00
             };
         self.shifter_attrib_hi = (self.shifter_attrib_hi & 0xFF00)
-            | if extract_flag(self.latch_at, BI::_1) {
+            | if self.latch_at.extract_flag(BI::_1) {
                 0xFF
             } else {
                 0x00

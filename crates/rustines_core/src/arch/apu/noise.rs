@@ -1,8 +1,6 @@
 use crate::{
     arch::apu::common::{Envelope, LengthCounter},
-    utils::bit_utils::{
-        BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
-    },
+    utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
 pub struct Noise {
@@ -34,19 +32,19 @@ impl Default for Noise {
 impl Noise {
     pub fn update_1(&mut self, value: u8) {
         self.envelope.update(
-            extract_flag(value, BitIndex::_5),
-            extract_flag(value, BitIndex::_4),
-            extract_bits_mask_lsb(value, BitCount::_4),
+            value.extract_flag(BitIndex::_5),
+            value.extract_flag(BitIndex::_4),
+            value.extract_bits_mask_lsb(BitCount::_4),
         );
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.noise_mode = extract_flag(value, BitIndex::_7);
-        self.period = extract_bits_mask_lsb(value, BitCount::_4);
+        self.noise_mode = value.extract_flag(BitIndex::_7);
+        self.period = value.extract_bits_mask_lsb(BitCount::_4);
     }
 
     pub fn update_3(&mut self, value: u8) {
-        let index = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
+        let index = value.extract_bits_shift(BitIndex::_3, BitCount::_5);
 
         if self.enabled {
             self.length_counter.update(index as usize);

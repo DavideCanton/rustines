@@ -1,4 +1,4 @@
-use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_mask_lsb, extract_flag};
+use crate::utils::bit_utils::{BitCount, BitIndex, BitManip};
 
 pub struct Dmc {
     irq_enable: bool,
@@ -70,9 +70,9 @@ impl Dmc {
     }
 
     pub fn update_1(&mut self, value: u8) {
-        self.irq_enable = extract_flag(value, BitIndex::_7);
-        self.loop_flag = extract_flag(value, BitIndex::_6);
-        self.freq = extract_bits_mask_lsb(value, BitCount::_4);
+        self.irq_enable = value.extract_flag(BitIndex::_7);
+        self.loop_flag = value.extract_flag(BitIndex::_6);
+        self.freq = value.extract_bits_mask_lsb(BitCount::_4);
 
         if !self.irq_enable {
             self.irq_active = false;
@@ -80,7 +80,7 @@ impl Dmc {
     }
 
     pub fn update_2(&mut self, value: u8) {
-        self.direct_load = extract_bits_mask_lsb(value, BitCount::_7);
+        self.direct_load = value.extract_bits_mask_lsb(BitCount::_7);
         self.output_level = self.direct_load;
     }
 

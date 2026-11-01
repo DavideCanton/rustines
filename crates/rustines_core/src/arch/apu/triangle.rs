@@ -1,8 +1,6 @@
 use crate::{
     arch::apu::common::{LengthCounter, Sequencer},
-    utils::bit_utils::{
-        BitCount, BitIndex, extract_bits_mask_lsb, extract_bits_shift, extract_flag,
-    },
+    utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
 pub struct Triangle {
@@ -43,8 +41,8 @@ impl Default for Triangle {
 
 impl Triangle {
     pub fn update_1(&mut self, value: u8) {
-        self.counter_ctl = extract_flag(value, BitIndex::_7);
-        self.counter_load = extract_bits_mask_lsb(value, BitCount::_7);
+        self.counter_ctl = value.extract_flag(BitIndex::_7);
+        self.counter_load = value.extract_bits_mask_lsb(BitCount::_7);
     }
 
     pub fn update_2(&mut self, value: u8) {
@@ -52,8 +50,8 @@ impl Triangle {
     }
 
     pub fn update_3(&mut self, value: u8) {
-        self.timer_high = extract_bits_mask_lsb(value, BitCount::_3);
-        self.length_counter_load = extract_bits_shift(value, BitIndex::_3, BitCount::_5);
+        self.timer_high = value.extract_bits_mask_lsb(BitCount::_3);
+        self.length_counter_load = value.extract_bits_shift(BitIndex::_3, BitCount::_5);
 
         self.linear_counter_reload = true;
 

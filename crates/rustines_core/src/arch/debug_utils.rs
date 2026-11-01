@@ -7,7 +7,7 @@ use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
 use crate::arch::utils::generate_ppm;
-use crate::utils::bit_utils::{BitCount, BitIndex, NumberFormat, extract_bits_shift};
+use crate::utils::bit_utils::{BitCount, BitIndex, NumberFormat};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize, save_file: bool) -> Vec<u8> {
     assert!(scale > 0, "Pattern table scale must be greater than zero");

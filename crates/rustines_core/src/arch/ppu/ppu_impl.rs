@@ -13,7 +13,7 @@ use crate::{
     },
     compose_rgba, decompose_rgba,
     renderer::{Renderer, RendererBox},
-    utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, set_flag},
+    utils::bit_utils::{BitCount as BC, BitIndex as BI, BitManip},
 };
 use log::trace;
 
@@ -565,7 +565,7 @@ impl Ppu {
                     // in this case the read happens before the vblank is actually set, so force
                     // it to false
                     if self.cycle == 1 {
-                        data = set_flag(data, BI::_7, false);
+                        data = data.set_flag(BI::_7, false);
                     }
                     // reading $2002 at this scanline skips the vblank for this frame
                     if self.cycle <= 1 {
@@ -893,8 +893,8 @@ fn compute_palette_vram_address(palette: u8, pixel: u8) -> u16 {
 pub fn get_color_index(byte_low: u8, byte_high: u8, pixel_x: u8) -> u8 {
     let bit_shift: BI = (7 - pixel_x).try_into().unwrap();
 
-    let bit_low = extract_bits_shift(byte_low, bit_shift, BC::_1);
-    let bit_high = extract_bits_shift(byte_high, bit_shift, BC::_1);
+    let bit_low = byte_low.extract_bits_shift(bit_shift, BC::_1);
+    let bit_high = byte_high.extract_bits_shift(bit_shift, BC::_1);
 
     (bit_high << 1) | bit_low
 }
