@@ -20,34 +20,33 @@ pub fn to_u8_lh(v: u16) -> (u8, u8) {
     (low, high)
 }
 
-/// Converts the provided value `v` into a pair of `u16`,
-/// returning `(low, high)`.
-#[inline(always)]
-pub fn to_u16_lh(v: u32) -> (u16, u16) {
-    let low = (v & 0b1111_1111_1111_1111) as u16;
-    let high = ((v >> 16) & 0b1111_1111_1111_1111) as u16;
-
-    (low, high)
+pub trait NumberFormat {
+    fn hex(&self) -> String;
+    fn bin(&self) -> String;
 }
 
-#[inline(always)]
-pub fn hex(v: u8) -> String {
-    format!("{:02X}", v)
+impl NumberFormat for u8 {
+    #[inline(always)]
+    fn hex(&self) -> String {
+        format!("{:02X}", *self)
+    }
+
+    #[inline(always)]
+    fn bin(&self) -> String {
+        format!("{:08b}", *self)
+    }
 }
 
-#[inline(always)]
-pub fn hex16(v: u16) -> String {
-    format!("{:04X}", v)
-}
+impl NumberFormat for u16 {
+    #[inline(always)]
+    fn hex(&self) -> String {
+        format!("{:04X}", *self)
+    }
 
-#[inline(always)]
-pub fn bin(v: u8) -> String {
-    format!("{:08b}", v)
-}
-
-#[inline(always)]
-pub fn bin16(v: u16) -> String {
-    format!("{:016b}", v)
+    #[inline(always)]
+    fn bin(&self) -> String {
+        format!("{:016b}", *self)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -291,10 +290,10 @@ mod tests {
 
     #[test]
     fn test_format_fn() {
-        assert_eq!(bin(0xFF), "11111111");
-        assert_eq!(bin16(0xFFFF), "1111111111111111");
+        assert_eq!(0xFF_u8.bin(), "11111111");
+        assert_eq!(0xFFFF_u16.bin(), "1111111111111111");
 
-        assert_eq!(hex(255), "FF");
-        assert_eq!(hex16(65535), "FFFF");
+        assert_eq!(255_u8.hex(), "FF");
+        assert_eq!(65535_u16.hex(), "FFFF");
     }
 }

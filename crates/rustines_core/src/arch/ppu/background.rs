@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     arch::ppu::utils::get_bits_mask,
-    utils::bit_utils::{BitIndex as BI, bin16, extract_flag, hex},
+    utils::bit_utils::{BitIndex as BI, NumberFormat, extract_flag},
 };
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -55,14 +55,14 @@ impl fmt::Display for BackgroundData {
         write!(
             f,
             "BackgroundData[pat_lo={} pat_hi={} attr_lo={} attr_hi={} nt={} at={} pl={} ph={}]",
-            bin16(self.shifter_pattern_lo),
-            bin16(self.shifter_pattern_hi),
-            bin16(self.shifter_attrib_lo),
-            bin16(self.shifter_attrib_hi),
-            hex(self.latch_nt),
-            hex(self.latch_at),
-            hex(self.latch_pl),
-            hex(self.latch_ph),
+            self.shifter_pattern_lo.bin(),
+            self.shifter_pattern_hi.bin(),
+            self.shifter_attrib_lo.bin(),
+            self.shifter_attrib_hi.bin(),
+            self.latch_nt.hex(),
+            self.latch_at.hex(),
+            self.latch_pl.hex(),
+            self.latch_ph.hex(),
         )
     }
 }

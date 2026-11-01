@@ -7,7 +7,7 @@ use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
 use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
 use crate::arch::utils::generate_ppm;
-use crate::utils::bit_utils::{BitCount, BitIndex, extract_bits_shift, hex};
+use crate::utils::bit_utils::{BitCount, BitIndex, NumberFormat, extract_bits_shift};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize, save_file: bool) -> Vec<u8> {
     assert!(scale > 0, "Pattern table scale must be greater than zero");
@@ -163,7 +163,12 @@ fn print_oam<const N: usize>(oam: &[u8; N]) {
 }
 
 fn format_sprite_bytes(bytes: &[u8]) -> String {
-    bytes.iter().copied().map(hex).collect::<Vec<_>>().join("-")
+    bytes
+        .iter()
+        .copied()
+        .map(|v| v.hex())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {

@@ -3,7 +3,7 @@ use log::warn;
 use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::instrs::*;
-use crate::utils::bit_utils::hex;
+use crate::utils::bit_utils::NumberFormat;
 
 macro_rules! instr {
     ( $fn: expr, $name: expr, $op: expr ) => {{ Instr::new($fn, $name, $op) }};
@@ -291,7 +291,7 @@ impl Instr {
             .iter()
             .skip(1)
             .copied()
-            .map(hex)
+            .map(|v| v.hex())
             .rev()
             .collect::<Vec<_>>()
             .join("");
@@ -345,7 +345,7 @@ pub fn disassemble_instr(prg: &[u8], pc: usize) -> (String, usize) {
     let is_error = instr.fname == "err";
 
     let msg = if is_error {
-        format!("{} ({})", fname, hex(opcode))
+        format!("{} ({})", fname, opcode.hex())
     } else {
         if pc + ilen > prg.len() {
             let mut buf = vec![0; ilen];
