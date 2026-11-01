@@ -1,4 +1,5 @@
 pub mod arch;
+pub mod audio;
 pub mod loaders;
 pub mod renderer;
 pub mod utils;
@@ -11,6 +12,7 @@ pub use arch::debug_utils;
 pub use arch::mappers::mapper::{Mapper, MapperBox};
 pub use arch::ppu::{Ppu, compose_rgba, decompose_rgba};
 pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
+pub use audio::{AudioOutput, AudioOutputBox, NoAudio};
 pub use loaders::loader::Loader;
 pub use loaders::loaders_factory::decode_loader;
 pub use renderer::{NoopRenderer, Renderer};

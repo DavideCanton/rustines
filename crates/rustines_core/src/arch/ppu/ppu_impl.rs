@@ -12,7 +12,7 @@ use crate::{
         rom_structs::MirroringType,
     },
     compose_rgba, decompose_rgba,
-    renderer::Renderer,
+    renderer::{Renderer, RendererBox},
     utils::bit_utils::{BitCount as BC, BitIndex as BI, extract_bits_shift, set_flag},
 };
 use log::trace;
@@ -73,7 +73,7 @@ pub struct Ppu {
     zapper_position: Option<(usize, usize)>,
     zapper_light_timer: usize,
 
-    renderer: Box<dyn Renderer>,
+    renderer: RendererBox,
     tracing_enabled: bool,
 }
 
@@ -82,7 +82,7 @@ const ZAPPER_SENSOR_RADIUS: usize = 4;
 const ZAPPER_LIGHT_THRESHOLD: u32 = 128;
 
 impl Ppu {
-    pub fn new(renderer: Box<dyn Renderer>) -> Self {
+    pub fn new(renderer: RendererBox) -> Self {
         Self {
             nametables: [0; 2048],
             palette_table: [0; 32],

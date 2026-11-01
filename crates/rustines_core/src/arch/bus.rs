@@ -1,13 +1,16 @@
 use log::trace;
 
-use crate::arch::apu::Apu;
-use crate::arch::controller::NesController;
-use crate::arch::mappers::mapper::{Mapper, MapperBox};
-
-use crate::arch::common::replace;
-use crate::arch::ppu::Ppu;
-use crate::arch::zapper::Zapper;
-use crate::utils::bit_utils::to_u16;
+use crate::{
+    arch::{
+        apu::Apu,
+        common::replace,
+        controller::NesController,
+        mappers::mapper::{Mapper, MapperBox},
+        ppu::Ppu,
+        zapper::Zapper,
+    },
+    utils::bit_utils::to_u16,
+};
 
 pub enum Controller2 {
     NesController(NesController),
