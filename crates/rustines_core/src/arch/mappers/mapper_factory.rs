@@ -2,10 +2,7 @@ use anyhow::{Result as AResult, bail};
 
 use crate::{
     Mapper, MapperBox,
-    arch::{
-        mappers::{Mapper0, Mapper3},
-        rom_structs::INesHeader,
-    },
+    arch::{mappers, rom_structs::INesHeader},
 };
 
 fn boxed_mapper<M>(
@@ -21,8 +18,9 @@ where
 
 pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> AResult<MapperBox> {
     match header.mapping_number() {
-        0 => boxed_mapper(Mapper0::new, header, buf),
-        3 => boxed_mapper(Mapper3::new, header, buf),
+        0 => boxed_mapper(mappers::Mapper0::new, header, buf),
+        2 => boxed_mapper(mappers::Mapper2::new, header, buf),
+        3 => boxed_mapper(mappers::Mapper3::new, header, buf),
         _ => bail!("Invalid mapper"),
     }
 }

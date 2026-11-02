@@ -5,7 +5,7 @@ use crate::{context::Args, types::RustinesDebugError};
 use clap::Parser;
 use flexi_logger::{LogSpecBuilder, Logger, LoggerHandle};
 use log::{LevelFilter, info};
-use rustines_core::{self as core, arch::instrs::instr_table::disassemble_instr};
+use rustines_core::{self as core};
 use std::{fs, io::Read, path};
 
 #[must_use]
@@ -15,15 +15,16 @@ fn init_logger() -> LoggerHandle {
     builder.start().expect("Failed to start logger")
 }
 
-fn disassemble_rom(mapper: core::MapperBox) {
-    let data = mapper.prg_rom();
-    let mut pc: usize = 0;
+fn disassemble_rom(_mapper: core::MapperBox) {
+    todo!()
+    // let data = mapper.prg_rom();
+    // let mut pc: usize = 0;
 
-    while pc < data.len() {
-        let (string, new_pc) = disassemble_instr(data, pc);
-        pc = new_pc;
-        println!("{}", string);
-    }
+    // while pc < data.len() {
+    //     let (string, new_pc) = disassemble_instr(data, pc);
+    //     pc = new_pc;
+    //     println!("{}", string);
+    // }
 }
 
 fn read_file(

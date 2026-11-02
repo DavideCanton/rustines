@@ -991,14 +991,6 @@ mod tests {
     }
 
     impl Mapper for FakeMapper {
-        fn prg_rom(&self) -> &[u8] {
-            todo!()
-        }
-
-        fn chr_rom(&self) -> &[u8] {
-            todo!()
-        }
-
         fn mirroring_mode(&self) -> MirroringType {
             MirroringType::Vertical
         }

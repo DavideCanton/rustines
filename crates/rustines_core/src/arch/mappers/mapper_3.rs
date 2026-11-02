@@ -1,15 +1,16 @@
 use anyhow::bail;
 use rustines_macro::Named;
 
+use crate::arch::mappers::common::{ChrRomBank, PrgRomBank, get_bank_coordinates, get_rom_banks};
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, INesHeader, MirroringType, TRAINER_SIZE};
+use crate::arch::rom_structs::{INesHeader, MirroringType, PRG_ROM_BANK_SIZE, TRAINER_SIZE};
 use crate::utils::named::Named;
 
 #[derive(Named)]
 pub struct Mapper3 {
-    prg_rom: Vec<u8>,
+    prg_rom: Vec<PrgRomBank>,
     prg_ram: Option<Vec<u8>>,
-    chr_rom: Vec<u8>,
+    chr_rom_banks: Vec<ChrRomBank>,
     mirroring_type: MirroringType,
     selected_bank: u8,
     bank_mask: u8,
@@ -23,15 +24,15 @@ impl Mapper3 {
 
         let banks = header.prg_rom_banks();
         if banks != 2 {
-            bail!("Invalid number of banks, expected 2, found {banks}")
+            bail!("Invalid number of PRG banks, expected 2, found {banks}")
         }
 
-        let prg_rom = rom.drain(0..header.prg_rom_size()).collect();
+        let prg_rom = get_rom_banks(&mut rom, header.prg_rom_size());
 
         if header.uses_chr_ram() {
-            bail!("Unexpected CHR RAM for mapper 0");
+            bail!("Unexpected CHR RAM for mapper 3");
         }
-        let chr_rom = rom.drain(0..header.chr_rom_size()).collect();
+        let chr_rom_banks = get_rom_banks(&mut rom, header.chr_rom_size());
 
         let prg_ram = if header.uses_prg_ram() {
             Some(vec![0; header.prg_ram_size()])
@@ -41,7 +42,7 @@ impl Mapper3 {
 
         Ok(Mapper3 {
             prg_rom,
-            chr_rom,
+            chr_rom_banks,
             prg_ram,
             mirroring_type: header.mirroring_type(),
             selected_bank: 0,
@@ -51,14 +52,6 @@ impl Mapper3 {
 }
 
 impl Mapper for Mapper3 {
-    fn prg_rom(&self) -> &[u8] {
-        &self.prg_rom
-    }
-
-    fn chr_rom(&self) -> &[u8] {
-        &self.chr_rom
-    }
-
     fn fetch_cpu(&self, addr: u16) -> u8 {
         match addr {
             0x6000..=0x7FFF => {
@@ -70,8 +63,8 @@ impl Mapper for Mapper3 {
                 }
             }
             0x8000..=0xFFFF => {
-                let addr = (addr - 0x8000) as usize;
-                self.prg_rom[addr]
+                let (index, offset) = get_bank_coordinates(addr - 0x8000, PRG_ROM_BANK_SIZE as u16);
+                self.prg_rom[index as usize][offset as usize]
             }
             _ => panic!("Invalid value provided to fetch_cpu: {addr}"),
         }
@@ -79,8 +72,7 @@ impl Mapper for Mapper3 {
 
     fn fetch_ppu(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
-            let base = (self.selected_bank as usize) * CHR_ROM_BANK_SIZE;
-            self.chr_rom[base + addr as usize]
+            self.chr_rom_banks[self.selected_bank as usize][addr as usize]
         } else {
             0
         }

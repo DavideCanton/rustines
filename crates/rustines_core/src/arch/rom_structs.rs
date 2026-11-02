@@ -88,6 +88,10 @@ impl INesHeader {
         (self.chr_rom_banks as usize) * CHR_ROM_BANK_SIZE
     }
 
+    pub fn chr_rom_banks(&self) -> usize {
+        self.chr_rom_banks as usize
+    }
+
     pub fn prg_ram_size(&self) -> usize {
         (self.prg_ram_banks as usize) * PRG_RAM_BANK_SIZE
     }
