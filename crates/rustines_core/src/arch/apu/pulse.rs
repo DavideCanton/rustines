@@ -96,9 +96,11 @@ impl Pulse {
         let change = period >> self.sweep_shift;
 
         if self.sweep_negate {
+            // the result is clamped to zero if negative
             period
-                .wrapping_sub(change)
-                .wrapping_sub(self.is_pulse1 as u16)
+                .saturating_sub(change)
+                // pulse 1 subtracts 1 more than pulse 2
+                .saturating_sub(self.is_pulse1 as u16)
         } else {
             period.wrapping_add(change)
         }
@@ -125,7 +127,6 @@ impl Pulse {
         if !self.enabled
             || !self.length_counter.running()
             || self.sweep_mute()
-            || self.timer_period() < 8
             || self.duty_output() == 0
         {
             return 0;
