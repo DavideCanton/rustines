@@ -7,7 +7,9 @@ use gilrs::{Button, EventType, Gilrs};
 use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
-use rustines_core::{self as core, Renderer, arch::bus::Controller2};
+use rustines_core::{
+    self as core, AudioOutputBox, NoAudio, Renderer, arch::bus::Controller2, renderer::RendererBox,
+};
 use rustines_gui_utils::FpsCounter;
 use std::{
     cell::RefCell,
@@ -138,16 +140,21 @@ impl App {
         }
     }
 
-    fn init_app_state(
-        &mut self,
-        main_window: Arc<Window>,
-        renderer: Box<dyn Renderer>,
-    ) -> AppState {
+    fn init_app_state(&mut self, main_window: Arc<Window>, renderer: RendererBox) -> AppState {
         let ppu = core::Ppu::new(renderer);
-        let mut cpal = CpalOutput::new().expect("Cannot initialize audio");
-        cpal.play().expect("Can't play");
 
-        let apu = core::Apu::new(Box::new(cpal));
+        let audio: AudioOutputBox = match CpalOutput::new() {
+            Ok(mut cpal) => {
+                cpal.play().expect("Can't play");
+                Box::new(cpal)
+            }
+            Err(e) => {
+                eprintln!("Cannot initialize audio: {}", e);
+                Box::new(NoAudio)
+            }
+        };
+
+        let apu = core::Apu::new(audio);
 
         let ctrl2 = if self.zapper {
             Controller2::zapper()

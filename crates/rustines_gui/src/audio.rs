@@ -1,5 +1,5 @@
 use cpal::{
-    ErrorKind, Stream,
+    ErrorKind, Sample, Stream,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use ringbuf::{
@@ -33,7 +33,7 @@ impl CpalOutput {
             config.into(),
             move |data: &mut [f32], _| {
                 for frame in data.chunks_mut(channels) {
-                    let sample = consumer.try_pop().unwrap_or(0.0);
+                    let sample = consumer.try_pop().unwrap_or(Sample::EQUILIBRIUM);
 
                     for channel in frame.iter_mut() {
                         *channel = sample;
