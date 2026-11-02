@@ -1,5 +1,5 @@
 use cpal::{
-    Stream,
+    ErrorKind, Stream,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use ringbuf::{
@@ -40,7 +40,11 @@ impl CpalOutput {
                     }
                 }
             },
-            |err| eprintln!("Audio error: {err}"),
+            |err| {
+                if err.kind() != ErrorKind::StreamInvalidated {
+                    eprintln!("Audio error: {err:?}");
+                }
+            },
             None,
         )?;
 
