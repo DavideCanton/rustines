@@ -85,11 +85,11 @@ impl Apu {
         if self.cpu_cycle_count.is_multiple_of(2) {
             self.pulse1.tick_timer();
             self.pulse2.tick_timer();
+            self.noise.tick_timer();
+            self.dmc.tick_timer();
         }
 
         self.triangle.tick_timer();
-        self.noise.tick_timer();
-        self.dmc.tick_timer();
 
         self.update_frame_counter();
         self.emit_output();
