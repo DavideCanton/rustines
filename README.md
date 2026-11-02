@@ -6,7 +6,7 @@ Stuff implemented:
 
 - [x] run roms (only Mapper 0 and 3 implemented)
 - [x] ppu
-- [ ] audio
+- [x] audio
 - [x] input handling (~~not the zapper~~ zapper too!)
 - [x] wasm support
 
