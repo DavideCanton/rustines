@@ -450,6 +450,25 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
                 .pattern_window
                 .show(bus.mapper_ref(), event_loop, 4);
         }
+
+        if input.key_pressed(KeyCode::Digit1) {
+            bus.apu_mut().mixer_mut().pulse1().toggle();
+        }
+        if input.key_pressed(KeyCode::Digit2) {
+            bus.apu_mut().mixer_mut().pulse2().toggle();
+        }
+        if input.key_pressed(KeyCode::Digit3) {
+            bus.apu_mut().mixer_mut().triangle().toggle();
+        }
+        if input.key_pressed(KeyCode::Digit4) {
+            bus.apu_mut().mixer_mut().noise().toggle();
+        }
+        if input.key_pressed(KeyCode::Digit5) {
+            bus.apu_mut().mixer_mut().dmc().toggle();
+        }
+        if input.key_pressed(KeyCode::Digit0) {
+            bus.apu_mut().mixer_mut().enable_all();
+        }
     }
 }
 

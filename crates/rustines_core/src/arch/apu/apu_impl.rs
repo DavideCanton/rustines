@@ -3,6 +3,7 @@ use crate::{
     arch::apu::{
         dmc::Dmc,
         filter::{Filter, HighPassFilter, LowPassFilter, SequenceFilter},
+        mixer::Mixer,
         noise::Noise,
         pulse::Pulse,
         triangle::Triangle,
@@ -48,6 +49,7 @@ pub struct Apu {
 
     output: AudioOutputBox,
     filter: SequenceFilter,
+    mixer: Mixer,
 }
 
 impl Apu {
@@ -76,6 +78,7 @@ impl Apu {
                 Box::new(HighPassFilter::new(440.0, sample_rate)),
                 Box::new(LowPassFilter::new(14_000.0, sample_rate)),
             ]),
+            mixer: Mixer::default(),
         }
     }
 
@@ -253,29 +256,13 @@ impl Apu {
     }
 
     fn mix_output(&self) -> f32 {
-        let pulse1 = self.pulse1.output() as f32;
-        let pulse2 = self.pulse2.output() as f32;
+        let pulse1 = self.pulse1.output();
+        let pulse2 = self.pulse2.output();
+        let triangle = self.triangle.output();
+        let noise = self.noise.output();
+        let dmc = self.dmc.output();
 
-        let pulse_sum = pulse1 + pulse2;
-        let pulse_out = if pulse_sum == 0.0 {
-            0.0
-        } else {
-            95.88 / (8128.0 / pulse_sum + 100.0)
-        };
-
-        let triangle = self.triangle.output() as f32;
-        let noise = self.noise.output() as f32;
-        let dmc = self.dmc.output() as f32;
-
-        let tnd_sum = triangle / 8227.0 + noise / 12241.0 + dmc / 22638.0;
-
-        let tnd_out = if tnd_sum == 0.0 {
-            0.0
-        } else {
-            159.79 / (1.0 / tnd_sum + 100.0)
-        };
-
-        pulse_out + tnd_out
+        self.mixer.mix_output(pulse1, pulse2, triangle, noise, dmc)
     }
 
     pub fn dmc_mut(&mut self) -> &mut Dmc {
@@ -284,5 +271,9 @@ impl Apu {
 
     pub fn dmc(&self) -> &Dmc {
         &self.dmc
+    }
+
+    pub fn mixer_mut(&mut self) -> &mut Mixer {
+        &mut self.mixer
     }
 }
