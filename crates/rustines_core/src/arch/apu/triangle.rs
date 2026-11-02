@@ -90,9 +90,12 @@ impl Triangle {
 
     pub fn tick_timer(&mut self) {
         if self.timer_counter == 0 {
-            self.timer_counter = self.timer_period();
+            let period = self.timer_period();
+            self.timer_counter = period;
 
-            if self.linear_counter > 0 && self.length_counter.running() {
+            // don't increment the sequencer if period < 2
+            // to avoid high frequencies
+            if self.linear_counter > 0 && self.length_counter.running() && period >= 2 {
                 self.sequencer.increment();
             }
         } else {
