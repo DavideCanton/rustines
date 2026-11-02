@@ -195,9 +195,9 @@ impl Apu {
                 self.delayed_write_value = value;
 
                 if self.cpu_cycle_count.is_multiple_of(2) {
-                    self.delayed_reset_cycles = Some(3);
+                    self.delayed_reset_cycles = Some(2);
                 } else {
-                    self.delayed_reset_cycles = Some(4);
+                    self.delayed_reset_cycles = Some(3);
                 }
 
                 if value.get_bit(BitIndex::_6) {
