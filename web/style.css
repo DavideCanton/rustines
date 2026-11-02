@@ -1,0 +1,121 @@
+body {
+    background-color: black;
+    margin: 0;
+    font-family: monospace;
+    font-size: 2em;
+    color: white;
+    user-select: none;
+}
+
+#main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    justify-content: center;
+}
+
+#header {
+    display: flex;
+    flex-direction: column;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+#label {
+    padding: 0.1em;
+    text-align: center;
+    display: inline-block;
+}
+
+label {
+    cursor: pointer;
+}
+
+#start {
+    cursor: pointer;
+    text-align: center;
+}
+
+.status {
+    color: green;
+}
+
+#game_canvas {
+    flex: 0 0 auto;
+    border: 3px solid red;
+    border-radius: 6px;
+    outline: none;
+}
+
+#run_status {
+    display: none;
+    margin-bottom: 60px;
+    flex-direction: column;
+}
+
+.counter {
+    display: flex;
+}
+
+#loaded {
+    text-align: center;
+}
+
+#filename {
+    text-align: right;
+}
+
+.fps {
+    flex: 1 1 0;
+    text-align: right;
+    margin-right: 10px;
+}
+
+#zapper_container {
+    margin-bottom: 1em;
+}
+
+#zapper {
+    transform: scale(1.5);
+}
+
+#error {
+    position: fixed;
+    z-index: 100000;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: black;
+    width: 30vw;
+    height: 20vh;
+    border: 5px solid white;
+    border-radius: 10px;
+    color: red;
+    font-size: 4em;
+    text-align: center;
+    line-height: 20vh;
+    display: none;
+}
+
+#error.show {
+    display: block;
+}
+
+.github-ribbon {
+    position: fixed;
+    top: 0;
+    right: 0;
+}
+
+pre {
+    text-wrap: auto;
+}
+
+.disclaimer-link {
+    position: fixed;
+    bottom: 1em;
+    right: 1em;
+}
