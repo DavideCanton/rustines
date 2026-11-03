@@ -410,71 +410,75 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     // keep this enabled even when debug keys are disabled
     app_state.speedup.update(input.key_held(KeyCode::Backquote));
 
-    if app_state.enable_debug_keys && input.held_shift() {
-        if input.key_pressed(KeyCode::KeyD) {
-            core::debug_utils::debug_dump_nametables(bus);
-            core::debug_utils::debug_dump_attribute_tables(bus);
+    if input.held_shift() {
+        if app_state.enable_debug_keys {
+            if input.key_pressed(KeyCode::KeyD) {
+                core::debug_utils::debug_dump_nametables(bus);
+                core::debug_utils::debug_dump_attribute_tables(bus);
+            }
+
+            if input.key_pressed(KeyCode::KeyP) {
+                core::debug_utils::debug_dump_palette(bus);
+            }
+
+            if input.key_pressed(KeyCode::KeyO) {
+                core::debug_utils::debug_dump_oam(bus.ppu());
+            }
+
+            if input.key_pressed(KeyCode::KeyX) {
+                app_state.pause = !app_state.pause;
+            }
+
+            if input.key_pressed(KeyCode::KeyQ) {
+                core::debug_utils::debug_dump_state(bus, cpu);
+            }
+
+            if input.key_pressed(KeyCode::KeyF) {
+                let mut file = File::create("frame.ppm").expect("cannot create file");
+                bus.ppu()
+                    .renderer()
+                    .dump_frame(&mut file)
+                    .expect("cannot dump frame");
+            }
+
+            if input.key_pressed(KeyCode::KeyT) {
+                let log_point = app_state.log_point;
+                println!("LOG_POINT {}", log_point);
+                info!("LOG_POINT {}", log_point);
+
+                app_state.log_point += 1;
+
+                cpu.enable_tracing(true);
+                bus.enable_tracing(true);
+                bus.ppu_mut().enable_tracing(true);
+            }
+
+            if input.key_pressed(KeyCode::KeyS) {
+                app_state
+                    .pattern_window
+                    .show(bus.mapper_ref(), event_loop, 4);
+            }
         }
 
-        if input.key_pressed(KeyCode::KeyP) {
-            core::debug_utils::debug_dump_palette(bus);
-        }
-
-        if input.key_pressed(KeyCode::KeyO) {
-            core::debug_utils::debug_dump_oam(bus.ppu());
-        }
-
-        if input.key_pressed(KeyCode::KeyX) {
-            app_state.pause = !app_state.pause;
-        }
-
-        if input.key_pressed(KeyCode::KeyQ) {
-            core::debug_utils::debug_dump_state(bus, cpu);
-        }
-
-        if input.key_pressed(KeyCode::KeyF) {
-            let mut file = File::create("frame.ppm").expect("cannot create file");
-            bus.ppu()
-                .renderer()
-                .dump_frame(&mut file)
-                .expect("cannot dump frame");
-        }
-
-        if input.key_pressed(KeyCode::KeyT) {
-            let log_point = app_state.log_point;
-            println!("LOG_POINT {}", log_point);
-            info!("LOG_POINT {}", log_point);
-
-            app_state.log_point += 1;
-
-            cpu.enable_tracing(true);
-            bus.enable_tracing(true);
-            bus.ppu_mut().enable_tracing(true);
-        }
-
-        if input.key_pressed(KeyCode::KeyS) {
-            app_state
-                .pattern_window
-                .show(bus.mapper_ref(), event_loop, 4);
-        }
+        let mixer = bus.apu_mut().mixer_mut();
 
         if input.key_pressed(KeyCode::Digit1) {
-            bus.apu_mut().mixer_mut().pulse1().toggle();
+            mixer.pulse1().toggle();
         }
         if input.key_pressed(KeyCode::Digit2) {
-            bus.apu_mut().mixer_mut().pulse2().toggle();
+            mixer.pulse2().toggle();
         }
         if input.key_pressed(KeyCode::Digit3) {
-            bus.apu_mut().mixer_mut().triangle().toggle();
+            mixer.triangle().toggle();
         }
         if input.key_pressed(KeyCode::Digit4) {
-            bus.apu_mut().mixer_mut().noise().toggle();
+            mixer.noise().toggle();
         }
         if input.key_pressed(KeyCode::Digit5) {
-            bus.apu_mut().mixer_mut().dmc().toggle();
+            mixer.dmc().toggle();
         }
         if input.key_pressed(KeyCode::Digit0) {
-            bus.apu_mut().mixer_mut().enable_all();
+            mixer.enable_all();
         }
     }
 }
