@@ -22,3 +22,7 @@ data/
 
 *.log
 *.ppm
+.env
+
+.venv/
+.python-version
