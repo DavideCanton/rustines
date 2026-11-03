@@ -4,7 +4,7 @@ An (ambitious) project aimed to develop a NES emulator written in Rust.
 
 Stuff implemented:
 
-- [x] run roms (only Mapper 0 and 3 implemented)
+- [x] run roms (mappers 0, 2 and 3 implemented)
 - [x] ppu
 - [x] audio
 - [x] input handling (~~not the zapper~~ zapper too!)
