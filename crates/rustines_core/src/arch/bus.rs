@@ -25,6 +25,13 @@ impl Controller2 {
     pub fn zapper() -> Self {
         Controller2::Zapper(Zapper::new())
     }
+
+    pub fn reset(&mut self) {
+        match self {
+            Controller2::NesController(c) => c.reset(),
+            Controller2::Zapper(c) => c.reset(),
+        }
+    }
 }
 
 pub struct Bus {
@@ -58,6 +65,20 @@ impl Bus {
             oam_dma_state: OamDmaState::NotRunning,
             dmc_dma_state: DmcDmaState::NotRunning,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.nes_ram.fill(0);
+        self.ppu.reset();
+        self.apu.reset();
+        self.mapper.reset();
+        self.controller1.reset();
+        self.controller2.reset();
+        self.open_bus_value = 0;
+        self.cycles_cnt = 0;
+        self.total_cycles = 0;
+        self.oam_dma_state = OamDmaState::NotRunning;
+        self.dmc_dma_state = DmcDmaState::NotRunning;
     }
 
     pub fn enable_tracing(&mut self, tracing_enabled: bool) {

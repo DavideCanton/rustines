@@ -1,6 +1,7 @@
 use crate::{arch::rom_structs::MirroringType, utils::named::Named};
 
 pub trait Mapper: Named {
+    fn reset(&mut self) {}
     fn fetch_cpu(&self, addr: u16) -> u8;
     fn store_cpu(&mut self, addr: u16, val: u8);
 

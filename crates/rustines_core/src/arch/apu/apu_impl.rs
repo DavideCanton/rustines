@@ -30,7 +30,7 @@ impl From<bool> for ApuMode {
     }
 }
 
-pub struct Apu {
+pub struct ApuState {
     pulse1: Pulse,
     pulse2: Pulse,
     triangle: Triangle,
@@ -46,15 +46,10 @@ pub struct Apu {
     cpu_cycle_count: u64,
 
     sample_accumulator: u64,
-
-    output: AudioOutputBox,
-    filter: SequenceFilter,
-    mixer: Mixer,
 }
 
-impl Apu {
-    pub fn new(output: AudioOutputBox) -> Self {
-        let sample_rate = output.sample_rate() as f32;
+impl ApuState {
+    pub fn new() -> Self {
         Self {
             pulse1: Pulse::new(true),
             pulse2: Pulse::new(false),
@@ -71,7 +66,22 @@ impl Apu {
             cpu_cycle_count: 0,
 
             sample_accumulator: 0,
+        }
+    }
+}
 
+pub struct Apu {
+    state: ApuState,
+    output: AudioOutputBox,
+    filter: SequenceFilter,
+    mixer: Mixer,
+}
+
+impl Apu {
+    pub fn new(output: AudioOutputBox) -> Self {
+        let sample_rate = output.sample_rate() as f32;
+        Self {
+            state: ApuState::new(),
             output,
             filter: SequenceFilter::new(vec![
                 Box::new(HighPassFilter::new(90.0, sample_rate)),
@@ -82,27 +92,31 @@ impl Apu {
         }
     }
 
-    pub fn tick(&mut self) {
-        self.cpu_cycle_count += 1;
+    pub fn reset(&mut self) {
+        self.state = ApuState::new();
+    }
 
-        if self.cpu_cycle_count.is_multiple_of(2) {
-            self.pulse1.tick_timer();
-            self.pulse2.tick_timer();
-            self.noise.tick_timer();
-            self.dmc.tick_timer();
+    pub fn tick(&mut self) {
+        self.state.cpu_cycle_count += 1;
+
+        if self.state.cpu_cycle_count.is_multiple_of(2) {
+            self.state.pulse1.tick_timer();
+            self.state.pulse2.tick_timer();
+            self.state.noise.tick_timer();
+            self.state.dmc.tick_timer();
         }
 
-        self.triangle.tick_timer();
+        self.state.triangle.tick_timer();
 
         self.update_frame_counter();
         self.emit_output();
     }
 
     fn emit_output(&mut self) {
-        self.sample_accumulator += self.output.sample_rate();
+        self.state.sample_accumulator += self.output.sample_rate();
 
-        if self.sample_accumulator >= CPU_CLOCK {
-            self.sample_accumulator -= CPU_CLOCK;
+        if self.state.sample_accumulator >= CPU_CLOCK {
+            self.state.sample_accumulator -= CPU_CLOCK;
 
             let sample = self.mix_output();
             let sample = self.filter.process(sample);
@@ -112,15 +126,15 @@ impl Apu {
     }
 
     fn update_frame_counter(&mut self) {
-        self.delayed_reset_cycles = match self.delayed_reset_cycles {
+        self.state.delayed_reset_cycles = match self.state.delayed_reset_cycles {
             None => None,
             Some(0) => {
-                let val = self.delayed_write_value;
-                self.mode = val.get_bit(BitIndex::_7).into();
-                self.irq_disabled = val.get_bit(BitIndex::_6);
-                self.frame_cycles = 0;
+                let val = self.state.delayed_write_value;
+                self.state.mode = val.get_bit(BitIndex::_7).into();
+                self.state.irq_disabled = val.get_bit(BitIndex::_6);
+                self.state.frame_cycles = 0;
 
-                if self.mode == ApuMode::FiveStep {
+                if self.state.mode == ApuMode::FiveStep {
                     self.quarter_frame();
                     self.half_frame();
                 }
@@ -130,9 +144,9 @@ impl Apu {
             Some(value) => Some(value - 1),
         };
 
-        self.frame_cycles += 1;
+        self.state.frame_cycles += 1;
 
-        match self.frame_cycles {
+        match self.state.frame_cycles {
             7457 => {
                 self.quarter_frame();
             }
@@ -143,68 +157,68 @@ impl Apu {
             22371 => {
                 self.quarter_frame();
             }
-            29829 if self.mode == ApuMode::FourStep => {
+            29829 if self.state.mode == ApuMode::FourStep => {
                 self.quarter_frame();
                 self.half_frame();
 
-                if !self.irq_disabled {
-                    self.frame_irq_active = true;
+                if !self.state.irq_disabled {
+                    self.state.frame_irq_active = true;
                 }
 
-                self.frame_cycles = 0;
+                self.state.frame_cycles = 0;
             }
-            37281 if self.mode == ApuMode::FiveStep => {
+            37281 if self.state.mode == ApuMode::FiveStep => {
                 self.quarter_frame();
                 self.half_frame();
-                self.frame_cycles = 0;
+                self.state.frame_cycles = 0;
             }
             _ => {}
         }
     }
 
     pub fn irq_active(&self) -> bool {
-        self.dmc.irq_active() || self.frame_irq_active
+        self.state.dmc.irq_active() || self.state.frame_irq_active
     }
 
     pub fn cpu_write(&mut self, reg_index: u8, value: u8) {
         match reg_index {
-            0x00 => self.pulse1.update_1(value),
-            0x01 => self.pulse1.update_2(value),
-            0x02 => self.pulse1.update_3(value),
-            0x03 => self.pulse1.update_4(value),
-            0x04 => self.pulse2.update_1(value),
-            0x05 => self.pulse2.update_2(value),
-            0x06 => self.pulse2.update_3(value),
-            0x07 => self.pulse2.update_4(value),
-            0x08 => self.triangle.update_1(value),
-            0x0a => self.triangle.update_2(value),
-            0x0b => self.triangle.update_3(value),
-            0x0c => self.noise.update_1(value),
-            0x0e => self.noise.update_2(value),
-            0x0f => self.noise.update_3(value),
-            0x10 => self.dmc.update_1(value),
-            0x11 => self.dmc.update_2(value),
-            0x12 => self.dmc.update_3(value),
-            0x13 => self.dmc.update_4(value),
+            0x00 => self.state.pulse1.update_1(value),
+            0x01 => self.state.pulse1.update_2(value),
+            0x02 => self.state.pulse1.update_3(value),
+            0x03 => self.state.pulse1.update_4(value),
+            0x04 => self.state.pulse2.update_1(value),
+            0x05 => self.state.pulse2.update_2(value),
+            0x06 => self.state.pulse2.update_3(value),
+            0x07 => self.state.pulse2.update_4(value),
+            0x08 => self.state.triangle.update_1(value),
+            0x0a => self.state.triangle.update_2(value),
+            0x0b => self.state.triangle.update_3(value),
+            0x0c => self.state.noise.update_1(value),
+            0x0e => self.state.noise.update_2(value),
+            0x0f => self.state.noise.update_3(value),
+            0x10 => self.state.dmc.update_1(value),
+            0x11 => self.state.dmc.update_2(value),
+            0x12 => self.state.dmc.update_3(value),
+            0x13 => self.state.dmc.update_4(value),
             0x15 => {
-                self.dmc.set_irq_active(false);
-                self.dmc.set_enabled(value.get_bit(BitIndex::_4));
-                self.noise.set_enabled(value.get_bit(BitIndex::_3));
-                self.triangle.set_enabled(value.get_bit(BitIndex::_2));
-                self.pulse2.set_enabled(value.get_bit(BitIndex::_1));
-                self.pulse1.set_enabled(value.get_bit(BitIndex::_0));
+                self.state.dmc.set_irq_active(false);
+                self.state.dmc.set_enabled(value.get_bit(BitIndex::_4));
+                self.state.noise.set_enabled(value.get_bit(BitIndex::_3));
+                self.state.triangle.set_enabled(value.get_bit(BitIndex::_2));
+                self.state.pulse2.set_enabled(value.get_bit(BitIndex::_1));
+                self.state.pulse1.set_enabled(value.get_bit(BitIndex::_0));
             }
             0x17 => {
-                self.delayed_write_value = value;
+                self.state.delayed_write_value = value;
 
-                if self.cpu_cycle_count.is_multiple_of(2) {
-                    self.delayed_reset_cycles = Some(2);
+                if self.state.cpu_cycle_count.is_multiple_of(2) {
+                    self.state.delayed_reset_cycles = Some(2);
                 } else {
-                    self.delayed_reset_cycles = Some(3);
+                    self.state.delayed_reset_cycles = Some(3);
                 }
 
                 if value.get_bit(BitIndex::_6) {
-                    self.frame_irq_active = false;
+                    self.state.frame_irq_active = false;
                 }
             }
             _ => {}
@@ -219,17 +233,17 @@ impl Apu {
                 // bit 5 is always open bus
                 let open_bus_5 = open_bus_value.get_bit(BitIndex::_5);
 
-                ret = ret.set_bit(BitIndex::_7, self.dmc.irq_active());
-                ret = ret.set_bit(BitIndex::_6, self.frame_irq_active);
+                ret = ret.set_bit(BitIndex::_7, self.state.dmc.irq_active());
+                ret = ret.set_bit(BitIndex::_6, self.state.frame_irq_active);
                 ret = ret.set_bit(BitIndex::_5, open_bus_5);
-                ret = ret.set_bit(BitIndex::_4, self.dmc.enabled());
-                ret = ret.set_bit(BitIndex::_3, self.noise.length_counter().running());
-                ret = ret.set_bit(BitIndex::_2, self.triangle.length_counter().running());
-                ret = ret.set_bit(BitIndex::_1, self.pulse2.length_counter().running());
-                ret = ret.set_bit(BitIndex::_0, self.pulse1.length_counter().running());
+                ret = ret.set_bit(BitIndex::_4, self.state.dmc.enabled());
+                ret = ret.set_bit(BitIndex::_3, self.state.noise.length_counter().running());
+                ret = ret.set_bit(BitIndex::_2, self.state.triangle.length_counter().running());
+                ret = ret.set_bit(BitIndex::_1, self.state.pulse2.length_counter().running());
+                ret = ret.set_bit(BitIndex::_0, self.state.pulse1.length_counter().running());
 
-                self.frame_irq_active = false;
-                self.dmc.set_irq_active(false);
+                self.state.frame_irq_active = false;
+                self.state.dmc.set_irq_active(false);
 
                 ret
             }
@@ -238,39 +252,39 @@ impl Apu {
     }
 
     fn quarter_frame(&mut self) {
-        self.pulse1.clock_envelope();
-        self.pulse2.clock_envelope();
-        self.noise.clock_envelope();
-        self.triangle.clock_linear_counter();
+        self.state.pulse1.clock_envelope();
+        self.state.pulse2.clock_envelope();
+        self.state.noise.clock_envelope();
+        self.state.triangle.clock_linear_counter();
     }
 
     fn half_frame(&mut self) {
-        self.pulse1.clock_length_counter();
-        self.pulse2.clock_length_counter();
+        self.state.pulse1.clock_length_counter();
+        self.state.pulse2.clock_length_counter();
 
-        self.triangle.clock_length_counter();
-        self.noise.clock_length_counter();
+        self.state.triangle.clock_length_counter();
+        self.state.noise.clock_length_counter();
 
-        self.pulse1.clock_sweep();
-        self.pulse2.clock_sweep();
+        self.state.pulse1.clock_sweep();
+        self.state.pulse2.clock_sweep();
     }
 
     fn mix_output(&self) -> f32 {
-        let pulse1 = self.pulse1.output();
-        let pulse2 = self.pulse2.output();
-        let triangle = self.triangle.output();
-        let noise = self.noise.output();
-        let dmc = self.dmc.output();
+        let pulse1 = self.state.pulse1.output();
+        let pulse2 = self.state.pulse2.output();
+        let triangle = self.state.triangle.output();
+        let noise = self.state.noise.output();
+        let dmc = self.state.dmc.output();
 
         self.mixer.mix_output(pulse1, pulse2, triangle, noise, dmc)
     }
 
     pub fn dmc_mut(&mut self) -> &mut Dmc {
-        &mut self.dmc
+        &mut self.state.dmc
     }
 
     pub fn dmc(&self) -> &Dmc {
-        &self.dmc
+        &self.state.dmc
     }
 
     pub fn mixer_mut(&mut self) -> &mut Mixer {
