@@ -1,14 +1,9 @@
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
-for p in [Path.cwd(), *Path.cwd().parents]:
-    if list(p.glob("web")):
-        break
-else:
-    raise ValueError()
+from common import resolve_web
 
-os.chdir(p / "web")
+os.chdir(resolve_web())
 host = "localhost"
 port = 8000
 server = ThreadingHTTPServer((host, port), SimpleHTTPRequestHandler)

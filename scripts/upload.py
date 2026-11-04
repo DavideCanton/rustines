@@ -1,9 +1,10 @@
 import os
 from ftplib import FTP
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 
 import dotenv
 import keyring
+from common import resolve_web
 
 EXT = {
     ".html": "t",
@@ -21,11 +22,11 @@ ftp_host = os.environ["FTP_HOST"].strip()
 ftp_password = keyring.get_password(ftp_host, ftp_user)
 assert ftp_password
 
+root = resolve_web().resolve()
 
 with FTP(host=ftp_host, user=ftp_user, passwd=ftp_password) as ftp:
     print(ftp.getwelcome())
 
-    root = Path("../web").resolve()
     for cur, _, files in root.walk():
         cwd = ROOT / "rustines" / cur.resolve().relative_to(root)
 

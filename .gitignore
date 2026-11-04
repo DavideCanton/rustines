@@ -24,5 +24,6 @@ data/
 *.ppm
 .env
 
+__pycache__/
 .venv/
 .python-version
