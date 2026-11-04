@@ -24,9 +24,6 @@ enum RenderType {
     NoRender,
 }
 
-const RENDER_SPRITE_ENABLED: bool = true;
-const RENDER_BACKGROUND_ENABLED: bool = true;
-
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
 pub struct PpuState {
@@ -74,6 +71,8 @@ pub struct PpuState {
     zapper_light_timer: usize,
 
     tracing_enabled: bool,
+    debug_render_sprites_enabled: bool,
+    debug_render_background_enabled: bool,
 }
 
 impl PpuState {
@@ -122,6 +121,8 @@ impl PpuState {
             zapper_light_timer: 0,
 
             tracing_enabled: false,
+            debug_render_background_enabled: true,
+            debug_render_sprites_enabled: true,
         }
     }
 }
@@ -763,8 +764,12 @@ impl Ppu {
         };
 
         let (palette, pixel) = match render_type {
-            RenderType::Background if RENDER_BACKGROUND_ENABLED => (bg_palette, bg_pixel),
-            RenderType::Sprite if RENDER_SPRITE_ENABLED => (sprite_palette, sprite_pixel),
+            RenderType::Background if self.state.debug_render_background_enabled => {
+                (bg_palette, bg_pixel)
+            }
+            RenderType::Sprite if self.state.debug_render_sprites_enabled => {
+                (sprite_palette, sprite_pixel)
+            }
             _ => (0, 0),
         };
 
@@ -908,6 +913,14 @@ impl Ppu {
         } else {
             self.state.data_buffer
         }
+    }
+
+    pub fn toggle_sprite_render(&mut self) {
+        self.state.debug_render_sprites_enabled = !self.state.debug_render_sprites_enabled;
+    }
+
+    pub fn toggle_background_render(&mut self) {
+        self.state.debug_render_background_enabled = !self.state.debug_render_background_enabled;
     }
 }
 

@@ -336,7 +336,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     if esc_pressed || input.close_requested() {
         event_loop.exit();
     } else {
-        handle_debug_keys(app_state, event_loop);
+        handle_special_keys(app_state, event_loop);
 
         // reborrow
         let input = &app_state.main_window_helper;
@@ -401,64 +401,21 @@ fn update_zapper_input(app_state: &mut AppState) {
         .set_zapper_input(position, app_state.zapper_trigger_pressed);
 }
 
-fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+fn handle_special_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     let input = &app_state.main_window_helper;
-
-    let bus = &mut app_state.bus;
-    let cpu = &mut app_state.cpu;
 
     // keep this enabled even when debug keys are disabled
     app_state.speedup.update(input.key_held(KeyCode::Backquote));
 
+    if app_state.enable_debug_keys {
+        handle_debug_keys(app_state, event_loop);
+    }
+
+    let input = &app_state.main_window_helper;
+
     if input.held_shift() {
-        if app_state.enable_debug_keys {
-            if input.key_pressed(KeyCode::KeyD) {
-                core::debug_utils::debug_dump_nametables(bus);
-                core::debug_utils::debug_dump_attribute_tables(bus);
-            }
-
-            if input.key_pressed(KeyCode::KeyP) {
-                core::debug_utils::debug_dump_palette(bus);
-            }
-
-            if input.key_pressed(KeyCode::KeyO) {
-                core::debug_utils::debug_dump_oam(bus.ppu());
-            }
-
-            if input.key_pressed(KeyCode::KeyX) {
-                app_state.pause = !app_state.pause;
-            }
-
-            if input.key_pressed(KeyCode::KeyQ) {
-                core::debug_utils::debug_dump_state(bus, cpu);
-            }
-
-            if input.key_pressed(KeyCode::KeyF) {
-                let mut file = File::create("frame.ppm").expect("cannot create file");
-                bus.ppu()
-                    .renderer()
-                    .dump_frame(&mut file)
-                    .expect("cannot dump frame");
-            }
-
-            if input.key_pressed(KeyCode::KeyT) {
-                let log_point = app_state.log_point;
-                println!("LOG_POINT {}", log_point);
-                info!("LOG_POINT {}", log_point);
-
-                app_state.log_point += 1;
-
-                cpu.enable_tracing(true);
-                bus.enable_tracing(true);
-                bus.ppu_mut().enable_tracing(true);
-            }
-
-            if input.key_pressed(KeyCode::KeyS) {
-                app_state
-                    .pattern_window
-                    .show(bus.mapper_ref(), event_loop, 4);
-            }
-        }
+        let bus = &mut app_state.bus;
+        let cpu = &mut app_state.cpu;
 
         let mixer = bus.apu_mut().mixer_mut();
 
@@ -481,9 +438,71 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
             mixer.enable_all();
         }
 
+        if input.key_pressed(KeyCode::Digit6) {
+            bus.ppu_mut().toggle_sprite_render();
+        }
+        if input.key_pressed(KeyCode::Digit7) {
+            bus.ppu_mut().toggle_background_render();
+        }
+
         if input.key_pressed(KeyCode::KeyR) {
             bus.reset();
             cpu.reset();
+        }
+    }
+}
+
+fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+    let bus = &mut app_state.bus;
+    let cpu = &mut app_state.cpu;
+    let input = &app_state.main_window_helper;
+
+    if input.held_shift() {
+        if input.key_pressed(KeyCode::KeyD) {
+            core::debug_utils::debug_dump_nametables(bus);
+            core::debug_utils::debug_dump_attribute_tables(bus);
+        }
+
+        if input.key_pressed(KeyCode::KeyP) {
+            core::debug_utils::debug_dump_palette(bus);
+        }
+
+        if input.key_pressed(KeyCode::KeyO) {
+            core::debug_utils::debug_dump_oam(bus.ppu());
+        }
+
+        if input.key_pressed(KeyCode::KeyX) {
+            app_state.pause = !app_state.pause;
+        }
+
+        if input.key_pressed(KeyCode::KeyQ) {
+            core::debug_utils::debug_dump_state(bus, cpu);
+        }
+
+        if input.key_pressed(KeyCode::KeyF) {
+            let mut file = File::create("frame.ppm").expect("cannot create file");
+            bus.ppu()
+                .renderer()
+                .dump_frame(&mut file)
+                .expect("cannot dump frame");
+        }
+
+        if input.key_pressed(KeyCode::KeyT) {
+            let log_point = app_state.log_point;
+            println!("LOG_POINT {}", log_point);
+            info!("LOG_POINT {}", log_point);
+
+            app_state.log_point += 1;
+
+            cpu.enable_tracing(true);
+            bus.enable_tracing(true);
+            bus.ppu_mut().enable_tracing(true);
+        }
+
+        if input.key_pressed(KeyCode::KeyS) {
+            app_state
+                .pattern_window
+                .show(bus.mapper_ref(), event_loop, 4);
         }
     }
 }
