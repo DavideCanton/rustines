@@ -52,6 +52,10 @@ impl Mapper3 {
 }
 
 impl Mapper for Mapper3 {
+    fn reset(&mut self) {
+        self.selected_bank = 0;
+    }
+
     fn fetch_cpu(&self, addr: u16) -> u8 {
         match addr {
             0x6000..=0x7FFF => {

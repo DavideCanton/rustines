@@ -480,6 +480,11 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
         if input.key_pressed(KeyCode::Digit0) {
             mixer.enable_all();
         }
+
+        if input.key_pressed(KeyCode::KeyR) {
+            bus.reset();
+            cpu.reset();
+        }
     }
 }
 

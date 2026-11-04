@@ -31,6 +31,12 @@ impl NesController {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.buttons.fill(false);
+        self.shift_register = 0;
+        self.strobe = false;
+    }
+
     pub fn write(&mut self, value: u8) {
         self.strobe = !value.is_multiple_of(2);
 

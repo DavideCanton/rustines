@@ -137,14 +137,14 @@ pub fn debug_dump_palette(bus: &Bus) {
 }
 
 pub fn debug_dump_oam(ppu: &Ppu) {
-    println!("Scanline: {}", ppu.scanline);
+    println!("Scanline: {}", ppu.state.scanline);
     println!("=== DUMP OAM ===");
     print_oam(ppu.oam_data());
-    println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.cycle);
+    println!("\n=== SECONDARY OAM (cycle {}) ===", ppu.state.cycle);
     print_oam(ppu.secondary_oam_data());
     println!("\n===============\n");
     println!("=== SHIFTERS ===");
-    for s in ppu.sprite_shifters {
+    for s in ppu.state.sprite_shifters {
         println!("{}", s);
     }
     println!("\n===============\n");
@@ -195,14 +195,14 @@ pub fn debug_dump_state(bus: &Bus, cpu: &Cpu) {
     // PPU
     println!("--- PPU ---");
     let ppu = bus.ppu();
-    println!("PPUCTRL = {:?}", ppu.ctrl);
-    println!("PPUMASK = {:?}", ppu.mask);
-    println!("PPUSTATUS = {:?}", ppu.status);
-    println!("scanline={} cycle={}", ppu.scanline, ppu.cycle);
-    println!("V = {:?}", ppu.v_reg);
-    println!("X = {}", ppu.x_reg);
-    println!("T = {:?}", ppu.t_reg);
-    println!("BG = {:?}", ppu.bg_data);
+    println!("PPUCTRL = {:?}", ppu.state.ctrl);
+    println!("PPUMASK = {:?}", ppu.state.mask);
+    println!("PPUSTATUS = {:?}", ppu.state.status);
+    println!("scanline={} cycle={}", ppu.state.scanline, ppu.state.cycle);
+    println!("V = {:?}", ppu.state.v_reg);
+    println!("X = {}", ppu.state.x_reg);
+    println!("T = {:?}", ppu.state.t_reg);
+    println!("BG = {:?}", ppu.state.bg_data);
 }
 
 #[macro_export]

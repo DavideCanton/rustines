@@ -32,6 +32,15 @@ impl Cpu {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.registers = Registers::default();
+        self.clock = 0;
+        self.pending_irq_execution = false;
+        self.pending_nmi_execution = false;
+        self.pending_rst_execution = true;
+        self.tracer = InstructionTracer::new();
+    }
+
     pub fn tick(&mut self, bus: &mut Bus) {
         if bus.is_oam_dma_state_running() {
             self.run_oam_dma_cycle(bus);

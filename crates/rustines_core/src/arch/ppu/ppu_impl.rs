@@ -29,7 +29,7 @@ const RENDER_BACKGROUND_ENABLED: bool = true;
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
-pub struct Ppu {
+pub struct PpuState {
     nametables: [u8; 2048],
     palette_table: [u8; 32],
     oam_data: [u8; 256],
@@ -73,16 +73,11 @@ pub struct Ppu {
     zapper_position: Option<(usize, usize)>,
     zapper_light_timer: usize,
 
-    renderer: RendererBox,
     tracing_enabled: bool,
 }
 
-const ZAPPER_LIGHT_PERSISTENCE: usize = 26 * 341;
-const ZAPPER_SENSOR_RADIUS: usize = 4;
-const ZAPPER_LIGHT_THRESHOLD: u32 = 128;
-
-impl Ppu {
-    pub fn new(renderer: RendererBox) -> Self {
+impl PpuState {
+    pub fn new() -> Self {
         Self {
             nametables: [0; 2048],
             palette_table: [0; 32],
@@ -126,33 +121,54 @@ impl Ppu {
             zapper_position: None,
             zapper_light_timer: 0,
 
-            renderer,
             tracing_enabled: false,
         }
     }
+}
+
+pub struct Ppu {
+    pub(crate) state: PpuState,
+    renderer: RendererBox,
+}
+
+const ZAPPER_LIGHT_PERSISTENCE: usize = 26 * 341;
+const ZAPPER_SENSOR_RADIUS: usize = 4;
+const ZAPPER_LIGHT_THRESHOLD: u32 = 128;
+
+impl Ppu {
+    pub fn new(renderer: RendererBox) -> Self {
+        Self {
+            state: PpuState::new(),
+            renderer,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.state = PpuState::new();
+    }
 
     pub fn take_nmi_requested(&mut self) -> bool {
-        mem::replace(&mut self.nmi_request, false)
+        mem::replace(&mut self.state.nmi_request, false)
     }
 
     pub fn clear_nmi(&mut self) {
-        self.nmi_request = false;
+        self.state.nmi_request = false;
     }
 
     pub fn current_frame(&self) -> u16 {
-        self.frame
+        self.state.frame
     }
 
     pub fn frame_ready(&self) -> bool {
-        self.frame_ready
+        self.state.frame_ready
     }
 
     pub fn clear_frame_ready(&mut self) {
-        self.frame_ready = false;
+        self.state.frame_ready = false;
     }
 
     pub fn enable_tracing(&mut self, tracing_enabled: bool) {
-        self.tracing_enabled = tracing_enabled;
+        self.state.tracing_enabled = tracing_enabled;
     }
 
     pub fn renderer(&self) -> &dyn Renderer {
@@ -164,46 +180,47 @@ impl Ppu {
     }
 
     pub fn set_zapper_position(&mut self, position: Option<(usize, usize)>) {
-        if self.zapper_position != position {
-            self.zapper_light_timer = 0;
+        if self.state.zapper_position != position {
+            self.state.zapper_light_timer = 0;
         }
-        self.zapper_position = position;
+        self.state.zapper_position = position;
     }
 
     pub fn zapper_light_detected(&self) -> bool {
-        self.zapper_light_timer > 0
+        self.state.zapper_light_timer > 0
     }
 
     pub fn palette_table(&self) -> &[u8; 32] {
-        &self.palette_table
+        &self.state.palette_table
     }
 
     /// Returns true if the current scanline is the prerender one (-1)
     fn is_prerender_scanline(&self) -> bool {
-        self.scanline == -1
+        self.state.scanline == -1
     }
 
     /// Returns true if the current scanline is between 0 and 239
     fn is_visible_scanline(&self) -> bool {
-        (0..=239).contains(&self.scanline)
+        (0..=239).contains(&self.state.scanline)
     }
 
     /// Returns true if the current cycle is between 1 and 256
     fn is_visible_cycle(&self) -> bool {
-        (1..=256).contains(&self.cycle)
+        (1..=256).contains(&self.state.cycle)
     }
 
     fn max_cycles_for_current_scanline(&self) -> u16 {
         // the prerender scanline skips the last cycle on odd frames
-        let skip_last =
-            self.is_prerender_scanline() && self.mask.rendering_enabled() && self.is_odd_frame;
+        let skip_last = self.is_prerender_scanline()
+            && self.state.mask.rendering_enabled()
+            && self.state.is_odd_frame;
         let offset = if skip_last { 0 } else { 1 };
         340 + offset
     }
 
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
-        self.zapper_light_timer = self.zapper_light_timer.saturating_sub(1);
-        let rendering_enabled = self.mask.rendering_enabled();
+        self.state.zapper_light_timer = self.state.zapper_light_timer.saturating_sub(1);
+        let rendering_enabled = self.state.mask.rendering_enabled();
 
         let is_prerender_scanline = self.is_prerender_scanline();
         let is_visible_scanline = self.is_visible_scanline();
@@ -213,22 +230,22 @@ impl Ppu {
             self.render_pixel(mapper);
         }
 
-        let cycle = self.cycle;
+        let cycle = self.state.cycle;
 
         if is_visible_scanline || is_prerender_scanline {
             // in the prerender scanline, second cycle, the vblank is cleared along with other
             // flags
             if is_prerender_scanline && cycle == 1 {
-                self.status.set_vblank_started(false);
-                self.status.set_sprite_zero_hit(false);
-                self.status.set_sprite_overflow(false);
+                self.state.status.set_vblank_started(false);
+                self.state.status.set_sprite_zero_hit(false);
+                self.state.status.set_sprite_overflow(false);
             }
 
             if rendering_enabled {
                 // every cycle, the shifters must be updated so that the next write writes
                 // the correct bit
                 if (2..=257).contains(&cycle) || (322..=337).contains(&cycle) {
-                    self.bg_data.update_shifters();
+                    self.state.bg_data.update_shifters();
                 }
 
                 if self.is_visible_cycle() || (321..=336).contains(&cycle) {
@@ -256,54 +273,54 @@ impl Ppu {
         }
 
         // VBlank is ALWAYS set at scanline 241, cycle 1
-        if self.scanline == 241 && self.cycle == 1 {
-            if !self.suppress_vblank {
-                self.status.set_vblank_started(true);
-                if self.ctrl.vblank_nmi_enable() {
-                    self.nmi_request = true;
+        if self.state.scanline == 241 && self.state.cycle == 1 {
+            if !self.state.suppress_vblank {
+                self.state.status.set_vblank_started(true);
+                if self.state.ctrl.vblank_nmi_enable() {
+                    self.state.nmi_request = true;
                 }
             }
 
-            self.suppress_vblank = false;
+            self.state.suppress_vblank = false;
         }
 
         self.increase_cycle();
     }
 
     fn do_sprite_evaluation(&mut self, mapper: &mut dyn Mapper) {
-        let cycle = self.cycle;
+        let cycle = self.state.cycle;
 
         match cycle {
             1 => {
                 // start clearing secondary oam at cycle 1
-                self.secondary_oam_addr = 0;
-                self.sprite_zero_next = false;
-                self.oam_end = false;
-                self.secondary_oam_full = false;
-                self.sprite_in_range.fill(false);
+                self.state.secondary_oam_addr = 0;
+                self.state.sprite_zero_next = false;
+                self.state.oam_end = false;
+                self.state.secondary_oam_full = false;
+                self.state.sprite_in_range.fill(false);
             }
             2..=64 => {
                 if cycle.is_multiple_of(2) {
                     // secondary oam initialization, copy 0xFF every even cycle and increase
                     // secondary oam address
-                    self.secondary_oam[self.secondary_oam_addr as usize] = 0xFF;
-                    self.secondary_oam_addr += 1;
+                    self.state.secondary_oam[self.state.secondary_oam_addr as usize] = 0xFF;
+                    self.state.secondary_oam_addr += 1;
                 }
                 if cycle == 64 {
                     // end clearing phase, start searching
-                    self.secondary_oam_addr = 0;
+                    self.state.secondary_oam_addr = 0;
                 }
             }
             65..=256 => {
                 if !cycle.is_multiple_of(2) {
-                    self.oam_data_latch = self.oam_data[self.oam_addr as usize];
+                    self.state.oam_data_latch = self.state.oam_data[self.state.oam_addr as usize];
                 } else {
-                    if self.to_copy > 0 {
+                    if self.state.to_copy > 0 {
                         self.copy_sprite_byte();
-                        self.to_copy -= 1;
+                        self.state.to_copy -= 1;
                     } else {
                         if self.search_next_sprite() {
-                            self.to_copy = 3;
+                            self.state.to_copy = 3;
                         }
                     }
                 }
@@ -315,26 +332,27 @@ impl Ppu {
                     self.fill_sprite_data(sprite_idx, mapper);
                 }
                 if !cycle.is_multiple_of(2) {
-                    self.sprite_zero_current = self.sprite_zero_next;
+                    self.state.sprite_zero_current = self.state.sprite_zero_next;
                 }
                 // clear oamaddr every cycle
-                self.oam_addr = 0;
+                self.state.oam_addr = 0;
             }
             _ => {}
         }
     }
 
     fn copy_sprite_byte(&mut self) {
-        let mut m = self.oam_addr & 0x3;
-        let mut n = self.oam_addr >> 2;
+        let mut m = self.state.oam_addr & 0x3;
+        let mut n = self.state.oam_addr >> 2;
 
-        if !self.secondary_oam_full {
-            self.secondary_oam[self.secondary_oam_addr as usize] = self.oam_data_latch;
-            self.secondary_oam_addr += 1;
+        if !self.state.secondary_oam_full {
+            self.state.secondary_oam[self.state.secondary_oam_addr as usize] =
+                self.state.oam_data_latch;
+            self.state.secondary_oam_addr += 1;
             (m, n) = self.incr(m, n);
         }
 
-        self.oam_addr = (n << 2) | m;
+        self.state.oam_addr = (n << 2) | m;
     }
 
     fn incr(&mut self, mut m: u8, mut n: u8) -> (u8, u8) {
@@ -349,98 +367,99 @@ impl Ppu {
     fn incr_n(&mut self, mut n: u8) -> u8 {
         n = (n + 1) & 0x3F;
         if n == 0 {
-            self.oam_end = true;
+            self.state.oam_end = true;
         }
-        if self.secondary_oam_addr == 32 {
-            self.secondary_oam_full = true;
-            self.secondary_oam_addr = 0;
+        if self.state.secondary_oam_addr == 32 {
+            self.state.secondary_oam_full = true;
+            self.state.secondary_oam_addr = 0;
         }
         n
     }
 
     fn search_next_sprite(&mut self) -> bool {
-        debug_assert!(self.cycle.is_multiple_of(2));
+        debug_assert!(self.state.cycle.is_multiple_of(2));
 
-        if self.oam_end {
+        if self.state.oam_end {
             return false;
         }
 
-        let oam_value = self.oam_data_latch;
+        let oam_value = self.state.oam_data_latch;
         let mut found = false;
 
-        let mut m = self.oam_addr & 0x3;
-        let mut n = self.oam_addr >> 2;
+        let mut m = self.state.oam_addr & 0x3;
+        let mut n = self.state.oam_addr >> 2;
 
-        if !self.secondary_oam_full {
-            self.secondary_oam[self.secondary_oam_addr as usize] = oam_value;
+        if !self.state.secondary_oam_full {
+            self.state.secondary_oam[self.state.secondary_oam_addr as usize] = oam_value;
         }
         if self.is_sprite_in_range_y(oam_value) {
-            if self.secondary_oam_full {
-                self.status.set_sprite_overflow(true);
+            if self.state.secondary_oam_full {
+                self.state.status.set_sprite_overflow(true);
             } else {
                 found = true;
-                self.sprite_in_range[(self.secondary_oam_addr >> 2) as usize] = true;
+                self.state.sprite_in_range[(self.state.secondary_oam_addr >> 2) as usize] = true;
                 // sprite zero is hit only if it's in range at cycle 66 (i.e. it's the first)
                 // and only on visible scanlines. If this is the 239, the next is not visible
-                if self.cycle == 66 && self.scanline < 239 {
-                    self.sprite_zero_next = true;
+                if self.state.cycle == 66 && self.state.scanline < 239 {
+                    self.state.sprite_zero_next = true;
                 }
                 (m, n) = self.incr(m, n);
-                self.secondary_oam_addr += 1;
+                self.state.secondary_oam_addr += 1;
             }
         } else {
             n = self.incr_n(n);
             m = 0;
         }
 
-        self.oam_addr = (n << 2) | m;
+        self.state.oam_addr = (n << 2) | m;
 
         found
     }
 
     fn is_sprite_in_range_y(&self, value: u8) -> bool {
         let sprite_y = value as i16;
-        let sprite_height = self.ctrl.sprite_height() as i16;
-        self.scanline >= sprite_y && self.scanline < sprite_y + sprite_height
+        let sprite_height = self.state.ctrl.sprite_height() as i16;
+        self.state.scanline >= sprite_y && self.state.scanline < sprite_y + sprite_height
     }
 
     fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
-        match self.cycle % 8 {
+        match self.state.cycle % 8 {
             // cycles 1-2: load nametable data
             2 => {
-                let nt_address = 0x2000 | (self.v_reg.0 & 0x0FFF);
-                self.bg_data.latch_nt = self.vram_read(nt_address, mapper);
+                let nt_address = 0x2000 | (self.state.v_reg.0 & 0x0FFF);
+                self.state.bg_data.latch_nt = self.vram_read(nt_address, mapper);
             }
             // cycles 3-4: load attribute table data
             4 => {
                 let at_address = 0x23C0
-                    | ((self.v_reg.nametable_select() as u16) << 10)
-                    | (((self.v_reg.coarse_y() as u16) >> 2) & 0x07) << 3
-                    | (((self.v_reg.coarse_x() as u16) >> 2) & 0x07);
+                    | ((self.state.v_reg.nametable_select() as u16) << 10)
+                    | (((self.state.v_reg.coarse_y() as u16) >> 2) & 0x07) << 3
+                    | (((self.state.v_reg.coarse_x() as u16) >> 2) & 0x07);
                 let attribute = self.vram_read(at_address, mapper);
 
-                let coarse_x = self.v_reg.coarse_x();
-                let coarse_y = self.v_reg.coarse_y();
+                let coarse_x = self.state.v_reg.coarse_x();
+                let coarse_y = self.state.v_reg.coarse_y();
                 let shift = ((coarse_y & 0x02) << 1) | (coarse_x & 0x02);
-                self.bg_data.latch_at = (attribute >> shift) & 0x03;
+                self.state.bg_data.latch_at = (attribute >> shift) & 0x03;
             }
             // cycles 5-6: load bg low part
             6 => {
-                let fine_y = self.v_reg.fine_y() as u16;
-                let table_select = self.ctrl.bg_pattern_table() as u16;
-                let address = (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | fine_y;
-                self.bg_data.latch_pl = self.vram_read(address, mapper);
+                let fine_y = self.state.v_reg.fine_y() as u16;
+                let table_select = self.state.ctrl.bg_pattern_table() as u16;
+                let address =
+                    (table_select << 12) | ((self.state.bg_data.latch_nt as u16) << 4) | fine_y;
+                self.state.bg_data.latch_pl = self.vram_read(address, mapper);
             }
             // cycles 7-8: load bg high part, then transfer everything in the shifters
             // then increment vram x scroll
             0 => {
-                let end_y = self.v_reg.fine_y() as u16;
+                let end_y = self.state.v_reg.fine_y() as u16;
 
-                let table_select = self.ctrl.bg_pattern_table() as u16;
+                let table_select = self.state.ctrl.bg_pattern_table() as u16;
                 let address =
-                    (table_select << 12) | ((self.bg_data.latch_nt as u16) << 4) | end_y | 8;
-                self.bg_data.latch_ph = self.vram_read(address, mapper);
-                self.bg_data.load_shifters();
+                    (table_select << 12) | ((self.state.bg_data.latch_nt as u16) << 4) | end_y | 8;
+                self.state.bg_data.latch_ph = self.vram_read(address, mapper);
+                self.state.bg_data.load_shifters();
                 self.increment_vram_address_x();
             }
             _ => {}
@@ -448,112 +467,120 @@ impl Ppu {
     }
 
     fn transfer_scroll_x(&mut self) {
-        self.v_reg.set_unused(false);
-        self.v_reg.set_coarse_x(self.t_reg.coarse_x());
-        self.v_reg
-            .set_nametable_select_x(self.t_reg.nametable_select_x());
+        self.state.v_reg.set_unused(false);
+        self.state.v_reg.set_coarse_x(self.state.t_reg.coarse_x());
+        self.state
+            .v_reg
+            .set_nametable_select_x(self.state.t_reg.nametable_select_x());
     }
 
     fn transfer_scroll_y(&mut self) {
-        self.v_reg.set_unused(false);
-        self.v_reg.set_coarse_y(self.t_reg.coarse_y());
-        self.v_reg
-            .set_nametable_select_y(self.t_reg.nametable_select_y());
-        self.v_reg.set_fine_y(self.t_reg.fine_y());
+        self.state.v_reg.set_unused(false);
+        self.state.v_reg.set_coarse_y(self.state.t_reg.coarse_y());
+        self.state
+            .v_reg
+            .set_nametable_select_y(self.state.t_reg.nametable_select_y());
+        self.state.v_reg.set_fine_y(self.state.t_reg.fine_y());
     }
 
     fn increase_cycle(&mut self) {
-        self.cycle += 1;
+        self.state.cycle += 1;
 
-        if self.cycle >= self.max_cycles_for_current_scanline() {
-            self.cycle = 0;
-            self.scanline += 1;
+        if self.state.cycle >= self.max_cycles_for_current_scanline() {
+            self.state.cycle = 0;
+            self.state.scanline += 1;
 
-            if self.scanline == 261 {
-                self.scanline = -1;
-                self.frame_ready = true;
-                self.frame += 1;
-                self.is_odd_frame = !self.is_odd_frame;
+            if self.state.scanline == 261 {
+                self.state.scanline = -1;
+                self.state.frame_ready = true;
+                self.state.frame += 1;
+                self.state.is_odd_frame = !self.state.is_odd_frame;
                 self.handle_open_bus_decay();
             }
         }
     }
 
     fn handle_open_bus_decay(&mut self) {
-        if self.open_bus_decay_timer > 0 {
-            self.open_bus_decay_timer -= 1;
-            if self.open_bus_decay_timer == 0 {
-                self.open_bus_value = 0;
+        if self.state.open_bus_decay_timer > 0 {
+            self.state.open_bus_decay_timer -= 1;
+            if self.state.open_bus_decay_timer == 0 {
+                self.state.open_bus_value = 0;
             }
         }
     }
 
     pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &mut dyn Mapper) {
-        if self.tracing_enabled {
+        if self.state.tracing_enabled {
             trace!("PPU CPU WRITE {reg_index:04X} <- {value:04X}");
         }
         self.write_open_bus(value);
         match reg_index {
             0 => {
-                let old_nmi_enable = self.ctrl.vblank_nmi_enable();
+                let old_nmi_enable = self.state.ctrl.vblank_nmi_enable();
 
                 let ctrl = PpuCtrl(value);
                 if ctrl.ppu_write_ext() {
                     panic!("Bit 6 of PPUCTRL should NEVER be set");
                 }
-                self.ctrl = ctrl;
-                self.t_reg.set_nametable_select(value & 0x03);
+                self.state.ctrl = ctrl;
+                self.state.t_reg.set_nametable_select(value & 0x03);
 
-                if !old_nmi_enable && self.ctrl.vblank_nmi_enable() && self.status.vblank_started()
+                if !old_nmi_enable
+                    && self.state.ctrl.vblank_nmi_enable()
+                    && self.state.status.vblank_started()
                 {
-                    self.nmi_request = true;
+                    self.state.nmi_request = true;
                 }
             }
             1 => {
-                self.mask = PpuMask(value);
+                self.state.mask = PpuMask(value);
             }
             2 => {}
             3 => {
-                self.oam_addr = value;
+                self.state.oam_addr = value;
             }
             4 => {
-                self.oam_data[self.oam_addr as usize] = value;
-                self.oam_addr = self.oam_addr.wrapping_add(1);
+                self.state.oam_data[self.state.oam_addr as usize] = value;
+                self.state.oam_addr = self.state.oam_addr.wrapping_add(1);
             }
             5 => {
-                if self.w_toggle {
-                    self.t_reg.set_scroll_y(value);
+                if self.state.w_toggle {
+                    self.state.t_reg.set_scroll_y(value);
                 } else {
-                    self.x_reg = value & 0x7;
-                    self.t_reg.set_scroll_x(value);
+                    self.state.x_reg = value & 0x7;
+                    self.state.t_reg.set_scroll_x(value);
                 }
-                self.w_toggle = !self.w_toggle;
+                self.state.w_toggle = !self.state.w_toggle;
             }
             6 => {
-                if self.w_toggle {
-                    self.t_reg.set_address_low(value);
+                if self.state.w_toggle {
+                    self.state.t_reg.set_address_low(value);
                     // TODO delay this?
-                    self.v_reg = self.t_reg;
+                    self.state.v_reg = self.state.t_reg;
                 } else {
-                    self.t_reg.set_address_high(value);
+                    self.state.t_reg.set_address_high(value);
                 }
-                self.w_toggle = !self.w_toggle;
+                self.state.w_toggle = !self.state.w_toggle;
             }
             7 => {
-                let current_addr = self.v_reg.address();
+                let current_addr = self.state.v_reg.address();
 
                 self.vram_write(current_addr, value, mapper);
 
-                let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
-                self.v_reg.increment_address(increment);
+                let increment = if self.state.ctrl.vram_address_incr() {
+                    32
+                } else {
+                    1
+                };
+                self.state.v_reg.increment_address(increment);
             }
             _ => unreachable!(),
         }
     }
 
     fn write_open_bus(&mut self, value: u8) {
-        self.open_bus_value = value;
-        self.open_bus_decay_timer = OPEN_BUS_DECAY_FRAMES;
+        self.state.open_bus_value = value;
+        self.state.open_bus_decay_timer = OPEN_BUS_DECAY_FRAMES;
     }
 
     pub fn cpu_read(&mut self, reg_index: u8, mapper: &dyn Mapper) -> u8 {
@@ -561,59 +588,63 @@ impl Ppu {
             2 => {
                 let mut data = self.status_bits_shadow();
 
-                if self.scanline == 241 {
+                if self.state.scanline == 241 {
                     // in this case the read happens before the vblank is actually set, so force
                     // it to false
-                    if self.cycle == 1 {
+                    if self.state.cycle == 1 {
                         data = data.set_bit(BI::_7, false);
                     }
                     // reading $2002 at this scanline skips the vblank for this frame
-                    if self.cycle <= 1 {
-                        self.suppress_vblank = true;
+                    if self.state.cycle <= 1 {
+                        self.state.suppress_vblank = true;
                     }
                 } else {
-                    if !(1..=3).contains(&self.cycle) {
-                        self.nmi_request = false;
+                    if !(1..=3).contains(&self.state.cycle) {
+                        self.state.nmi_request = false;
                     }
                 }
 
-                self.status.set_vblank_started(false);
-                self.w_toggle = false;
+                self.state.status.set_vblank_started(false);
+                self.state.w_toggle = false;
 
                 self.write_open_bus(data);
                 data
             }
             4 => {
-                if self.mask.rendering_enabled() && (2..=64).contains(&self.cycle) {
+                if self.state.mask.rendering_enabled() && (2..=64).contains(&self.state.cycle) {
                     0xFF
                 } else {
-                    self.oam_data[self.oam_addr as usize]
+                    self.state.oam_data[self.state.oam_addr as usize]
                 }
             }
             7 => {
                 let mut data = self.vram_buffer_shadow(mapper);
 
-                let current_addr = self.v_reg.address();
+                let current_addr = self.state.v_reg.address();
 
                 // when reading through $2007, buffer the nametable at addr - 0x1000
                 if current_addr >= 0x3F00 {
                     // when reading palette data, the upper two bits of the open bus are preserved
-                    data = (data & 0x3F) | (self.open_bus_value & 0xC0);
-                    self.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
+                    data = (data & 0x3F) | (self.state.open_bus_value & 0xC0);
+                    self.state.data_buffer = self.vram_read(current_addr - 0x1000, mapper);
                 } else {
-                    self.data_buffer = self.vram_read(current_addr, mapper);
+                    self.state.data_buffer = self.vram_read(current_addr, mapper);
                 }
 
-                let increment = if self.ctrl.vram_address_incr() { 32 } else { 1 };
+                let increment = if self.state.ctrl.vram_address_incr() {
+                    32
+                } else {
+                    1
+                };
 
-                self.v_reg.increment_address(increment);
+                self.state.v_reg.increment_address(increment);
                 self.write_open_bus(data);
                 data
             }
-            _ => self.open_bus_value,
+            _ => self.state.open_bus_value,
         };
 
-        if self.tracing_enabled {
+        if self.state.tracing_enabled {
             trace!("PPU CPU READ {reg_index:04X} -> {ret:04X}");
         }
 
@@ -629,16 +660,16 @@ impl Ppu {
             0x0000..=0x1FFF => mapper.fetch_ppu(resolved_addr),
             0x2000..=0x3EFF => {
                 let idx = mirror_nametable_addr(resolved_addr, mapper.mirroring_mode());
-                self.nametables[idx]
+                self.state.nametables[idx]
             }
             0x3F00..=0x3FFF => {
                 let palette_addr = normalize_palette_address(resolved_addr);
-                self.palette_table[palette_addr]
+                self.state.palette_table[palette_addr]
             }
             _ => 0,
         };
 
-        if self.tracing_enabled {
+        if self.state.tracing_enabled {
             trace!("PPU VRAM READ {resolved_addr:04X}({orig_addr:04X}) -> {ret:04X}");
         }
 
@@ -649,7 +680,7 @@ impl Ppu {
         let orig_addr = addr;
         addr &= 0x3FFF;
 
-        if self.tracing_enabled {
+        if self.state.tracing_enabled {
             trace!("PPU VRAM WRITE {addr:04X}({orig_addr:04X}) <- {value:04X}");
         }
 
@@ -659,38 +690,38 @@ impl Ppu {
             }
             0x2000..=0x3EFF => {
                 let idx = mirror_nametable_addr(addr, mapper.mirroring_mode());
-                self.nametables[idx] = value;
+                self.state.nametables[idx] = value;
             }
             0x3F00..=0x3FFF => {
                 let palette_addr = normalize_palette_address(addr);
-                self.palette_table[palette_addr] = value;
+                self.state.palette_table[palette_addr] = value;
             }
             _ => unreachable!(),
         }
     }
 
     fn render_pixel(&mut self, mapper: &dyn Mapper) {
-        let x_pos = (self.cycle - 1) as usize;
-        let y_pos = self.scanline as usize;
+        let x_pos = (self.state.cycle - 1) as usize;
+        let y_pos = self.state.scanline as usize;
 
-        let valid_bg_x = x_pos >= 8 || self.mask.show_background_leftmost();
+        let valid_bg_x = x_pos >= 8 || self.state.mask.show_background_leftmost();
 
-        let (bg_pixel, bg_palette) = if self.mask.show_background() && valid_bg_x {
-            let bit_mux = 0x8000 >> self.x_reg;
-            self.bg_data.get_pixel_palette(bit_mux)
+        let (bg_pixel, bg_palette) = if self.state.mask.show_background() && valid_bg_x {
+            let bit_mux = 0x8000 >> self.state.x_reg;
+            self.state.bg_data.get_pixel_palette(bit_mux)
         } else {
             (0, 0)
         };
 
-        let valid_sprite_x = x_pos >= 8 || self.mask.show_sprites_leftmost();
+        let valid_sprite_x = x_pos >= 8 || self.state.mask.show_sprites_leftmost();
 
         let mut sprite_pixel = 0;
         let mut sprite_palette = 0;
         let mut sprite_behind = false;
         let mut sprite_zero = false;
 
-        if self.mask.show_sprites() {
-            for (i, sprite) in self.sprite_shifters.iter_mut().enumerate() {
+        if self.state.mask.show_sprites() {
+            for (i, sprite) in self.state.sprite_shifters.iter_mut().enumerate() {
                 if !sprite.reached_x() {
                     sprite.dec_x();
                 } else {
@@ -711,15 +742,15 @@ impl Ppu {
             (0, _) => RenderType::Sprite,
             (_, 0) => RenderType::Background,
             _ => {
-                if self.sprite_zero_current && sprite_zero {
-                    let left_allowed =
-                        self.mask.show_background_leftmost() && self.mask.show_sprites_leftmost();
+                if self.state.sprite_zero_current && sprite_zero {
+                    let left_allowed = self.state.mask.show_background_leftmost()
+                        && self.state.mask.show_sprites_leftmost();
 
                     let clip_left = if !left_allowed { x_pos < 8 } else { false };
 
                     // zero hit cannot happen on X=255
-                    if self.mask.rendering_enabled() && !clip_left && x_pos < 255 {
-                        self.status.set_sprite_zero_hit(true);
+                    if self.state.mask.rendering_enabled() && !clip_left && x_pos < 255 {
+                        self.state.status.set_sprite_zero_hit(true);
                     }
                 }
 
@@ -740,15 +771,15 @@ impl Ppu {
         let palette_addr = compute_palette_vram_address(palette, pixel);
         let color_index = self.vram_read(palette_addr, mapper);
 
-        let rgb_color = read_palette_by_color_id(&self.mask, color_index);
+        let rgb_color = read_palette_by_color_id(&self.state.mask, color_index);
 
-        let zapper_hit = self.zapper_position.is_some_and(|(x, y)| {
+        let zapper_hit = self.state.zapper_position.is_some_and(|(x, y)| {
             x_pos.abs_diff(x) <= ZAPPER_SENSOR_RADIUS
                 && y_pos.abs_diff(y) <= ZAPPER_SENSOR_RADIUS
                 && is_zapper_light(rgb_color)
         });
         if zapper_hit {
-            self.zapper_light_timer = ZAPPER_LIGHT_PERSISTENCE;
+            self.state.zapper_light_timer = ZAPPER_LIGHT_PERSISTENCE;
         }
 
         self.renderer.render_pixel(x_pos, y_pos, rgb_color);
@@ -756,7 +787,7 @@ impl Ppu {
 
     fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
         let addr = sprite_idx * 4;
-        let oam_sprite = OamSprite::from_bytes(&self.secondary_oam[addr..addr + 4]);
+        let oam_sprite = OamSprite::from_bytes(&self.state.secondary_oam[addr..addr + 4]);
 
         let tile_index = oam_sprite.tile;
         let attributes = oam_sprite.attr;
@@ -764,17 +795,17 @@ impl Ppu {
         let flip_vertical = attributes.vertical_flip();
         let flip_horizontal = attributes.horizontal_flip();
 
-        let mut sprite_row = self.scanline - (oam_sprite.y as i16);
+        let mut sprite_row = self.state.scanline - (oam_sprite.y as i16);
 
         if flip_vertical {
-            let sprite_height = self.ctrl.sprite_height() as i16;
+            let sprite_height = self.state.ctrl.sprite_height() as i16;
             sprite_row = (sprite_height - 1) - sprite_row;
         }
 
         let mut sprite_row = sprite_row as u16;
 
         let (table_base, actual_tile) = {
-            if self.ctrl.sprite_size() {
+            if self.state.ctrl.sprite_size() {
                 let table_base = ((tile_index & 0x01) as u16) << 12;
                 let mut actual_tile = (tile_index & 0xFE) as u16;
 
@@ -784,7 +815,7 @@ impl Ppu {
                 }
                 (table_base, actual_tile)
             } else {
-                let table_base = if self.ctrl.sprite_pattern_table() {
+                let table_base = if self.state.ctrl.sprite_pattern_table() {
                     0x1000
                 } else {
                     0
@@ -803,48 +834,48 @@ impl Ppu {
             hi_shifter = hi_shifter.reverse_bits();
         }
 
-        if !self.sprite_in_range[sprite_idx] {
+        if !self.state.sprite_in_range[sprite_idx] {
             lo_shifter = 0;
             hi_shifter = 0;
         }
 
         // load the shifters only if the next scanline is visible, to avoid rendering of scanline
         // 240 on scanline 0
-        if self.scanline < 239 {
-            self.sprite_shifters[sprite_idx].load(oam_sprite, lo_shifter, hi_shifter);
+        if self.state.scanline < 239 {
+            self.state.sprite_shifters[sprite_idx].load(oam_sprite, lo_shifter, hi_shifter);
         }
     }
 
     fn increment_vram_address_x(&mut self) {
-        let coarse_x = self.v_reg.coarse_x();
+        let coarse_x = self.state.v_reg.coarse_x();
         if coarse_x == 0x1F {
             // in this case, wraps the last 5 bits to 0
-            self.v_reg.set_coarse_x(0);
+            self.state.v_reg.set_coarse_x(0);
             // switch the horizontal nametable
-            self.v_reg.switch_nametable_x();
+            self.state.v_reg.switch_nametable_x();
         } else {
             // increments the x part, that are the last 5 bits
-            self.v_reg.set_coarse_x(coarse_x + 1);
+            self.state.v_reg.set_coarse_x(coarse_x + 1);
         }
     }
 
     fn increment_vram_address_y(&mut self) {
-        let fine_y = self.v_reg.fine_y();
+        let fine_y = self.state.v_reg.fine_y();
         if fine_y < 7 {
             // if the y part is not maxed, simply increment it
-            self.v_reg.set_fine_y(fine_y + 1);
+            self.state.v_reg.set_fine_y(fine_y + 1);
         } else {
             // in this case, wrap the y bits to 0
-            self.v_reg.set_fine_y(0);
+            self.state.v_reg.set_fine_y(0);
 
             // compute coarse y
-            let mut y = self.v_reg.coarse_y();
+            let mut y = self.state.v_reg.coarse_y();
 
             if y == 29 {
                 // clear coarse y
                 y = 0;
                 // switch the vertical nametable
-                self.v_reg.switch_nametable_y();
+                self.state.v_reg.switch_nametable_y();
             } else if y == 31 {
                 // clear coarse y without switching
                 y = 0;
@@ -854,28 +885,28 @@ impl Ppu {
             }
 
             // put back coarse y
-            self.v_reg.set_coarse_y(y);
+            self.state.v_reg.set_coarse_y(y);
         }
     }
 
     pub(crate) fn oam_data(&self) -> &[u8; 256] {
-        &self.oam_data
+        &self.state.oam_data
     }
 
     pub(crate) fn secondary_oam_data(&self) -> &[u8; 32] {
-        &self.secondary_oam
+        &self.state.secondary_oam
     }
 
     pub(crate) fn status_bits_shadow(&self) -> u8 {
-        (self.status.0 & 0b1110_0000) | (self.open_bus_value & 0b0001_1111)
+        (self.state.status.0 & 0b1110_0000) | (self.state.open_bus_value & 0b0001_1111)
     }
 
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
-        let current_addr = self.v_reg.address();
+        let current_addr = self.state.v_reg.address();
         if current_addr >= 0x3F00 {
             self.vram_read(current_addr, mapper)
         } else {
-            self.data_buffer
+            self.state.data_buffer
         }
     }
 }
@@ -1017,80 +1048,80 @@ mod tests {
         let renderer = NoopRenderer;
         let mut ppu = Ppu::new(Box::new(renderer));
 
-        ppu.t_reg = PpuScrollRegister(0b0111_1111_1111_1111);
-        ppu.v_reg = PpuScrollRegister(0b0111_1111_1111_1111);
-        ppu.x_reg = 0b1111_1111;
-        ppu.w_toggle = true;
+        ppu.state.t_reg = PpuScrollRegister(0b0111_1111_1111_1111);
+        ppu.state.v_reg = PpuScrollRegister(0b0111_1111_1111_1111);
+        ppu.state.x_reg = 0b1111_1111;
+        ppu.state.w_toggle = true;
 
         let mut mapper = FakeMapper;
 
         ppu.cpu_write(0, 0, &mut mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0111_0011_1111_1111);
-        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
-        assert_eq!(ppu.x_reg, 0b1111_1111);
-        assert!(ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.state.x_reg, 0b1111_1111);
+        assert!(ppu.state.w_toggle);
 
         ppu.cpu_read(2, &mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0111_0011_1111_1111);
-        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
-        assert_eq!(ppu.x_reg, 0b1111_1111);
-        assert!(!ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0111_0011_1111_1111);
+        assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.state.x_reg, 0b1111_1111);
+        assert!(!ppu.state.w_toggle);
 
         ppu.cpu_write(5, 0b0111_1101, &mut mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0111_0010_0000_1111);
-        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
-        assert_eq!(ppu.x_reg, 0b0000_0101);
-        assert!(ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0111_0010_0000_1111);
+        assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.state.x_reg, 0b0000_0101);
+        assert!(ppu.state.w_toggle);
 
         ppu.cpu_write(5, 0b0101_1110, &mut mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0110_0001_0110_1111);
-        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
-        assert_eq!(ppu.x_reg, 0b0000_0101);
-        assert!(!ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0110_0001_0110_1111);
+        assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.state.x_reg, 0b0000_0101);
+        assert!(!ppu.state.w_toggle);
 
         ppu.cpu_write(6, 0b0011_1101, &mut mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0011_1101_0110_1111);
-        assert_eq!(ppu.v_reg.0, 0b0111_1111_1111_1111);
-        assert_eq!(ppu.x_reg, 0b0000_0101);
-        assert!(ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0011_1101_0110_1111);
+        assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
+        assert_eq!(ppu.state.x_reg, 0b0000_0101);
+        assert!(ppu.state.w_toggle);
 
         ppu.cpu_write(6, 0b11110000, &mut mapper);
 
-        assert_eq!(ppu.t_reg.0, 0b0011_1101_1111_0000);
-        assert_eq!(ppu.v_reg.0, 0b0011_1101_1111_0000);
-        assert_eq!(ppu.x_reg, 0b0000_0101);
-        assert!(!ppu.w_toggle);
+        assert_eq!(ppu.state.t_reg.0, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.state.v_reg.0, 0b0011_1101_1111_0000);
+        assert_eq!(ppu.state.x_reg, 0b0000_0101);
+        assert!(!ppu.state.w_toggle);
     }
 
     #[test]
     fn vram_scroll_increments_wrap_coarse_coordinates_and_toggle_nametables() {
         let mut ppu = Ppu::new(Box::new(NoopRenderer));
-        ppu.v_reg.set_coarse_x(0x1F);
-        ppu.v_reg.set_coarse_y(29);
-        ppu.v_reg.set_nametable_select(1);
-        ppu.v_reg.set_fine_y(7);
+        ppu.state.v_reg.set_coarse_x(0x1F);
+        ppu.state.v_reg.set_coarse_y(29);
+        ppu.state.v_reg.set_nametable_select(1);
+        ppu.state.v_reg.set_fine_y(7);
 
         ppu.increment_vram_address_x();
-        assert_eq!(ppu.v_reg.coarse_x(), 0);
-        assert_eq!(ppu.v_reg.nametable_select(), 0);
+        assert_eq!(ppu.state.v_reg.coarse_x(), 0);
+        assert_eq!(ppu.state.v_reg.nametable_select(), 0);
 
         ppu.increment_vram_address_y();
-        assert_eq!(ppu.v_reg.fine_y(), 0);
-        assert_eq!(ppu.v_reg.coarse_y(), 0);
-        assert_eq!(ppu.v_reg.nametable_select(), 2);
+        assert_eq!(ppu.state.v_reg.fine_y(), 0);
+        assert_eq!(ppu.state.v_reg.coarse_y(), 0);
+        assert_eq!(ppu.state.v_reg.nametable_select(), 2);
 
-        ppu.v_reg.set_coarse_y(31);
-        ppu.v_reg.set_nametable_select(3);
-        ppu.v_reg.set_fine_y(7);
+        ppu.state.v_reg.set_coarse_y(31);
+        ppu.state.v_reg.set_nametable_select(3);
+        ppu.state.v_reg.set_fine_y(7);
         ppu.increment_vram_address_y();
-        assert_eq!(ppu.v_reg.fine_y(), 0);
-        assert_eq!(ppu.v_reg.coarse_y(), 0);
-        assert_eq!(ppu.v_reg.nametable_select(), 3);
+        assert_eq!(ppu.state.v_reg.fine_y(), 0);
+        assert_eq!(ppu.state.v_reg.coarse_y(), 0);
+        assert_eq!(ppu.state.v_reg.nametable_select(), 3);
     }
 
     #[test]
@@ -1098,22 +1129,22 @@ mod tests {
         let mut ppu = Ppu::new(Box::new(NoopRenderer));
         let mut mapper = FakeMapper;
 
-        ppu.scanline = 10;
-        ppu.mask = PpuMask(0x10);
-        ppu.oam_data[0] = 1;
-        ppu.oam_data[4..8].copy_from_slice(&[8, 0x2A, 0x80, 0x34]);
+        ppu.state.scanline = 10;
+        ppu.state.mask = PpuMask(0x10);
+        ppu.state.oam_data[0] = 1;
+        ppu.state.oam_data[4..8].copy_from_slice(&[8, 0x2A, 0x80, 0x34]);
 
         for _ in 0..=256 {
             ppu.tick(&mut mapper);
         }
 
-        assert_eq!(&ppu.secondary_oam[..4], &[8, 0x2A, 0x80, 0x34]);
+        assert_eq!(&ppu.state.secondary_oam[..4], &[8, 0x2A, 0x80, 0x34]);
 
         for _ in 257..=320 {
             ppu.tick(&mut mapper);
         }
 
-        assert_eq!(ppu.sprite_shifters[0].x, 0x34);
+        assert_eq!(ppu.state.sprite_shifters[0].x, 0x34);
     }
 
     #[test]
@@ -1121,18 +1152,18 @@ mod tests {
         let mut ppu = Ppu::new(Box::new(NoopRenderer));
         let mut mapper = FakeMapper;
 
-        ppu.mask = PpuMask(0x10);
-        ppu.scanline = 10;
+        ppu.state.mask = PpuMask(0x10);
+        ppu.state.scanline = 10;
 
         for sprite in 0..9 {
-            ppu.oam_data[sprite * 4] = 8;
+            ppu.state.oam_data[sprite * 4] = 8;
         }
 
         for _ in 0..=256 {
             ppu.tick(&mut mapper);
         }
 
-        assert!(ppu.status.sprite_overflow());
-        assert!(ppu.secondary_oam_full);
+        assert!(ppu.state.status.sprite_overflow());
+        assert!(ppu.state.secondary_oam_full);
     }
 }

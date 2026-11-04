@@ -11,6 +11,11 @@ impl Zapper {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.position = None;
+        self.trigger_pressed = false;
+    }
+
     pub fn set_input(&mut self, position: Option<(usize, usize)>, trigger_pressed: bool) {
         self.position = position;
         self.trigger_pressed = trigger_pressed;
