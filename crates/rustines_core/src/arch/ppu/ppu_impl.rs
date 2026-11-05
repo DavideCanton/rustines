@@ -1084,7 +1084,7 @@ mod tests {
 
         ppu.cpu_write(5, 0b0111_1101, &mut mapper);
 
-        assert_eq!(ppu.state.t_reg.0, 0b0111_0010_0000_1111);
+        assert_eq!(ppu.state.t_reg.0, 0b0111_0011_1110_1111);
         assert_eq!(ppu.state.v_reg.0, 0b0111_1111_1111_1111);
         assert_eq!(ppu.state.x_reg, 0b0000_0101);
         assert!(ppu.state.w_toggle);

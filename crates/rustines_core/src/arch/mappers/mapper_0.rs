@@ -10,7 +10,7 @@ use crate::utils::named::Named;
 
 const CHR_RAM_SIZE: usize = 8192;
 
-#[derive(Named)]
+#[derive(Named, Debug)]
 pub struct Mapper0 {
     prg_rom: Vec<PrgRomBank>,
     chr_rom: Option<Vec<ChrRomBank>>,
@@ -86,5 +86,33 @@ impl Mapper for Mapper0 {
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        INesHeader,
+        arch::{mappers::Mapper0, rom_structs::HeaderFlags},
+    };
+
+    #[test]
+    pub fn new_invalid_banks() {
+        let header = INesHeader {
+            header: [0; 4],
+            flags: HeaderFlags(0),
+            chr_rom_banks: 1,
+            flags_9: 0,
+            flags_10: 0,
+            prg_rom_banks: 3,
+            prg_ram_banks: 0,
+            _padding: [0; 5],
+        };
+        let mapper = Mapper0::new(&header, vec![0; 1 << 16]);
+        assert!(mapper.is_err());
+        assert_eq!(
+            mapper.unwrap_err().to_string(),
+            "Invalid number of PRG banks, expected 1 or 2, found 3"
+        )
     }
 }

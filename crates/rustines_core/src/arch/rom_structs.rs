@@ -5,7 +5,7 @@ use std::fmt::Debug;
 bitfield! {
     #[derive(Clone, Copy, Pod, Zeroable)]
     #[repr(C)]
-    struct HeaderFlags(u16);
+    pub struct HeaderFlags(pub(crate) u16);
     impl Debug;
     u8;
 
@@ -35,7 +35,7 @@ pub struct INesHeader {
     pub header: [u8; 4],
     pub prg_rom_banks: u8,
     pub chr_rom_banks: u8,
-    flags: HeaderFlags,
+    pub flags: HeaderFlags,
     pub prg_ram_banks: u8,
     pub flags_9: u8,
     pub flags_10: u8,
