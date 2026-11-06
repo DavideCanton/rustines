@@ -975,12 +975,14 @@ fn is_zapper_light(rgba: u32) -> bool {
     (r * 299 + g * 587 + b * 114) / 1000 >= ZAPPER_LIGHT_THRESHOLD
 }
 
-fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
+pub fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
     let nametable = (addr >> 10) & 0x03;
     let offset = (addr & 0x03FF) as usize;
     let physical_nametable = match mode {
         MirroringType::Horizontal => nametable >> 1,
         MirroringType::Vertical => nametable & 0x01,
+        MirroringType::SingleScreenLower => 0,
+        MirroringType::SingleScreenUpper => 1,
     };
 
     (physical_nametable as usize) * 0x0400 + offset

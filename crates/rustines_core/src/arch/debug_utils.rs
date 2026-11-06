@@ -5,7 +5,7 @@ use crate::MirroringType;
 use crate::arch::bus::Bus;
 use crate::arch::cpu::Cpu;
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::ppu::{OamSprite, Ppu, get_color_index};
+use crate::arch::ppu::{OamSprite, Ppu, get_color_index, mirror_nametable_addr};
 use crate::arch::utils::generate_ppm;
 use crate::utils::bit_utils::{BitCount, BitIndex, NumberFormat};
 
@@ -60,13 +60,7 @@ pub fn debug_dump_nametables(bus: &Bus) {
     let mapper: &dyn Mapper = bus.mapper_ref();
     let ppu = bus.ppu();
 
-    let nt1 = 0x2000;
-    let nt2 = match mapper.mirroring_mode() {
-        MirroringType::Horizontal => 0x2800,
-        MirroringType::Vertical => 0x2400,
-    };
-
-    for (nt, base) in [nt1, nt2].iter().enumerate() {
+    for (nt, base) in [0x2000, 0x2400, 0x2800, 0x2C00].iter().enumerate() {
         println!("\n=== DUMP NAMETABLE {nt} (0x{base:04X}) ===");
 
         print!("     ");
@@ -93,14 +87,17 @@ pub fn debug_dump_nametables(bus: &Bus) {
 pub fn debug_dump_attribute_tables(bus: &Bus) {
     let mapper: &dyn Mapper = bus.mapper_ref();
     let ppu = bus.ppu();
+    let mode = mapper.mirroring_mode();
 
-    let at1 = 0x23C0;
-    let at2 = match mapper.mirroring_mode() {
-        MirroringType::Horizontal => 0x2BC0,
-        MirroringType::Vertical => 0x27C0,
-    };
+    let at0_physical = mirror_nametable_addr(0x23C0, mode) as u16;
+    let at1_physical = mirror_nametable_addr(0x27C0, mode) as u16;
+    let at2_physical = mirror_nametable_addr(0x2BC0, mode) as u16;
+    let at3_physical = mirror_nametable_addr(0x2FC0, mode) as u16;
 
-    for (at, base) in [at1, at2].into_iter().enumerate() {
+    for (at, base) in [at0_physical, at1_physical, at2_physical, at3_physical]
+        .into_iter()
+        .enumerate()
+    {
         println!("\n=== DUMP ATTRIBUTE TABLE {at} (0x{base:04X}) ===");
 
         print!("     ");

@@ -62,9 +62,10 @@ impl Debug for INesHeader {
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum MirroringType {
+    SingleScreenLower,
+    SingleScreenUpper,
     Horizontal,
     Vertical,
-    // TODO add other types of mirroring
 }
 
 pub const PRG_ROM_BANK_SIZE: usize = 1 << 14;

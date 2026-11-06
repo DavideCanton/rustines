@@ -1,7 +1,8 @@
-use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, PRG_ROM_BANK_SIZE};
+use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, PRG_RAM_BANK_SIZE, PRG_ROM_BANK_SIZE};
 
 pub type RomBank<const N: usize> = [u8; N];
 pub type PrgRomBank = RomBank<PRG_ROM_BANK_SIZE>;
+pub type PrgRamBank = RomBank<PRG_RAM_BANK_SIZE>;
 pub type ChrRomBank = RomBank<CHR_ROM_BANK_SIZE>;
 
 pub fn get_rom_banks<const N: usize>(rom: &mut Vec<u8>, size: usize) -> Vec<RomBank<N>> {
