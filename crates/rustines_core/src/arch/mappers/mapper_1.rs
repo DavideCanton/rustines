@@ -1,13 +1,16 @@
 use rustines_macro::Named;
 
-use crate::arch::mappers::common::{ChrRomBank, PrgRamBank, PrgRomBank, get_rom_banks};
+use crate::arch::mappers::common::{BankedMemory, ChrMemory, skip_trainer};
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::rom_structs::{INesHeader, MirroringType, PRG_RAM_BANK_SIZE, TRAINER_SIZE};
+use crate::arch::rom_structs::{
+    CHR_ROM_BANK_SIZE, INesHeader, MirroringType, PRG_RAM_BANK_SIZE, PRG_ROM_BANK_SIZE,
+};
 use crate::utils::bit_utils::{BitIndex, BitManip};
 use crate::utils::named::Named;
 use bitfield::bitfield;
 
-const CHR_RAM_SIZE: usize = 8192;
+const CHR_4KB_BANK_SIZE: usize = 0x1000;
+const PRG_32KB_BANK_SIZE: usize = 0x8000;
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -27,10 +30,11 @@ impl Default for ControlRegister {
 
 #[derive(Named, Debug)]
 pub struct Mapper1 {
-    prg_rom: Vec<PrgRomBank>,
-    prg_ram: Vec<PrgRamBank>,
-    chr_rom: Option<Vec<ChrRomBank>>,
-    chr_ram: Option<[u8; CHR_RAM_SIZE]>,
+    prg_rom: BankedMemory,
+    prg_ram: BankedMemory,
+    chr: ChrMemory,
+    /// 16KB bank fixed on $C000-$FFFF in PRG mode 3.
+    last_prg_bank: usize,
     shift_register: u8,
     count: u8,
     ctrl_register: ControlRegister,
@@ -41,26 +45,20 @@ pub struct Mapper1 {
 
 impl Mapper1 {
     pub fn new(header: &INesHeader, mut rom: Vec<u8>) -> anyhow::Result<Self> {
-        if header.has_trainer() {
-            let _ = rom.drain(0..TRAINER_SIZE).collect::<Vec<_>>();
-        }
+        skip_trainer(header, &mut rom);
 
-        let prg_rom = get_rom_banks(&mut rom, header.prg_rom_size());
-        let prg_ram = (0..header.prg_ram_banks.max(1))
-            .map(|_| [0; PRG_RAM_BANK_SIZE])
-            .collect();
-
-        let (chr_rom, chr_ram) = if header.uses_chr_ram() {
-            (None, Some([0; CHR_RAM_SIZE]))
-        } else {
-            (Some(get_rom_banks(&mut rom, header.chr_rom_size())), None)
-        };
+        let prg_rom = BankedMemory::from_rom(&mut rom, header.prg_rom_size());
+        // TODO PRG RAM banking: only the first 8KB bank is reachable for now
+        let prg_ram =
+            BankedMemory::zeroed(PRG_RAM_BANK_SIZE * header.prg_ram_banks.max(1) as usize);
+        let chr = ChrMemory::new(header, &mut rom);
+        let last_prg_bank = prg_rom.banks(PRG_ROM_BANK_SIZE) - 1;
 
         Ok(Mapper1 {
             prg_rom,
             prg_ram,
-            chr_rom,
-            chr_ram,
+            chr,
+            last_prg_bank,
             count: 0,
             shift_register: 0,
             ctrl_register: ControlRegister::default(),
@@ -72,6 +70,20 @@ impl Mapper1 {
 
     fn prg_ram_enabled(&self) -> bool {
         !self.prg_reg.get_bit(BitIndex::_4)
+    }
+
+    /// Returns the CHR bank and its size for the given PPU address.
+    fn chr_bank(&self, addr: u16) -> (usize, usize) {
+        if self.ctrl_register.chr_bank_mode() {
+            let reg = if addr < 0x1000 {
+                self.chr_1_reg
+            } else {
+                self.chr_2_reg
+            };
+            ((reg & 0x1F) as usize, CHR_4KB_BANK_SIZE)
+        } else {
+            (((self.chr_1_reg & 0x1E) >> 1) as usize, CHR_ROM_BANK_SIZE)
+        }
     }
 }
 
@@ -86,89 +98,55 @@ impl Mapper for Mapper1 {
     }
 
     fn fetch_cpu(&self, addr: u16) -> u8 {
-        if (0x6000..=0x7FFF).contains(&addr) {
-            if self.prg_ram_enabled() {
-                // TODO improve
-                return self.prg_ram[0][(addr & 0x1FFF) as usize];
+        match addr {
+            0x6000..=0x7FFF => {
+                if self.prg_ram_enabled() {
+                    self.prg_ram.read((addr - 0x6000) as usize)
+                } else {
+                    0
+                }
             }
-            return 0;
+            0x8000..=0xFFFF => {
+                let prg_reg = self.prg_reg as usize;
+                match (self.ctrl_register.prg_bank_mode(), addr) {
+                    // 32KB mode, the low bit of the bank number is ignored
+                    (0 | 1, _) => {
+                        self.prg_rom
+                            .read_banked((prg_reg & 0x0E) >> 1, PRG_32KB_BANK_SIZE, addr)
+                    }
+                    // first bank fixed on $8000, switchable bank on $C000
+                    (2, 0x8000..=0xBFFF) => self.prg_rom.read_banked(0, PRG_ROM_BANK_SIZE, addr),
+                    (2, _) => self
+                        .prg_rom
+                        .read_banked(prg_reg & 0x0F, PRG_ROM_BANK_SIZE, addr),
+                    // switchable bank on $8000, last bank fixed on $C000
+                    (3, 0x8000..=0xBFFF) => {
+                        self.prg_rom
+                            .read_banked(prg_reg & 0x0F, PRG_ROM_BANK_SIZE, addr)
+                    }
+                    (3, _) => self
+                        .prg_rom
+                        .read_banked(self.last_prg_bank, PRG_ROM_BANK_SIZE, addr),
+                    _ => unreachable!(),
+                }
+            }
+            _ => 0,
         }
-
-        if addr >= 0x8000 {
-            let num_banks = self.prg_rom.len();
-
-            let (bank, offset) = match self.ctrl_register.prg_bank_mode() {
-                0 | 1 => {
-                    let base_bank = (self.prg_reg & 0x0E) as usize;
-                    if addr < 0xC000 {
-                        (base_bank, (addr & 0x3FFF) as usize)
-                    } else {
-                        (base_bank + 1, (addr & 0x3FFF) as usize)
-                    }
-                }
-
-                2 => {
-                    if addr < 0xC000 {
-                        (0, (addr & 0x3FFF) as usize)
-                    } else {
-                        ((self.prg_reg & 0x0F) as usize, (addr & 0x3FFF) as usize)
-                    }
-                }
-
-                3 => {
-                    if addr < 0xC000 {
-                        ((self.prg_reg & 0x0F) as usize, (addr & 0x3FFF) as usize)
-                    } else {
-                        (num_banks - 1, (addr & 0x3FFF) as usize)
-                    }
-                }
-
-                _ => unreachable!(),
-            };
-
-            let safe_bank = bank % num_banks;
-            return self.prg_rom[safe_bank][offset];
-        }
-
-        0
     }
 
     fn fetch_ppu(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
-            if let Some(chr_ram) = self.chr_ram {
-                chr_ram[addr as usize]
-            } else {
-                let (index, offset) = if self.ctrl_register.chr_bank_mode() {
-                    let index = match addr {
-                        0x0000..=0x0FFF => self.chr_1_reg,
-                        0x1000..=0x1FFF => self.chr_2_reg,
-                        _ => unreachable!(),
-                    };
-                    let index = index & 0x1F;
-                    let bank_8kb = (index >> 1) as usize;
-                    let sub_offset = ((index & 0x01) as usize * 0x1000) + (addr & 0x0FFF) as usize;
-                    (bank_8kb, sub_offset)
-                } else {
-                    let bank_8kb = ((self.chr_1_reg & 0x1E) >> 1) as usize;
-                    let offset_8kb = (addr & 0x1FFF) as usize;
-                    (bank_8kb, offset_8kb)
-                };
-
-                let rom_banks = self.chr_rom.as_ref().unwrap();
-                let safe_index = index % rom_banks.len();
-
-                self.chr_rom.as_ref().unwrap()[safe_index][offset]
-            }
+            let (bank, bank_size) = self.chr_bank(addr);
+            self.chr.read_banked(bank, bank_size, addr)
         } else {
             0
         }
     }
 
     fn store_ppu(&mut self, addr: u16, val: u8) {
-        if addr <= 0x1FFF
-            && let Some(chr_ram) = self.chr_ram.as_mut()
-        {
-            chr_ram[addr as usize] = val;
+        if addr <= 0x1FFF {
+            let (bank, bank_size) = self.chr_bank(addr);
+            self.chr.write_banked(bank, bank_size, addr, val);
         }
     }
 
@@ -179,8 +157,7 @@ impl Mapper for Mapper1 {
 
         if (0x6000..=0x7FFF).contains(&addr) {
             if self.prg_ram_enabled() {
-                // TODO improve
-                self.prg_ram[0][(addr & 0x1FFF) as usize] = value;
+                self.prg_ram.write((addr - 0x6000) as usize, value);
             }
             return;
         }
@@ -480,6 +457,29 @@ mod tests {
         for addr in 0..=0x1FFFu16 {
             assert_eq!(mapper.fetch_ppu(addr), (addr ^ (addr >> 8)) as u8);
         }
+    }
+
+    #[test]
+    pub fn chr_ram_4kb_banking() {
+        let mut mapper = mapper(8, 0);
+
+        write_reg(&mut mapper, CTRL, 0x1C);
+        // both windows point to the upper 4KB of the 8KB CHR RAM
+        write_reg(&mut mapper, CHR_0, 1);
+        write_reg(&mut mapper, CHR_1, 1);
+        mapper.store_ppu(0x0010, 0x42);
+        assert_eq!(mapper.fetch_ppu(0x1010), 0x42);
+
+        // swapped windows
+        write_reg(&mut mapper, CHR_0, 0);
+        write_reg(&mut mapper, CHR_1, 1);
+        mapper.store_ppu(0x0020, 0x24);
+        assert_eq!(mapper.fetch_ppu(0x0020), 0x24);
+        assert_eq!(mapper.fetch_ppu(0x1010), 0x42);
+        write_reg(&mut mapper, CHR_0, 1);
+        write_reg(&mut mapper, CHR_1, 0);
+        assert_eq!(mapper.fetch_ppu(0x0010), 0x42);
+        assert_eq!(mapper.fetch_ppu(0x1020), 0x24);
     }
 
     #[test_case(0x2000)]

@@ -1,62 +1,50 @@
 use anyhow::bail;
 use rustines_macro::Named;
 
-use crate::arch::mappers::common::{ChrRomBank, PrgRomBank, get_bank_coordinates, get_rom_banks};
+use crate::arch::mappers::common::{BankedMemory, skip_trainer};
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::rom_structs::{INesHeader, MirroringType, PRG_ROM_BANK_SIZE, TRAINER_SIZE};
+use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, INesHeader, MirroringType};
 use crate::utils::named::Named;
 
 #[derive(Named)]
 pub struct Mapper3 {
-    prg_rom: Vec<PrgRomBank>,
-    prg_ram: Option<Vec<u8>>,
-    chr_rom_banks: Vec<ChrRomBank>,
+    /// 16KB or 32KB, a 16KB PRG ROM is mirrored on $C000-$FFFF.
+    prg_rom: BankedMemory,
+    /// Mirrored over $6000-$7FFF when smaller than 8KB.
+    prg_ram: Option<BankedMemory>,
+    chr_rom: BankedMemory,
     mirroring_type: MirroringType,
+    /// 8KB CHR bank; out of range values wrap around.
     selected_bank: u8,
-    bank_mask: u8,
 }
 
 impl Mapper3 {
     pub fn new(header: &INesHeader, mut rom: Vec<u8>) -> anyhow::Result<Self> {
-        if header.has_trainer() {
-            let _ = rom.drain(0..TRAINER_SIZE).collect::<Vec<_>>();
-        }
+        skip_trainer(header, &mut rom);
 
         let banks = header.prg_rom_banks();
         if banks != 1 && banks != 2 {
             bail!("Invalid number of PRG banks, expected 1 or 2, found {banks}")
         }
 
-        let mut prg_rom = get_rom_banks(&mut rom, header.prg_rom_size());
-        if banks == 1 {
-            // 16KB PRG ROM is mirrored on $C000-$FFFF
-            prg_rom.push(prg_rom[0]);
-        }
+        let prg_rom = BankedMemory::from_rom(&mut rom, header.prg_rom_size());
 
         if header.uses_chr_ram() {
             bail!("Unexpected CHR RAM for mapper 3");
         }
-        let chr_rom_banks = get_rom_banks(&mut rom, header.chr_rom_size());
+        let chr_rom = BankedMemory::from_rom(&mut rom, header.chr_rom_size());
 
-        let prg_ram = if header.uses_prg_ram() {
-            Some(vec![0; header.prg_ram_size()])
-        } else {
-            None
-        };
+        let prg_ram = header
+            .uses_prg_ram()
+            .then(|| BankedMemory::zeroed(header.prg_ram_size()));
 
         Ok(Mapper3 {
             prg_rom,
-            chr_rom_banks,
             prg_ram,
+            chr_rom,
             mirroring_type: header.mirroring_type(),
             selected_bank: 0,
-            bank_mask: header.chr_rom_banks - 1,
         })
-    }
-
-    /// PRG RAM is mirrored over $6000-$7FFF when smaller than 8KB.
-    fn prg_ram_index(addr: u16, len: usize) -> usize {
-        (addr - 0x6000) as usize % len
     }
 }
 
@@ -67,24 +55,19 @@ impl Mapper for Mapper3 {
 
     fn fetch_cpu(&self, addr: u16) -> u8 {
         match addr {
-            0x6000..=0x7FFF => {
-                if let Some(prg_ram) = self.prg_ram.as_ref() {
-                    prg_ram[Self::prg_ram_index(addr, prg_ram.len())]
-                } else {
-                    0
-                }
-            }
-            0x8000..=0xFFFF => {
-                let (index, offset) = get_bank_coordinates(addr - 0x8000, PRG_ROM_BANK_SIZE as u16);
-                self.prg_rom[index as usize][offset as usize]
-            }
+            0x6000..=0x7FFF => self
+                .prg_ram
+                .as_ref()
+                .map_or(0, |prg_ram| prg_ram.read((addr - 0x6000) as usize)),
+            0x8000..=0xFFFF => self.prg_rom.read((addr - 0x8000) as usize),
             _ => panic!("Invalid value provided to fetch_cpu: {addr}"),
         }
     }
 
     fn fetch_ppu(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
-            self.chr_rom_banks[self.selected_bank as usize][addr as usize]
+            self.chr_rom
+                .read_banked(self.selected_bank as usize, CHR_ROM_BANK_SIZE, addr)
         } else {
             0
         }
@@ -96,11 +79,10 @@ impl Mapper for Mapper3 {
         match addr {
             0x6000..=0x7FFF => {
                 if let Some(prg_ram) = self.prg_ram.as_mut() {
-                    let index = Self::prg_ram_index(addr, prg_ram.len());
-                    prg_ram[index] = val;
+                    prg_ram.write((addr - 0x6000) as usize, val);
                 }
             }
-            0x8000..=0xFFFF => self.selected_bank = val & self.bank_mask,
+            0x8000..=0xFFFF => self.selected_bank = val,
             _ => {}
         }
     }

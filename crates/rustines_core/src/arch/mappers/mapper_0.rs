@@ -1,49 +1,34 @@
 use anyhow::bail;
 use rustines_macro::Named;
 
-use crate::arch::mappers::common::{ChrRomBank, PrgRomBank, get_bank_coordinates, get_rom_banks};
+use crate::arch::mappers::common::{BankedMemory, ChrMemory, skip_trainer};
 use crate::arch::mappers::mapper::Mapper;
-use crate::arch::rom_structs::{
-    CHR_ROM_BANK_SIZE, INesHeader, MirroringType, PRG_ROM_BANK_SIZE, TRAINER_SIZE,
-};
+use crate::arch::rom_structs::{INesHeader, MirroringType};
 use crate::utils::named::Named;
-
-const CHR_RAM_SIZE: usize = 8192;
 
 #[derive(Named, Debug)]
 pub struct Mapper0 {
-    prg_rom: Vec<PrgRomBank>,
-    chr_rom: Option<Vec<ChrRomBank>>,
-    chr_ram: Option<[u8; CHR_RAM_SIZE]>,
+    /// 16KB or 32KB, a 16KB PRG ROM is mirrored on $C000-$FFFF.
+    prg_rom: BankedMemory,
+    chr: ChrMemory,
     mirroring_type: MirroringType,
 }
 
 impl Mapper0 {
     pub fn new(header: &INesHeader, mut rom: Vec<u8>) -> anyhow::Result<Self> {
-        if header.has_trainer() {
-            let _ = rom.drain(0..TRAINER_SIZE).collect::<Vec<_>>();
-        }
+        skip_trainer(header, &mut rom);
 
         let banks = header.prg_rom_banks();
         if banks != 1 && banks != 2 {
             bail!("Invalid number of PRG banks, expected 1 or 2, found {banks}")
         }
 
-        let mut prg_rom = get_rom_banks(&mut rom, header.prg_rom_size());
-        if banks == 1 {
-            prg_rom.push(prg_rom[0]);
-        }
-
-        let (chr_rom, chr_ram) = if header.uses_chr_ram() {
-            (None, Some([0; CHR_RAM_SIZE]))
-        } else {
-            (Some(get_rom_banks(&mut rom, header.chr_rom_size())), None)
-        };
+        let prg_rom = BankedMemory::from_rom(&mut rom, header.prg_rom_size());
+        let chr = ChrMemory::new(header, &mut rom);
 
         Ok(Mapper0 {
             prg_rom,
-            chr_rom,
-            chr_ram,
+            chr,
             mirroring_type: header.mirroring_type(),
         })
     }
@@ -52,33 +37,22 @@ impl Mapper0 {
 impl Mapper for Mapper0 {
     fn fetch_cpu(&self, addr: u16) -> u8 {
         match addr {
-            0x8000..=0xFFFF => {
-                let (index, offset) = get_bank_coordinates(addr - 0x8000, PRG_ROM_BANK_SIZE as u16);
-                self.prg_rom[index as usize][offset as usize]
-            }
+            0x8000..=0xFFFF => self.prg_rom.read((addr - 0x8000) as usize),
             _ => 0,
         }
     }
 
     fn fetch_ppu(&self, addr: u16) -> u8 {
         if addr <= 0x1FFF {
-            if let Some(chr_ram) = self.chr_ram {
-                chr_ram[addr as usize]
-            } else {
-                let (index, offset) = get_bank_coordinates(addr, CHR_ROM_BANK_SIZE as u16);
-                debug_assert_eq!(index, 0);
-                self.chr_rom.as_ref().unwrap()[index as usize][offset as usize]
-            }
+            self.chr.read_banked(0, 0x2000, addr)
         } else {
             0
         }
     }
 
     fn store_ppu(&mut self, addr: u16, val: u8) {
-        if addr <= 0x1FFF
-            && let Some(chr_ram) = self.chr_ram.as_mut()
-        {
-            chr_ram[addr as usize] = val;
+        if addr <= 0x1FFF {
+            self.chr.write_banked(0, 0x2000, addr, val);
         }
     }
 
