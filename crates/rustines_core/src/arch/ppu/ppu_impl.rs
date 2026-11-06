@@ -964,7 +964,11 @@ fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
         color_id & 0b0011_1111
     };
     let color = NES_PALETTE[color_id as usize];
-    apply_emphasis(color, mask)
+    if mask.any_emphasis() {
+        apply_emphasis(color, mask)
+    } else {
+        color
+    }
 }
 
 fn is_zapper_light(rgba: u32) -> bool {
@@ -988,6 +992,7 @@ pub fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
     (physical_nametable as usize) * 0x0400 + offset
 }
 
+#[inline(always)]
 fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
     let [r, g, b, a] = decompose_rgba(color);
 
@@ -995,21 +1000,22 @@ fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
     let mut g2 = g;
     let mut b2 = b;
 
-    fn emphasize(col: u8) -> u8 {
-        col + 0x55
-    }
-
     if mask.emphasis_red() {
-        r2 = emphasize(r2);
+        r2 = emphasize_color(r2);
     }
     if mask.emphasis_green() {
-        g2 = emphasize(g2);
+        g2 = emphasize_color(g2);
     }
     if mask.emphasis_blue() {
-        b2 = emphasize(b2);
+        b2 = emphasize_color(b2);
     }
 
     compose_rgba(r2, g2, b2, a)
+}
+
+#[inline(always)]
+fn emphasize_color(col: u8) -> u8 {
+    col + 0x55
 }
 
 const NES_PALETTE: [u32; 64] = [

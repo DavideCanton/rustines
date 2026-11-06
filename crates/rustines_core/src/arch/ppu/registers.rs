@@ -126,6 +126,10 @@ impl PpuMask {
     pub fn rendering_enabled(&self) -> bool {
         self.show_background() || self.show_sprites()
     }
+
+    pub fn any_emphasis(&self) -> bool {
+        self.emphasis_blue() || self.emphasis_green() || self.emphasis_red()
+    }
 }
 
 bitfield! {

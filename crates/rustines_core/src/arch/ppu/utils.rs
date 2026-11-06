@@ -29,10 +29,12 @@ pub fn get_bits_mask<T: IntType>(lo: T, hi: T, mask: T) -> u8 {
     pixel
 }
 
+#[inline(always)]
 pub fn decompose_rgba(rgba: u32) -> [u8; 4] {
     rgba.to_be_bytes()
 }
 
+#[inline(always)]
 pub fn compose_rgba(r: u8, g: u8, b: u8, a: u8) -> u32 {
     ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32)
 }
