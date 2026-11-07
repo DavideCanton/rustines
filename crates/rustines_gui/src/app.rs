@@ -8,7 +8,8 @@ use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{
-    self as core, AudioOutputBox, NoAudio, Renderer, arch::bus::Controller2, renderer::RendererBox,
+    self as core, AudioOutputBox, NesRom, NoAudio, Renderer, arch::bus::Controller2,
+    renderer::RendererBox,
 };
 use rustines_gui_utils::FpsCounter;
 use std::{
@@ -51,6 +52,7 @@ impl SpeedupState {
 
 pub struct AppState {
     rom_name: String,
+    nes_rom: NesRom,
 
     bus: core::Bus,
     cpu: core::Cpu,
@@ -96,9 +98,22 @@ impl AppState {
     pub fn update_fps(&self) -> f64 {
         self.update_counter.current_fps()
     }
+
+    fn on_close(&self, platform: &dyn Platform) {
+        if self.nes_rom.header.battery_backed_prg_ram()
+            && let Some(p) = self.nes_rom.file_path.as_ref()
+            && let Some(m) = self.bus.mapper_ref().get_prg_ram()
+        {
+            let mut p = p.clone();
+            p.set_extension("sav");
+            platform.write_file(&p, m);
+            info!("Wrote save file to {p:?}");
+        }
+    }
 }
 
 struct AppStateInfo {
+    nes_rom: NesRom,
     mapper: core::MapperBox,
     rom_name: String,
 }
@@ -119,6 +134,7 @@ pub struct App {
 impl App {
     pub fn new(
         rom_name: String,
+        nes_rom: NesRom,
         mapper: core::MapperBox,
         trace_boot: bool,
         zapper: bool,
@@ -127,7 +143,11 @@ impl App {
         enable_debug_keys: bool,
     ) -> Self {
         App {
-            info: Some(AppStateInfo { mapper, rom_name }),
+            info: Some(AppStateInfo {
+                mapper,
+                nes_rom,
+                rom_name,
+            }),
             app_state: None,
             trace_boot,
             zapper,
@@ -162,7 +182,19 @@ impl App {
             Controller2::nes_controller()
         };
 
-        let info = self.info.take().unwrap();
+        let mut info = self.info.take().unwrap();
+
+        if info.nes_rom.header.battery_backed_prg_ram()
+            && let Some(p) = info.nes_rom.file_path.as_ref()
+        {
+            let mut p = p.clone();
+            p.set_extension("sav");
+
+            if let Some(content) = self.platform.read_file(&p) {
+                info!("Read save file from {p:?}");
+                info.mapper.set_prg_ram(&content);
+            }
+        }
 
         let mut bus = core::Bus::new(info.mapper, ppu, apu, ctrl2);
         let mut cpu = core::Cpu::new();
@@ -175,6 +207,7 @@ impl App {
 
         AppState {
             rom_name: info.rom_name,
+            nes_rom: info.nes_rom,
             bus,
             render_counter: FpsCounter::new(),
             update_counter: FpsCounter::new(),
@@ -334,6 +367,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     let esc_pressed = platform.esc_pressed_enabled() && input.key_pressed(KeyCode::Escape);
 
     if esc_pressed || input.close_requested() {
+        app_state.on_close(platform);
         event_loop.exit();
     } else {
         handle_special_keys(app_state, event_loop);

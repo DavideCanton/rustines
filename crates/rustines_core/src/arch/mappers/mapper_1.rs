@@ -203,6 +203,14 @@ impl Mapper for Mapper1 {
             _ => unreachable!(),
         }
     }
+
+    fn get_prg_ram(&self) -> Option<&[u8]> {
+        Some(self.prg_ram.memory())
+    }
+
+    fn set_prg_ram(&mut self, content: &[u8]) {
+        self.prg_ram.write_all(content);
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,9 @@
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
 bitfield! {
     #[derive(Clone, Copy, Pod, Zeroable)]
@@ -138,11 +141,15 @@ impl From<&[u8; 16]> for INesHeader {
 
 pub struct NesRom {
     pub header: INesHeader,
+    pub file_path: Option<PathBuf>,
 }
 
 impl NesRom {
-    pub fn new(header: INesHeader) -> Self {
-        NesRom { header }
+    pub fn new(path: Option<&Path>, header: INesHeader) -> Self {
+        NesRom {
+            header,
+            file_path: path.map(|p| p.to_owned()),
+        }
     }
 }
 

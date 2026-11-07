@@ -19,7 +19,7 @@ pub fn main() {
     info!("Using input file: {}", args.file_path);
 
     let file_path = Path::new(&args.file_path);
-    let (_, mapper) = read_file(file_path).unwrap();
+    let (nes_rom, mapper) = read_file(file_path).unwrap();
 
     info!(
         "Zapper {}",
@@ -30,6 +30,7 @@ pub fn main() {
 
     let mut app = App::new(
         file_path.file_name().unwrap().to_str().unwrap().to_string(),
+        nes_rom,
         mapper,
         args.trace_boot,
         args.zapper,

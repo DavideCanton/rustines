@@ -1,5 +1,6 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, fs, path::Path, rc::Rc, sync::Arc};
 
+use log::info;
 use rustines_core::Renderer;
 use rustines_gui::{AppState, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
 use winit::{dpi::PhysicalSize, window::Window};
@@ -40,6 +41,22 @@ impl Platform for DesktopPlatform {
 
     fn esc_pressed_enabled(&self) -> bool {
         true
+    }
+
+    fn read_file(&self, path: &Path) -> Option<Vec<u8>> {
+        fs::read(path)
+            .inspect_err(|e| {
+                info!("Cannot read {path:?}: {e}");
+            })
+            .ok()
+    }
+
+    fn write_file(&self, path: &Path, content: &[u8]) -> bool {
+        fs::write(path, content)
+            .inspect_err(|e| {
+                info!("Cannot read {path:?}: {e}");
+            })
+            .is_ok()
     }
 }
 

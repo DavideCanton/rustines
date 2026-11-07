@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::bail;
 use arrayref::array_ref;
 use log::{debug, error, info};
@@ -43,7 +45,11 @@ pub trait Loader: Named {
         Ok(header)
     }
 
-    fn load_rom_struct(&self, content: &[u8]) -> anyhow::Result<(NesRom, MapperBox)> {
+    fn load_rom_struct(
+        &self,
+        file_path: Option<&Path>,
+        content: &[u8],
+    ) -> anyhow::Result<(NesRom, MapperBox)> {
         let mut buf = self
             .load_rom(content)
             .map_err(|e| anyhow::anyhow!(format!("Error during load: {}", e)))?;
@@ -79,12 +85,15 @@ pub trait Loader: Named {
             ))
         })?;
 
-        Ok((NesRom::new(header), mapper))
+        Ok((NesRom::new(file_path, header), mapper))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+    use std::str::FromStr;
+
     use test_case::test_case;
 
     use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, PRG_ROM_BANK_SIZE, TRAINER_SIZE};
@@ -138,9 +147,13 @@ mod tests {
     #[test_case(true, TRAINER_SIZE + ROM_SIZE; "with trainer")]
     fn load_rom_struct_valid(trainer: bool, data_size: usize) {
         let (rom, mapper) = FlatLoader
-            .load_rom_struct(&rom(trainer, data_size))
+            .load_rom_struct(
+                Some(&PathBuf::from_str("foo/bar").unwrap()),
+                &rom(trainer, data_size),
+            )
             .unwrap();
         assert_eq!(rom.header.prg_rom_banks(), 2);
+        assert_eq!(rom.file_path, PathBuf::from_str("foo/bar").ok());
         assert_eq!(mapper.name(), "Mapper0");
     }
 
@@ -154,7 +167,7 @@ mod tests {
         } else {
             ROM_SIZE
         };
-        let result = FlatLoader.load_rom_struct(&rom(trainer, data_size));
+        let result = FlatLoader.load_rom_struct(None, &rom(trainer, data_size));
         assert_eq!(
             result.err().unwrap().to_string(),
             format!("Invalid ROM: expected {expected} bytes after the header, found {data_size}")
@@ -164,7 +177,7 @@ mod tests {
     #[test_case(0)]
     #[test_case(15)]
     fn load_rom_struct_shorter_than_header(size: usize) {
-        let result = FlatLoader.load_rom_struct(&header_bytes(2)[..size]);
+        let result = FlatLoader.load_rom_struct(None, &header_bytes(2)[..size]);
         assert_eq!(
             result.err().unwrap().to_string(),
             format!("Invalid ROM: expected at least 16 bytes for the header, found {size}")

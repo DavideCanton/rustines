@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
 use winit::{dpi::PhysicalSize, window::Window};
@@ -15,4 +15,6 @@ pub trait Platform {
         size: PhysicalSize<u32>,
     );
     fn esc_pressed_enabled(&self) -> bool;
+    fn read_file(&self, path: &Path) -> Option<Vec<u8>>;
+    fn write_file(&self, path: &Path, content: &[u8]) -> bool;
 }

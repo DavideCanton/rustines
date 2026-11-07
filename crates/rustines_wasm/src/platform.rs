@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
 use rustines_gui::{AppState, INNER_SIZE, Platform, create_pixels};
@@ -75,6 +75,14 @@ impl Platform for WasmPlatform {
     }
 
     fn esc_pressed_enabled(&self) -> bool {
+        false
+    }
+
+    fn read_file(&self, _path: &Path) -> Option<Vec<u8>> {
+        None
+    }
+
+    fn write_file(&self, _path: &Path, _content: &[u8]) -> bool {
         false
     }
 }

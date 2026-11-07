@@ -45,13 +45,14 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
 
     let loader = core::decode_loader(ext);
 
-    let (_, mapper) = loader
-        .load_rom_struct(buf)
+    let (nes_rom, mapper) = loader
+        .load_rom_struct(None, buf)
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
 
     let event_loop = EventLoop::new().map_err(|err| JsValue::from_str(&err.to_string()))?;
     let app = App::new(
         name.to_string(),
+        nes_rom,
         mapper,
         false,
         zapper,
