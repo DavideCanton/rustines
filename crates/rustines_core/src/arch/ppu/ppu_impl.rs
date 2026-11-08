@@ -61,7 +61,7 @@ pub struct PpuState {
 
     pub(crate) scanline: i16,
     pub(crate) cycle: u16,
-    pub(crate) frame: u16,
+    pub(crate) frame: u64,
 
     pub(crate) nmi_request: bool,
     pub(crate) frame_ready: bool,
@@ -156,7 +156,7 @@ impl Ppu {
         self.state.nmi_request = false;
     }
 
-    pub fn current_frame(&self) -> u16 {
+    pub fn current_frame(&self) -> u64 {
         self.state.frame
     }
 

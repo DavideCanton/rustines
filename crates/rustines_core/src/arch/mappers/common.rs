@@ -69,6 +69,14 @@ impl BankedMemory {
     pub fn write_banked(&mut self, bank: usize, bank_size: usize, addr: u16, val: u8) {
         self.write(Self::banked_offset(bank, bank_size, addr), val)
     }
+
+    pub fn memory(&self) -> &[u8] {
+        &self.data
+    }
+
+    pub(crate) fn write_all(&mut self, content: &[u8]) {
+        self.data.copy_from_slice(content);
+    }
 }
 
 /// CHR memory: CHR ROM from the cartridge, or 8KB of CHR RAM when the header declares no

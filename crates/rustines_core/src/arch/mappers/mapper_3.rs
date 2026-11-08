@@ -11,6 +11,7 @@ pub struct Mapper3 {
     /// 16KB or 32KB, a 16KB PRG ROM is mirrored on $C000-$FFFF.
     prg_rom: BankedMemory,
     /// Mirrored over $6000-$7FFF when smaller than 8KB.
+    /// not battery backed, so no need to implement get/set prg ram
     prg_ram: Option<BankedMemory>,
     chr_rom: BankedMemory,
     mirroring_type: MirroringType,

@@ -133,6 +133,10 @@ impl Bus {
         self.mapper.as_ref()
     }
 
+    pub fn mapper_mut(&mut self) -> &mut dyn Mapper {
+        self.mapper.as_mut()
+    }
+
     pub fn controller1_mut(&mut self) -> &mut NesController {
         &mut self.controller1
     }

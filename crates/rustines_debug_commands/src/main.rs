@@ -43,7 +43,7 @@ fn read_file(
     file.read_to_end(&mut buf)?;
 
     let (rom, mapper) = loader
-        .load_rom_struct(&buf)
+        .load_rom_struct(Some(file_path), &buf)
         .map_err(|e| RustinesDebugError::FileFormatError(e.to_string()))?;
 
     Ok((rom, mapper))

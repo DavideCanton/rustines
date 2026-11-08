@@ -1,7 +1,11 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
-
+use log::info;
+use rexie::{ObjectStore, Rexie, TransactionMode};
 use rustines_core::Renderer;
-use rustines_gui::{AppState, INNER_SIZE, Platform, create_pixels};
+use rustines_gui::{AppState, CustomEvents, INNER_SIZE, Platform, create_pixels};
+use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
+use wasm_bindgen::JsValue;
+use web_sys::js_sys::Uint8Array;
+use winit::event_loop::EventLoopProxy;
 
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
@@ -10,6 +14,9 @@ use winit::platform::web::WindowExtWebSys;
 use winit::window::Window;
 
 pub struct WasmPlatform;
+
+const DB_NAME: &str = "RustinesDB";
+const STORE_NAME: &str = "files";
 
 fn format_fps(fps: f64) -> String {
     format!("{:.1}", fps)
@@ -20,17 +27,17 @@ impl Platform for WasmPlatform {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
 
-        document
-            .get_element_by_id("filename")
-            .map(|e| e.set_text_content(Some(app_state.rom_name())));
+        if let Some(e) = document.get_element_by_id("filename") {
+            e.set_text_content(Some(app_state.rom_name()))
+        }
 
-        document
-            .get_element_by_id("r_fps")
-            .map(|e| e.set_text_content(Some(&format_fps(app_state.render_fps()))));
+        if let Some(e) = document.get_element_by_id("r_fps") {
+            e.set_text_content(Some(&format_fps(app_state.render_fps())))
+        }
 
-        document
-            .get_element_by_id("u_fps")
-            .map(|e| e.set_text_content(Some(&format_fps(app_state.update_fps()))));
+        if let Some(e) = document.get_element_by_id("u_fps") {
+            e.set_text_content(Some(&format_fps(app_state.update_fps())))
+        }
     }
 
     fn init_window_hook(&self, window: Arc<Window>, size: PhysicalSize<u32>) {
@@ -77,4 +84,82 @@ impl Platform for WasmPlatform {
     fn esc_pressed_enabled(&self) -> bool {
         false
     }
+
+    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
+        if let Ok(name) = resolve_filename(path) {
+            let proxy = proxy.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let res = read_file(name)
+                    .await
+                    .inspect_err(|e| {
+                        info!("Failed to read saved data: {e:?}");
+                    })
+                    .ok()
+                    .flatten();
+                let _ = proxy.send_event(CustomEvents::LoadedPrgRam(res));
+            })
+        }
+    }
+
+    fn start_write_file(&self, path: &Path, content: &[u8]) {
+        if let Ok(name) = resolve_filename(path) {
+            let content = content.to_vec();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Err(e) = write_file(&name, &content).await {
+                    info!("Failed to write save data: {e:?}");
+                }
+            });
+        }
+    }
+
+    fn should_exit(&self) -> bool {
+        false
+    }
+}
+
+fn resolve_filename(path: &Path) -> Result<String, String> {
+    let name = path.file_name().ok_or("No file name")?;
+    let name = name.to_str().ok_or("Cannot convert path")?;
+    Ok(name.to_owned())
+}
+
+async fn read_file(name: String) -> rexie::Result<Option<Vec<u8>>> {
+    let rexie = Rexie::builder(DB_NAME)
+        .add_object_store(ObjectStore::new(STORE_NAME))
+        .build()
+        .await?;
+
+    let tx = rexie.transaction(&[STORE_NAME], TransactionMode::ReadOnly)?;
+    let store = tx.store(STORE_NAME)?;
+
+    let res = store.get(JsValue::from_str(&name)).await?.and_then(|val| {
+        if val.is_null() || val.is_undefined() {
+            None
+        } else {
+            let uint8_array = Uint8Array::new(&val);
+            Some(uint8_array.to_vec())
+        }
+    });
+
+    Ok(res)
+}
+
+async fn write_file(name: &str, content: &[u8]) -> rexie::Result<()> {
+    let rexie = Rexie::builder(DB_NAME)
+        .add_object_store(ObjectStore::new(STORE_NAME))
+        .build()
+        .await?;
+
+    let tx = rexie.transaction(&[STORE_NAME], TransactionMode::ReadWrite)?;
+    let store = tx.store(STORE_NAME)?;
+
+    let uint8_array = Uint8Array::from(content);
+
+    store
+        .put(&uint8_array, Some(&JsValue::from_str(name)))
+        .await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }

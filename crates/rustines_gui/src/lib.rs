@@ -6,7 +6,7 @@ mod platform;
 mod renderer;
 mod utils;
 
-pub use app::{App, AppState, create_pixels};
+pub use app::{App, AppState, CustomEvents, create_pixels};
 pub use audio::CpalOutput;
 pub use constants::INNER_SIZE;
 pub use platform::Platform;

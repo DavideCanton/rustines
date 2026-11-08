@@ -1,8 +1,9 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, fs, path::Path, rc::Rc, sync::Arc};
 
+use log::info;
 use rustines_core::Renderer;
-use rustines_gui::{AppState, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
-use winit::{dpi::PhysicalSize, window::Window};
+use rustines_gui::{AppState, CustomEvents, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
+use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
 
 pub struct DesktopPlatform;
 
@@ -39,6 +40,25 @@ impl Platform for DesktopPlatform {
     }
 
     fn esc_pressed_enabled(&self) -> bool {
+        true
+    }
+
+    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
+        let ret = fs::read(path)
+            .inspect_err(|e| {
+                info!("Cannot read {path:?}: {e}");
+            })
+            .ok();
+        let _ = proxy.send_event(CustomEvents::LoadedPrgRam(ret));
+    }
+
+    fn start_write_file(&self, path: &Path, content: &[u8]) {
+        let _ = fs::write(path, content).inspect_err(|e| {
+            info!("Cannot read {path:?}: {e}");
+        });
+    }
+
+    fn should_exit(&self) -> bool {
         true
     }
 }

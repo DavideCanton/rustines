@@ -91,7 +91,7 @@ pub fn read_file(file_path: &path::Path) -> Result<(core::NesRom, MapperBox), St
     debug!("Read {} bytes", read);
 
     let loaded = loader
-        .load_rom_struct(&buf)
+        .load_rom_struct(Some(file_path), &buf)
         .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
     Ok(loaded)

@@ -1,9 +1,9 @@
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
-use winit::{dpi::PhysicalSize, window::Window};
+use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
 
-use crate::app::AppState;
+use crate::{CustomEvents, app::AppState};
 
 pub trait Platform {
     fn set_title(&self, app_state: &AppState);
@@ -15,4 +15,7 @@ pub trait Platform {
         size: PhysicalSize<u32>,
     );
     fn esc_pressed_enabled(&self) -> bool;
+    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>);
+    fn start_write_file(&self, path: &Path, content: &[u8]);
+    fn should_exit(&self) -> bool;
 }

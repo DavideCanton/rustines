@@ -19,23 +19,25 @@ pub fn main() {
     info!("Using input file: {}", args.file_path);
 
     let file_path = Path::new(&args.file_path);
-    let (_, mapper) = read_file(file_path).unwrap();
+    let (nes_rom, mapper) = read_file(file_path).unwrap();
 
     info!(
         "Zapper {}",
         if args.zapper { "enabled" } else { "disabled" }
     );
 
-    let event_loop = EventLoop::new().unwrap();
+    let event_loop = EventLoop::with_user_event().build().unwrap();
 
     let mut app = App::new(
         file_path.file_name().unwrap().to_str().unwrap().to_string(),
+        nes_rom,
         mapper,
         args.trace_boot,
         args.zapper,
         WIDTH,
-        Box::new(platform::DesktopPlatform),
+        platform::DesktopPlatform,
         true,
+        event_loop.create_proxy(),
     );
 
     let _ = event_loop.run_app(&mut app);
