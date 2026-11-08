@@ -1,3 +1,5 @@
+use crate::arch::memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter};
+
 #[derive(Default, Debug)]
 pub struct LengthCounter {
     counter: u8,
@@ -22,6 +24,18 @@ impl LengthCounter {
 
     pub fn running(&self) -> bool {
         self.counter > 0
+    }
+}
+
+impl MementoWriteable for LengthCounter {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.counter);
+    }
+}
+
+impl MementoReadAndFill for LengthCounter {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.counter = data.read_memento();
     }
 }
 
@@ -80,6 +94,28 @@ impl Envelope {
     }
 }
 
+impl MementoWriteable for Envelope {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.start);
+        writer.write_memento(self.divider);
+        writer.write_memento(self.decay);
+        writer.write_memento(self.loop_flag);
+        writer.write_memento(self.const_vol);
+        writer.write_memento(self.vol);
+    }
+}
+
+impl MementoReadAndFill for Envelope {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.start = data.read_memento();
+        self.divider = data.read_memento();
+        self.decay = data.read_memento();
+        self.loop_flag = data.read_memento();
+        self.const_vol = data.read_memento();
+        self.vol = data.read_memento();
+    }
+}
+
 pub struct Sequencer {
     value: u8,
     max: u8,
@@ -99,5 +135,19 @@ impl Sequencer {
         if self.value == self.max {
             self.value = 0;
         }
+    }
+}
+
+impl MementoWriteable for Sequencer {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.value);
+        writer.write_memento(self.max);
+    }
+}
+
+impl MementoReadAndFill for Sequencer {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.value = data.read_memento();
+        self.max = data.read_memento();
     }
 }

@@ -3,9 +3,11 @@ use log::trace;
 use crate::{
     arch::{
         apu::Apu,
-        common::replace,
         controller::NesController,
         mappers::mapper::{Mapper, MapperBox},
+        memento::{
+            MementoReadAndFill, MementoReadable, MementoReader, MementoWriteable, MementoWriter,
+        },
         ppu::Ppu,
         zapper::Zapper,
     },
@@ -291,7 +293,7 @@ impl Bus {
         match address {
             0x0000..=0x1FFF => {
                 let ind = address & 0b0000_0111_1111_1111;
-                replace(&mut self.nes_ram, ind as usize, val);
+                self.nes_ram[ind as usize] = val;
             }
             0x2000..=0x3FFF => {
                 let ind = address & 0b0000_0000_0000_0111;
@@ -403,6 +405,38 @@ impl Bus {
     }
 }
 
+impl MementoWriteable for Bus {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento_ref(&self.nes_ram.as_slice());
+        writer.write_memento_ref(self.ppu.state());
+        writer.write_memento_ref(self.apu.state());
+        // mapper
+        writer.write_memento(self.open_bus_value);
+        writer.write_memento(self.cycles_cnt);
+        writer.write_memento(self.total_cycles);
+        writer.write_memento(self.tracing_enabled);
+        writer.write_memento(self.oam_dma_state);
+        writer.write_memento(self.dmc_dma_state);
+    }
+}
+
+impl MementoReadAndFill for Bus {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.nes_ram = data.read_memento();
+        self.ppu.state_mut().read_and_fill(data);
+        self.apu.state_mut().read_and_fill(data);
+        // mapper
+        self.controller1.reset();
+        self.controller2.reset();
+        self.open_bus_value = data.read_memento();
+        self.cycles_cnt = data.read_memento();
+        self.total_cycles = data.read_memento();
+        self.tracing_enabled = data.read_memento();
+        self.oam_dma_state = data.read_memento();
+        self.dmc_dma_state = data.read_memento();
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum OamDmaState {
     NotRunning,
@@ -426,6 +460,66 @@ pub enum OamDmaState {
     },
 }
 
+impl MementoWriteable for OamDmaState {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        match self {
+            OamDmaState::NotRunning => writer.write_memento(0u8),
+            OamDmaState::Starting {
+                cnt,
+                address,
+                needs_alignment,
+            } => {
+                writer.write_memento(1u8);
+                writer.write_memento_ref(cnt);
+                writer.write_memento_ref(address);
+                writer.write_memento_ref(needs_alignment);
+            }
+            OamDmaState::Aligning { cnt, address } => {
+                writer.write_memento(2u8);
+                writer.write_memento_ref(cnt);
+                writer.write_memento_ref(address);
+            }
+            OamDmaState::Reading { cnt, address } => {
+                writer.write_memento(3u8);
+                writer.write_memento_ref(cnt);
+                writer.write_memento_ref(address);
+            }
+            OamDmaState::Writing { cnt, address, data } => {
+                writer.write_memento(4u8);
+                writer.write_memento_ref(cnt);
+                writer.write_memento_ref(address);
+                writer.write_memento_ref(data);
+            }
+        }
+    }
+}
+impl MementoReadable for OamDmaState {
+    fn read_memento(reader: &mut MementoReader) -> Self {
+        match reader.read_memento::<u8>() {
+            0 => OamDmaState::NotRunning,
+            1 => OamDmaState::Starting {
+                cnt: reader.read_memento(),
+                address: reader.read_memento(),
+                needs_alignment: reader.read_memento(),
+            },
+            2 => OamDmaState::Aligning {
+                cnt: reader.read_memento(),
+                address: reader.read_memento(),
+            },
+            3 => OamDmaState::Reading {
+                cnt: reader.read_memento(),
+                address: reader.read_memento(),
+            },
+            4 => OamDmaState::Writing {
+                cnt: reader.read_memento(),
+                address: reader.read_memento(),
+                data: reader.read_memento(),
+            },
+            _ => panic!("Invalid value"),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum DmcDmaState {
     NotRunning,
@@ -433,6 +527,50 @@ pub enum DmcDmaState {
     Dummy { address: u16 },
     Alignment { address: u16 },
     Read { address: u16 },
+}
+
+impl MementoWriteable for DmcDmaState {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        match self {
+            DmcDmaState::NotRunning => writer.write_memento(0u8),
+            DmcDmaState::Halt { address } => {
+                writer.write_memento(1u8);
+                writer.write_memento_ref(address);
+            }
+            DmcDmaState::Dummy { address } => {
+                writer.write_memento(2u8);
+                writer.write_memento_ref(address);
+            }
+            DmcDmaState::Alignment { address } => {
+                writer.write_memento(3u8);
+                writer.write_memento_ref(address);
+            }
+            DmcDmaState::Read { address } => {
+                writer.write_memento(4u8);
+                writer.write_memento_ref(address);
+            }
+        }
+    }
+}
+impl MementoReadable for DmcDmaState {
+    fn read_memento(reader: &mut MementoReader) -> Self {
+        match reader.read_memento::<u8>() {
+            0 => DmcDmaState::NotRunning,
+            1 => DmcDmaState::Halt {
+                address: reader.read_memento(),
+            },
+            2 => DmcDmaState::Dummy {
+                address: reader.read_memento(),
+            },
+            3 => DmcDmaState::Alignment {
+                address: reader.read_memento(),
+            },
+            4 => DmcDmaState::Read {
+                address: reader.read_memento(),
+            },
+            _ => panic!("Invalid value"),
+        }
+    }
 }
 
 pub struct DummyReadResult {

@@ -17,5 +17,5 @@ pub mod debug_utils;
 #[cfg(test)]
 mod arch_tests;
 
-mod common;
 mod instr_tracer;
+mod memento;

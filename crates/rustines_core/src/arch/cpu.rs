@@ -5,6 +5,7 @@ use crate::{
         bus::{Bus, DmcDmaState, DummyReadResult, OamDmaState},
         instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
         registers::*,
     },
     utils::bit_utils::*,
@@ -368,6 +369,27 @@ impl Cpu {
 
         bus.set_dmc_dma_state(next_state);
         self.clock += 1;
+    }
+}
+
+impl MementoWriteable for Cpu {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento_ref(&self.registers);
+        writer.write_memento(self.clock);
+        writer.write_memento(self.pending_irq_execution);
+        writer.write_memento(self.pending_nmi_execution);
+        writer.write_memento(self.pending_rst_execution);
+        // ignore tracer
+    }
+}
+
+impl MementoReadAndFill for Cpu {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.registers.read_and_fill(data);
+        self.clock = data.read_memento();
+        self.pending_irq_execution = data.read_memento();
+        self.pending_nmi_execution = data.read_memento();
+        self.pending_rst_execution = data.read_memento();
     }
 }
 

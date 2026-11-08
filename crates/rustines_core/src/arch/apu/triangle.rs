@@ -1,5 +1,8 @@
 use crate::{
-    arch::apu::common::{LengthCounter, Sequencer},
+    arch::{
+        apu::common::{LengthCounter, Sequencer},
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+    },
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
@@ -109,6 +112,38 @@ impl Triangle {
 
     fn timer_period(&self) -> u16 {
         ((self.timer_high as u16 & 0x07) << 8) | self.timer_low as u16
+    }
+}
+
+impl MementoWriteable for Triangle {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.counter_ctl);
+        writer.write_memento(self.counter_load);
+        writer.write_memento(self.timer_low);
+        writer.write_memento(self.timer_high);
+        writer.write_memento(self.length_counter_load);
+        writer.write_memento(self.enabled);
+        writer.write_memento(self.timer_counter);
+        writer.write_memento_ref(&self.length_counter);
+        writer.write_memento(self.linear_counter);
+        writer.write_memento(self.linear_counter_reload);
+        writer.write_memento_ref(&self.sequencer);
+    }
+}
+
+impl MementoReadAndFill for Triangle {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.counter_ctl = data.read_memento();
+        self.counter_load = data.read_memento();
+        self.timer_low = data.read_memento();
+        self.timer_high = data.read_memento();
+        self.length_counter_load = data.read_memento();
+        self.enabled = data.read_memento();
+        self.timer_counter = data.read_memento();
+        self.length_counter.read_and_fill(data);
+        self.linear_counter = data.read_memento();
+        self.linear_counter_reload = data.read_memento();
+        self.sequencer.read_and_fill(data);
     }
 }
 

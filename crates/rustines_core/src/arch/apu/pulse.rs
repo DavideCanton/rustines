@@ -1,5 +1,8 @@
 use crate::{
-    arch::apu::common::{Envelope, LengthCounter, Sequencer},
+    arch::{
+        apu::common::{Envelope, LengthCounter, Sequencer},
+        memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter},
+    },
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
@@ -169,6 +172,48 @@ impl Pulse {
     fn sweep_mute(&self) -> bool {
         let target = self.sweep_target_period();
         self.timer_period() < 8 || target > 0x07FF
+    }
+}
+
+impl MementoWriteable for Pulse {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.duty);
+        writer.write_memento(self.sweep_enabled);
+        writer.write_memento(self.sweep_period);
+        writer.write_memento(self.sweep_negate);
+        writer.write_memento(self.sweep_shift);
+        writer.write_memento(self.timer_low);
+        writer.write_memento(self.timer_high);
+        writer.write_memento(self.length_counter_load);
+        writer.write_memento_ref(&self.envelope);
+        writer.write_memento(self.timer_counter);
+        writer.write_memento_ref(&self.sequencer);
+        writer.write_memento_ref(&self.length_counter);
+        writer.write_memento(self.enabled);
+        writer.write_memento(self.sweep_divider);
+        writer.write_memento(self.sweep_reload);
+        writer.write_memento(self.is_pulse1);
+    }
+}
+
+impl MementoReadAndFill for Pulse {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.duty = data.read_memento();
+        self.sweep_enabled = data.read_memento();
+        self.sweep_period = data.read_memento();
+        self.sweep_negate = data.read_memento();
+        self.sweep_shift = data.read_memento();
+        self.timer_low = data.read_memento();
+        self.timer_high = data.read_memento();
+        self.length_counter_load = data.read_memento();
+        self.envelope.read_and_fill(data);
+        self.timer_counter = data.read_memento();
+        self.sequencer.read_and_fill(data);
+        self.length_counter.read_and_fill(data);
+        self.enabled = data.read_memento();
+        self.sweep_divider = data.read_memento();
+        self.sweep_reload = data.read_memento();
+        self.is_pulse1 = data.read_memento();
     }
 }
 

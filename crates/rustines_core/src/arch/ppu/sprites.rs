@@ -3,7 +3,13 @@ use std::fmt;
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 
-use crate::{arch::ppu::utils::get_bits_mask, utils::bit_utils::NumberFormat};
+use crate::{
+    arch::{
+        memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter},
+        ppu::utils::get_bits_mask,
+    },
+    utils::bit_utils::NumberFormat,
+};
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
@@ -102,5 +108,22 @@ impl fmt::Display for SpriteShifters {
             self.x,
             self.attributes
         )
+    }
+}
+impl MementoWriteable for SpriteShifters {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.lo_shifter);
+        writer.write_memento(self.hi_shifter);
+        writer.write_memento(self.x);
+        writer.write_memento(self.attributes.0);
+    }
+}
+
+impl MementoReadAndFill for SpriteShifters {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.lo_shifter = data.read_memento();
+        self.hi_shifter = data.read_memento();
+        self.x = data.read_memento();
+        self.attributes.0 = data.read_memento();
     }
 }

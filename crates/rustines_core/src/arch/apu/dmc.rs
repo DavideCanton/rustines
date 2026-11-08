@@ -1,4 +1,7 @@
-use crate::utils::bit_utils::{BitCount, BitIndex, BitManip};
+use crate::{
+    arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+    utils::bit_utils::{BitCount, BitIndex, BitManip},
+};
 
 pub struct Dmc {
     irq_enable: bool,
@@ -168,6 +171,48 @@ impl Dmc {
 
         self.shift_register >>= 1;
         self.bits_remaining -= 1;
+    }
+}
+
+impl MementoWriteable for Dmc {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.irq_enable);
+        writer.write_memento(self.irq_active);
+        writer.write_memento(self.loop_flag);
+        writer.write_memento(self.freq);
+        writer.write_memento(self.direct_load);
+        writer.write_memento(self.address);
+        writer.write_memento(self.bytes_remaining);
+        writer.write_memento(self.bits_remaining);
+        writer.write_memento(self.sample_length);
+        writer.write_memento(self.timer);
+        writer.write_memento(self.enabled);
+        writer.write_memento(self.sample_buffer);
+        writer.write_memento(self.shift_register);
+        writer.write_memento(self.silence);
+        writer.write_memento(self.output_level);
+        writer.write_memento(self.current_address);
+    }
+}
+
+impl MementoReadAndFill for Dmc {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.irq_enable = data.read_memento();
+        self.irq_active = data.read_memento();
+        self.loop_flag = data.read_memento();
+        self.freq = data.read_memento();
+        self.direct_load = data.read_memento();
+        self.address = data.read_memento();
+        self.bytes_remaining = data.read_memento();
+        self.bits_remaining = data.read_memento();
+        self.sample_length = data.read_memento();
+        self.timer = data.read_memento();
+        self.enabled = data.read_memento();
+        self.sample_buffer = data.read_memento();
+        self.shift_register = data.read_memento();
+        self.silence = data.read_memento();
+        self.output_level = data.read_memento();
+        self.current_address = data.read_memento();
     }
 }
 

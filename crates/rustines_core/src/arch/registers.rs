@@ -1,7 +1,10 @@
 use bitfield::bitfield;
 use std::fmt;
 
-use crate::utils::bit_utils::{BitIndex, BitManip};
+use crate::{
+    arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+    utils::bit_utils::{BitIndex, BitManip},
+};
 
 bitfield! {
     #[derive(Clone, Copy)]
@@ -129,6 +132,28 @@ impl fmt::Debug for Registers {
             .field("y_reg", &format!("{:#04x}", self.y_reg))
             .field("p_reg", &format!("{:?}", self.p_reg))
             .finish()
+    }
+}
+
+impl MementoWriteable for Registers {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.pc);
+        writer.write_memento(self.sp);
+        writer.write_memento(self.a_reg);
+        writer.write_memento(self.x_reg);
+        writer.write_memento(self.y_reg);
+        writer.write_memento(self.p_reg.0);
+    }
+}
+
+impl MementoReadAndFill for Registers {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.pc = data.read_memento();
+        self.sp = data.read_memento();
+        self.a_reg = data.read_memento();
+        self.x_reg = data.read_memento();
+        self.y_reg = data.read_memento();
+        self.p_reg.0 = data.read_memento();
     }
 }
 

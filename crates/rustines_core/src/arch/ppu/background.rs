@@ -1,7 +1,10 @@
 use std::fmt;
 
 use crate::{
-    arch::ppu::utils::get_bits_mask,
+    arch::{
+        memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter},
+        ppu::utils::get_bits_mask,
+    },
     utils::bit_utils::{BitIndex as BI, BitManip, NumberFormat},
 };
 
@@ -64,5 +67,32 @@ impl fmt::Display for BackgroundData {
             self.latch_pl.hex(),
             self.latch_ph.hex(),
         )
+    }
+}
+
+impl MementoWriteable for BackgroundData {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento(self.shifter_pattern_lo);
+        writer.write_memento(self.shifter_pattern_hi);
+        writer.write_memento(self.shifter_attrib_lo);
+        writer.write_memento(self.shifter_attrib_hi);
+
+        writer.write_memento(self.latch_nt);
+        writer.write_memento(self.latch_at);
+        writer.write_memento(self.latch_pl);
+        writer.write_memento(self.latch_ph);
+    }
+}
+impl MementoReadAndFill for BackgroundData {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.shifter_pattern_lo = data.read_memento();
+        self.shifter_pattern_hi = data.read_memento();
+        self.shifter_attrib_lo = data.read_memento();
+        self.shifter_attrib_hi = data.read_memento();
+
+        self.latch_nt = data.read_memento();
+        self.latch_at = data.read_memento();
+        self.latch_pl = data.read_memento();
+        self.latch_ph = data.read_memento();
     }
 }

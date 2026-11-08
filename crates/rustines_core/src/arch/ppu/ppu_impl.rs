@@ -3,6 +3,7 @@ use std::{array, mem};
 use crate::{
     arch::{
         mappers::mapper::Mapper,
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
         ppu::{
             OamSprite,
             background::BackgroundData,
@@ -127,6 +128,91 @@ impl PpuState {
     }
 }
 
+impl MementoWriteable for PpuState {
+    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+        writer.write_memento_ref(&self.nametables.as_slice());
+        writer.write_memento_ref(&self.palette_table.as_slice());
+        writer.write_memento_ref(&self.oam_data.as_slice());
+
+        writer.write_memento(self.ctrl.0);
+        writer.write_memento(self.mask.0);
+        writer.write_memento(self.status.0);
+        writer.write_memento(self.open_bus_value);
+        writer.write_memento(self.open_bus_decay_timer);
+        writer.write_memento(self.v_reg.0);
+        writer.write_memento(self.t_reg.0);
+        writer.write_memento(self.x_reg);
+        writer.write_memento(self.w_toggle);
+        writer.write_memento_ref(&self.bg_data);
+        writer.write_memento_ref(&self.sprite_shifters.as_slice());
+        writer.write_memento_ref(&self.secondary_oam.as_slice());
+        writer.write_memento(self.secondary_oam_addr);
+        writer.write_memento(self.oam_data_latch);
+        writer.write_memento(self.sprite_zero_current);
+        writer.write_memento(self.sprite_zero_next);
+        writer.write_memento(self.secondary_oam_full);
+        writer.write_memento(self.oam_end);
+        writer.write_memento(self.to_copy);
+        writer.write_memento(self.suppress_vblank);
+        writer.write_memento(self.oam_addr);
+        writer.write_memento(self.data_buffer);
+        writer.write_memento(self.scanline as u16);
+        writer.write_memento(self.cycle);
+        writer.write_memento(self.frame);
+        writer.write_memento(self.nmi_request);
+        writer.write_memento(self.frame_ready);
+        writer.write_memento(self.is_odd_frame);
+        writer.write_memento(self.zapper_position);
+        writer.write_memento(self.zapper_light_timer);
+        writer.write_memento(self.tracing_enabled);
+        writer.write_memento(self.debug_render_sprites_enabled);
+        writer.write_memento(self.debug_render_background_enabled);
+    }
+}
+
+impl MementoReadAndFill for PpuState {
+    fn read_and_fill(&mut self, reader: &mut MementoReader) {
+        self.nametables = reader.read_memento();
+        self.palette_table = reader.read_memento();
+        self.oam_data = reader.read_memento();
+        self.ctrl.0 = reader.read_memento();
+        self.mask.0 = reader.read_memento();
+        self.status.0 = reader.read_memento();
+        self.open_bus_value = reader.read_memento();
+        self.open_bus_decay_timer = reader.read_memento();
+        self.v_reg.0 = reader.read_memento();
+        self.t_reg.0 = reader.read_memento();
+        self.x_reg = reader.read_memento();
+        self.w_toggle = reader.read_memento();
+        self.bg_data.read_and_fill(reader);
+        for shifter in &mut self.sprite_shifters {
+            shifter.read_and_fill(reader);
+        }
+        self.secondary_oam = reader.read_memento();
+        self.secondary_oam_addr = reader.read_memento();
+        self.oam_data_latch = reader.read_memento();
+        self.sprite_zero_current = reader.read_memento();
+        self.sprite_zero_next = reader.read_memento();
+        self.secondary_oam_full = reader.read_memento();
+        self.oam_end = reader.read_memento();
+        self.to_copy = reader.read_memento();
+        self.suppress_vblank = reader.read_memento();
+        self.oam_addr = reader.read_memento();
+        self.data_buffer = reader.read_memento();
+        self.scanline = reader.read_memento::<u16>() as i16;
+        self.cycle = reader.read_memento();
+        self.frame = reader.read_memento();
+        self.nmi_request = reader.read_memento();
+        self.frame_ready = reader.read_memento();
+        self.is_odd_frame = reader.read_memento();
+        self.zapper_position = reader.read_memento();
+        self.zapper_light_timer = reader.read_memento();
+        self.tracing_enabled = reader.read_memento();
+        self.debug_render_sprites_enabled = reader.read_memento();
+        self.debug_render_background_enabled = reader.read_memento();
+    }
+}
+
 pub struct Ppu {
     pub(crate) state: PpuState,
     renderer: RendererBox,
@@ -146,6 +232,14 @@ impl Ppu {
 
     pub fn reset(&mut self) {
         self.state = PpuState::new();
+    }
+
+    pub fn state(&self) -> &PpuState {
+        &self.state
+    }
+
+    pub fn state_mut(&mut self) -> &mut PpuState {
+        &mut self.state
     }
 
     pub fn take_nmi_requested(&mut self) -> bool {
