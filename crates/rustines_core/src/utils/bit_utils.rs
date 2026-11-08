@@ -14,8 +14,8 @@ pub fn to_u16(low: u8, high: u8) -> u16 {
 /// returning `(low, high)`.
 #[inline(always)]
 pub fn to_u8_lh(v: u16) -> (u8, u8) {
-    let low = (v & 0b1111_1111) as u8;
-    let high = ((v >> 8) & 0b1111_1111) as u8;
+    let low = (v & 0xFF) as u8;
+    let high = ((v >> 8) & 0xFF) as u8;
 
     (low, high)
 }
