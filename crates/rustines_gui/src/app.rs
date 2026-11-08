@@ -2,14 +2,14 @@ use crate::{
     CpalOutput, Platform,
     constants::{INNER_SIZE, width_to_size},
     pattern_window::PatternTableWindow,
+    platform::PendingRenderer,
 };
 use gilrs::{Button, EventType, Gilrs};
 use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{
-    self as core, AudioOutputBox, NesRom, NoAudio, Renderer, arch::bus::Controller2,
-    renderer::RendererBox,
+    self as core, AudioOutputBox, NesRom, NoAudio, arch::bus::Controller2, renderer::RendererBox,
 };
 use rustines_gui_utils::FpsCounter;
 use std::{
@@ -131,13 +131,13 @@ struct AppStateInfo {
     rom_name: String,
 }
 
-pub struct App<P: Platform> {
+pub struct App<P> {
     app_state: Option<AppState>,
     info: Option<AppStateInfo>,
     trace_boot: bool,
     zapper: bool,
     pending_window: Option<Arc<Window>>,
-    pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
+    pending_renderer: PendingRenderer,
     platform: P,
     size: PhysicalSize<u32>,
     gilrs: Gilrs,
