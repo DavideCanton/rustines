@@ -19,7 +19,6 @@ log = { workspace = true }
 wasm-bindgen-futures = "0.4"
 pixels = { workspace = true }
 cpal = { version = "0.18", features = ["wasm-bindgen"] }
-base64 = "0.23"
 rexie = "0.6"
 
 [package.metadata.wasm-pack.profile.release]
