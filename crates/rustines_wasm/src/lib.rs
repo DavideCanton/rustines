@@ -6,7 +6,6 @@ mod renderer;
 use log::warn;
 use rustines_core as core;
 
-use console_error_panic_hook::hook;
 use rustines_gui::{App, CustomEvents};
 use std::{
     panic::{PanicHookInfo, set_hook},
@@ -29,7 +28,7 @@ fn panic_hook(info: &PanicHookInfo) {
         warn!("Can't display fancy error!");
     }
 
-    hook(info);
+    console_error_panic_hook::hook(info);
 }
 
 #[wasm_bindgen]
@@ -54,6 +53,8 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
         .build()
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
 
+    let proxy = event_loop.create_proxy();
+
     let app = App::new(
         name.to_string(),
         nes_rom,
@@ -61,11 +62,10 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
         false,
         zapper,
         WIDTH,
-        Box::new(platform::WasmPlatform),
+        platform::WasmPlatform,
         false,
+        proxy.clone(),
     );
-
-    let proxy = event_loop.create_proxy();
 
     event_loop.spawn_app(app);
 

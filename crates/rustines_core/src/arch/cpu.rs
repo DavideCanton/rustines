@@ -89,6 +89,10 @@ impl Cpu {
         bus.burn_cycle_from_cpu();
     }
 
+    pub fn clock(&self) -> u64 {
+        self.clock
+    }
+
     pub fn push16(&mut self, bus: &mut Bus, v: u16) {
         let (low, high) = to_u8_lh(v);
 

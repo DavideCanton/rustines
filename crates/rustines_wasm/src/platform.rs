@@ -1,9 +1,11 @@
-use base64::{Engine, engine::general_purpose::STANDARD};
 use log::info;
+use rexie::{ObjectStore, Rexie, TransactionMode};
 use rustines_core::Renderer;
-use rustines_gui::{AppState, INNER_SIZE, Platform, create_pixels};
+use rustines_gui::{AppState, CustomEvents, INNER_SIZE, Platform, create_pixels};
 use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
-use web_sys::Storage;
+use wasm_bindgen::JsValue;
+use web_sys::js_sys::Uint8Array;
+use winit::event_loop::EventLoopProxy;
 
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
@@ -12,6 +14,9 @@ use winit::platform::web::WindowExtWebSys;
 use winit::window::Window;
 
 pub struct WasmPlatform;
+
+const DB_NAME: &str = "RustinesDB";
+const STORE_NAME: &str = "files";
 
 fn format_fps(fps: f64) -> String {
     format!("{:.1}", fps)
@@ -80,32 +85,31 @@ impl Platform for WasmPlatform {
         false
     }
 
-    fn read_file(&self, path: &Path) -> Option<Vec<u8>> {
-        let storage = local_storage()?;
-
-        let name = path.file_name().inspect_none(|| info!("No file name"))?;
-        let name = name
-            .to_str()
-            .inspect_none(|| info!("Cannot convert path"))?;
-
-        let value = storage
-            .get_item(name)
-            .inspect_err(|e| {
-                info!("Cannot write to local storage: {e:?}");
+    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
+        if let Ok(name) = resolve_filename(path) {
+            let proxy = proxy.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let res = read_file(name)
+                    .await
+                    .inspect_err(|e| {
+                        info!("Failed to read saved data: {e:?}");
+                    })
+                    .ok()
+                    .flatten();
+                let _ = proxy.send_event(CustomEvents::LoadedPrgRam(res));
             })
-            .ok()
-            .flatten()?;
-
-        STANDARD
-            .decode(value)
-            .inspect_err(|e| {
-                info!("Cannot decode value: {e:?}");
-            })
-            .ok()
+        }
     }
 
-    fn write_file(&self, path: &Path, content: &[u8]) -> bool {
-        write_file(path, content).is_some()
+    fn start_write_file(&self, path: &Path, content: &[u8]) {
+        if let Ok(name) = resolve_filename(path) {
+            let content = content.to_vec();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Err(e) = write_file(&name, &content).await {
+                    info!("Failed to write save data: {e:?}");
+                }
+            });
+        }
     }
 
     fn should_exit(&self) -> bool {
@@ -113,44 +117,49 @@ impl Platform for WasmPlatform {
     }
 }
 
-fn write_file(path: &Path, content: &[u8]) -> Option<()> {
-    let storage = local_storage()?;
-
-    let name = path.file_name().inspect_none(|| info!("No file name"))?;
-    let name = name
-        .to_str()
-        .inspect_none(|| info!("Cannot convert path"))?;
-
-    let encoded = STANDARD.encode(content);
-
-    storage
-        .set_item(name, &encoded)
-        .inspect_err(|e| {
-            info!("Cannot write to local storage: {e:?}");
-        })
-        .ok()?;
-
-    Some(())
+fn resolve_filename(path: &Path) -> Result<String, String> {
+    let name = path.file_name().ok_or("No file name")?;
+    let name = name.to_str().ok_or("Cannot convert path")?;
+    Ok(name.to_owned())
 }
 
-trait InspectNone {
-    fn inspect_none(self, f: impl FnOnce()) -> Self;
-}
+async fn read_file(name: String) -> rexie::Result<Option<Vec<u8>>> {
+    let rexie = Rexie::builder(DB_NAME)
+        .add_object_store(ObjectStore::new(STORE_NAME))
+        .build()
+        .await?;
 
-impl<T> InspectNone for Option<T> {
-    fn inspect_none(self, f: impl FnOnce()) -> Self {
-        if self.is_none() {
-            f();
+    let tx = rexie.transaction(&[STORE_NAME], TransactionMode::ReadOnly)?;
+    let store = tx.store(STORE_NAME)?;
+
+    let res = store.get(JsValue::from_str(&name)).await?.and_then(|val| {
+        if val.is_null() || val.is_undefined() {
+            None
+        } else {
+            let uint8_array = Uint8Array::new(&val);
+            Some(uint8_array.to_vec())
         }
-        self
-    }
+    });
+
+    Ok(res)
 }
 
-fn local_storage() -> Option<Storage> {
-    web_sys::window()?
-        .local_storage()
-        .inspect_err(|e| {
-            info!("Cannot read localstorage: {e:?}");
-        })
-        .ok()?
+async fn write_file(name: &str, content: &[u8]) -> rexie::Result<()> {
+    let rexie = Rexie::builder(DB_NAME)
+        .add_object_store(ObjectStore::new(STORE_NAME))
+        .build()
+        .await?;
+
+    let tx = rexie.transaction(&[STORE_NAME], TransactionMode::ReadWrite)?;
+    let store = tx.store(STORE_NAME)?;
+
+    let uint8_array = Uint8Array::from(content);
+
+    store
+        .put(&uint8_array, Some(&JsValue::from_str(name)))
+        .await?;
+
+    tx.commit().await?;
+
+    Ok(())
 }

@@ -2,8 +2,8 @@ use std::{cell::RefCell, fs, path::Path, rc::Rc, sync::Arc};
 
 use log::info;
 use rustines_core::Renderer;
-use rustines_gui::{AppState, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
-use winit::{dpi::PhysicalSize, window::Window};
+use rustines_gui::{AppState, CustomEvents, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
+use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
 
 pub struct DesktopPlatform;
 
@@ -43,20 +43,19 @@ impl Platform for DesktopPlatform {
         true
     }
 
-    fn read_file(&self, path: &Path) -> Option<Vec<u8>> {
-        fs::read(path)
+    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
+        let ret = fs::read(path)
             .inspect_err(|e| {
                 info!("Cannot read {path:?}: {e}");
             })
-            .ok()
+            .ok();
+        let _ = proxy.send_event(CustomEvents::LoadedPrgRam(ret));
     }
 
-    fn write_file(&self, path: &Path, content: &[u8]) -> bool {
-        fs::write(path, content)
-            .inspect_err(|e| {
-                info!("Cannot read {path:?}: {e}");
-            })
-            .is_ok()
+    fn start_write_file(&self, path: &Path, content: &[u8]) {
+        let _ = fs::write(path, content).inspect_err(|e| {
+            info!("Cannot read {path:?}: {e}");
+        });
     }
 
     fn should_exit(&self) -> bool {

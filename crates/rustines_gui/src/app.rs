@@ -26,13 +26,14 @@ use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
     event::{ElementState, MouseButton, StartCause, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
     keyboard::KeyCode,
     window::{Window, WindowAttributes, WindowId},
 };
 use winit_input_helper::WinitInputHelper;
 
 const TARGET_FPS: u64 = 60;
+const SAVE_INTERVAL: u64 = 10;
 
 type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
 type GamepadMap = HashMap<Button, rustines_core::NesKey>;
@@ -80,6 +81,7 @@ pub struct AppState {
     speedup: SpeedupState,
     last_frame_time: Instant,
     accumulator: Duration,
+    last_save: u64,
 }
 
 impl AppState {
@@ -99,15 +101,15 @@ impl AppState {
         self.update_counter.current_fps()
     }
 
-    fn on_hide(&self, platform: &dyn Platform) {
+    fn save_data(&self, platform: &impl Platform) {
         if self.nes_rom.header.battery_backed_prg_ram()
             && let Some(p) = self.nes_rom.file_path.as_ref()
             && let Some(m) = self.bus.mapper_ref().get_prg_ram()
         {
             let mut p = p.clone();
             p.set_extension("sav");
-            platform.write_file(&p, m);
-            info!("Wrote save file to {p:?}");
+            info!("Writing save file");
+            platform.start_write_file(&p, m);
         }
     }
 
@@ -129,20 +131,21 @@ struct AppStateInfo {
     rom_name: String,
 }
 
-pub struct App {
+pub struct App<P: Platform> {
     app_state: Option<AppState>,
     info: Option<AppStateInfo>,
     trace_boot: bool,
     zapper: bool,
     pending_window: Option<Arc<Window>>,
     pending_renderer: Rc<RefCell<Option<Box<dyn Renderer>>>>,
-    platform: Box<dyn Platform>,
+    platform: P,
     size: PhysicalSize<u32>,
     gilrs: Gilrs,
     enable_debug_keys: bool,
+    proxy: EventLoopProxy<CustomEvents>,
 }
 
-impl App {
+impl<P: Platform> App<P> {
     pub fn new(
         rom_name: String,
         nes_rom: NesRom,
@@ -150,8 +153,9 @@ impl App {
         trace_boot: bool,
         zapper: bool,
         width: u32,
-        platform: Box<dyn Platform>,
+        platform: P,
         enable_debug_keys: bool,
+        proxy: EventLoopProxy<CustomEvents>,
     ) -> Self {
         App {
             info: Some(AppStateInfo {
@@ -168,6 +172,7 @@ impl App {
             pending_renderer: Rc::new(RefCell::new(None)),
             gilrs: Gilrs::new().unwrap(),
             enable_debug_keys,
+            proxy,
         }
     }
 
@@ -193,7 +198,7 @@ impl App {
             Controller2::nes_controller()
         };
 
-        let mut info = self.info.take().unwrap();
+        let info = self.info.take().unwrap();
 
         if info.nes_rom.header.battery_backed_prg_ram()
             && let Some(p) = info.nes_rom.file_path.as_ref()
@@ -201,10 +206,7 @@ impl App {
             let mut p = p.clone();
             p.set_extension("sav");
 
-            if let Some(content) = self.platform.read_file(&p) {
-                info!("Read save file from {p:?}");
-                info.mapper.set_prg_ram(&content);
-            }
+            self.platform.start_read_file(&p, &self.proxy);
         }
 
         let mut bus = core::Bus::new(info.mapper, ppu, apu, ctrl2);
@@ -239,6 +241,7 @@ impl App {
             enable_debug_keys: self.enable_debug_keys,
             accumulator: Duration::ZERO,
             last_frame_time: Instant::now(),
+            last_save: 0,
         }
     }
 }
@@ -247,9 +250,10 @@ impl App {
 pub enum CustomEvents {
     Pause,
     Resume,
+    LoadedPrgRam(Option<Vec<u8>>),
 }
 
-impl ApplicationHandler<CustomEvents> for App {
+impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.app_state.is_some() {
             return;
@@ -336,11 +340,19 @@ impl ApplicationHandler<CustomEvents> for App {
 
     fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: CustomEvents) {
         if let Some(app_state) = self.app_state.as_mut() {
-            if event == CustomEvents::Pause {
-                app_state.pause();
-                app_state.on_hide(self.platform.as_ref());
-            } else if event == CustomEvents::Resume {
-                app_state.resume();
+            match event {
+                CustomEvents::Pause => {
+                    app_state.pause();
+                    app_state.save_data(&self.platform);
+                }
+                CustomEvents::Resume => {
+                    app_state.resume();
+                }
+                CustomEvents::LoadedPrgRam(Some(content)) => {
+                    info!("Read save file");
+                    app_state.bus.mapper_mut().set_prg_ram(&content);
+                }
+                _ => {}
             }
         }
     }
@@ -355,12 +367,12 @@ impl ApplicationHandler<CustomEvents> for App {
                 }
             }
             Some(app_state) => {
-                handle_inputs(app_state, self.platform.as_ref(), event_loop);
+                handle_inputs(app_state, &self.platform, event_loop);
                 handle_gamepad(app_state, &mut self.gilrs);
 
                 // run as many updates as possible in the delta that has passed
                 while app_state.accumulator >= app_state.frame_duration {
-                    update_logic(app_state);
+                    update_logic(app_state, &self.platform);
                     app_state.accumulator -= app_state.frame_duration;
                 }
 
@@ -374,20 +386,27 @@ impl ApplicationHandler<CustomEvents> for App {
     }
 }
 
-fn update_logic(app_state: &mut AppState) {
+fn update_logic(app_state: &mut AppState, platform: &impl Platform) {
     if !app_state.pause {
         let frame_to_run = if app_state.speedup.active { 4 } else { 1 };
         for _ in 0..frame_to_run {
             app_state.update_counter.update();
             while !app_state.bus.ppu().frame_ready() {
                 app_state.cpu.tick(&mut app_state.bus);
+                let current_frame = app_state.bus.ppu().current_frame();
+                if current_frame != app_state.last_save
+                    && current_frame.is_multiple_of(TARGET_FPS * SAVE_INTERVAL)
+                {
+                    app_state.save_data(platform);
+                    app_state.last_save = current_frame;
+                }
             }
             app_state.bus.ppu_mut().clear_frame_ready();
         }
     }
 }
 
-fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: &ActiveEventLoop) {
+fn handle_inputs(app_state: &mut AppState, platform: &impl Platform, event_loop: &ActiveEventLoop) {
     let input = &mut app_state.main_window_helper;
 
     input.end_step();
@@ -395,7 +414,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     let esc_pressed = platform.esc_pressed_enabled() && input.key_pressed(KeyCode::Escape);
 
     if esc_pressed || input.close_requested() {
-        app_state.on_hide(platform);
+        app_state.save_data(platform);
         if platform.should_exit() {
             event_loop.exit();
         }

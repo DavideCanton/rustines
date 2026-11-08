@@ -35,8 +35,9 @@ pub fn main() {
         args.trace_boot,
         args.zapper,
         WIDTH,
-        Box::new(platform::DesktopPlatform),
+        platform::DesktopPlatform,
         true,
+        event_loop.create_proxy(),
     );
 
     let _ = event_loop.run_app(&mut app);
