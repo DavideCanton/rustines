@@ -7,11 +7,12 @@ use log::warn;
 use rustines_core as core;
 
 use console_error_panic_hook::hook;
-use rustines_gui::App;
+use rustines_gui::{App, CustomEvents};
 use std::{
     panic::{PanicHookInfo, set_hook},
     path::Path,
 };
+use web_sys::{Event, HtmlElement, VisibilityState, js_sys::Function};
 
 use wasm_bindgen::prelude::*;
 use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
@@ -46,10 +47,13 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
     let loader = core::decode_loader(ext);
 
     let (nes_rom, mapper) = loader
-        .load_rom_struct(None, buf)
+        .load_rom_struct(Some(file_path), buf)
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
 
-    let event_loop = EventLoop::new().map_err(|err| JsValue::from_str(&err.to_string()))?;
+    let event_loop = EventLoop::with_user_event()
+        .build()
+        .map_err(|err| JsValue::from_str(&err.to_string()))?;
+
     let app = App::new(
         name.to_string(),
         nes_rom,
@@ -61,6 +65,37 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
         false,
     );
 
+    let proxy = event_loop.create_proxy();
+
     event_loop.spawn_app(app);
+
+    let closure = move |e: JsValue| {
+        let e: Event = e.into();
+        e.prevent_default();
+
+        let doc = web_sys::window().unwrap().document().unwrap();
+        match doc.visibility_state() {
+            VisibilityState::Hidden => {
+                let _ = proxy.send_event(CustomEvents::Pause);
+            }
+            VisibilityState::Visible => {
+                if let Some(canvas) = doc.get_element_by_id("game_canvas") {
+                    let _ = canvas.dyn_into::<HtmlElement>().unwrap().focus();
+                }
+                let _ = proxy.send_event(CustomEvents::Resume);
+            }
+            _ => {}
+        }
+        false
+    };
+    let func: ScopedClosure<'static, dyn FnMut(JsValue) -> bool> = ScopedClosure::own(closure);
+
+    web_sys::window()
+        .unwrap()
+        .document()
+        .unwrap()
+        .add_event_listener_with_callback("visibilitychange", &Function::from_closure(func))
+        .unwrap();
+
     Ok(())
 }

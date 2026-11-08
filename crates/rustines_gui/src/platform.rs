@@ -17,4 +17,5 @@ pub trait Platform {
     fn esc_pressed_enabled(&self) -> bool;
     fn read_file(&self, path: &Path) -> Option<Vec<u8>>;
     fn write_file(&self, path: &Path, content: &[u8]) -> bool;
+    fn should_exit(&self) -> bool;
 }

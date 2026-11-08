@@ -26,7 +26,7 @@ pub fn main() {
         if args.zapper { "enabled" } else { "disabled" }
     );
 
-    let event_loop = EventLoop::new().unwrap();
+    let event_loop = EventLoop::with_user_event().build().unwrap();
 
     let mut app = App::new(
         file_path.file_name().unwrap().to_str().unwrap().to_string(),

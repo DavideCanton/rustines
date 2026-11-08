@@ -99,7 +99,7 @@ impl AppState {
         self.update_counter.current_fps()
     }
 
-    fn on_close(&self, platform: &dyn Platform) {
+    fn on_hide(&self, platform: &dyn Platform) {
         if self.nes_rom.header.battery_backed_prg_ram()
             && let Some(p) = self.nes_rom.file_path.as_ref()
             && let Some(m) = self.bus.mapper_ref().get_prg_ram()
@@ -109,6 +109,17 @@ impl AppState {
             platform.write_file(&p, m);
             info!("Wrote save file to {p:?}");
         }
+    }
+
+    pub fn pause(&mut self) {
+        self.pause = true;
+        self.accumulator = Duration::ZERO;
+    }
+
+    pub fn resume(&mut self) {
+        self.pause = false;
+        self.last_frame_time = Instant::now();
+        self.pause = false;
     }
 }
 
@@ -232,7 +243,13 @@ impl App {
     }
 }
 
-impl ApplicationHandler for App {
+#[derive(PartialEq, Eq)]
+pub enum CustomEvents {
+    Pause,
+    Resume,
+}
+
+impl ApplicationHandler<CustomEvents> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.app_state.is_some() {
             return;
@@ -317,6 +334,17 @@ impl ApplicationHandler for App {
         }
     }
 
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: CustomEvents) {
+        if let Some(app_state) = self.app_state.as_mut() {
+            if event == CustomEvents::Pause {
+                app_state.pause();
+                app_state.on_hide(self.platform.as_ref());
+            } else if event == CustomEvents::Resume {
+                app_state.resume();
+            }
+        }
+    }
+
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         match self.app_state.as_mut() {
             None => {
@@ -367,8 +395,10 @@ fn handle_inputs(app_state: &mut AppState, platform: &dyn Platform, event_loop: 
     let esc_pressed = platform.esc_pressed_enabled() && input.key_pressed(KeyCode::Escape);
 
     if esc_pressed || input.close_requested() {
-        app_state.on_close(platform);
-        event_loop.exit();
+        app_state.on_hide(platform);
+        if platform.should_exit() {
+            event_loop.exit();
+        }
     } else {
         handle_special_keys(app_state, event_loop);
 
@@ -487,35 +517,41 @@ fn handle_special_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 }
 
 fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
-    let bus = &mut app_state.bus;
-    let cpu = &mut app_state.cpu;
     let input = &app_state.main_window_helper;
 
     if input.held_shift() {
+        if input.key_pressed(KeyCode::KeyX) {
+            if app_state.pause {
+                app_state.resume();
+            } else {
+                app_state.pause();
+            }
+        }
+
+        let input = &app_state.main_window_helper;
+
         if input.key_pressed(KeyCode::KeyD) {
-            core::debug_utils::debug_dump_nametables(bus);
-            core::debug_utils::debug_dump_attribute_tables(bus);
+            core::debug_utils::debug_dump_nametables(&app_state.bus);
+            core::debug_utils::debug_dump_attribute_tables(&app_state.bus);
         }
 
         if input.key_pressed(KeyCode::KeyP) {
-            core::debug_utils::debug_dump_palette(bus);
+            core::debug_utils::debug_dump_palette(&app_state.bus);
         }
 
         if input.key_pressed(KeyCode::KeyO) {
-            core::debug_utils::debug_dump_oam(bus.ppu());
-        }
-
-        if input.key_pressed(KeyCode::KeyX) {
-            app_state.pause = !app_state.pause;
+            core::debug_utils::debug_dump_oam(app_state.bus.ppu());
         }
 
         if input.key_pressed(KeyCode::KeyQ) {
-            core::debug_utils::debug_dump_state(bus, cpu);
+            core::debug_utils::debug_dump_state(&app_state.bus, &app_state.cpu);
         }
 
         if input.key_pressed(KeyCode::KeyF) {
             let mut file = File::create("frame.ppm").expect("cannot create file");
-            bus.ppu()
+            app_state
+                .bus
+                .ppu()
                 .renderer()
                 .dump_frame(&mut file)
                 .expect("cannot dump frame");
@@ -528,15 +564,15 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
 
             app_state.log_point += 1;
 
-            cpu.enable_tracing(true);
-            bus.enable_tracing(true);
-            bus.ppu_mut().enable_tracing(true);
+            app_state.cpu.enable_tracing(true);
+            app_state.bus.enable_tracing(true);
+            app_state.bus.ppu_mut().enable_tracing(true);
         }
 
         if input.key_pressed(KeyCode::KeyS) {
             app_state
                 .pattern_window
-                .show(bus.mapper_ref(), event_loop, 4);
+                .show(app_state.bus.mapper_ref(), event_loop, 4);
         }
     }
 }

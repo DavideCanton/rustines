@@ -58,6 +58,10 @@ impl Platform for DesktopPlatform {
             })
             .is_ok()
     }
+
+    fn should_exit(&self) -> bool {
+        true
+    }
 }
 
 fn format_fps(fps: f64, msg: &str) -> String {
