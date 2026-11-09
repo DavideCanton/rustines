@@ -175,23 +175,23 @@ impl Dmc {
 }
 
 impl MementoWriteable for Dmc {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.irq_enable);
-        writer.write_memento(self.irq_active);
-        writer.write_memento(self.loop_flag);
-        writer.write_memento(self.freq);
-        writer.write_memento(self.direct_load);
-        writer.write_memento(self.address);
-        writer.write_memento(self.bytes_remaining);
-        writer.write_memento(self.bits_remaining);
-        writer.write_memento(self.sample_length);
-        writer.write_memento(self.timer);
-        writer.write_memento(self.enabled);
-        writer.write_memento(self.sample_buffer);
-        writer.write_memento(self.shift_register);
-        writer.write_memento(self.silence);
-        writer.write_memento(self.output_level);
-        writer.write_memento(self.current_address);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.irq_enable.write_memento(writer);
+        self.irq_active.write_memento(writer);
+        self.loop_flag.write_memento(writer);
+        self.freq.write_memento(writer);
+        self.direct_load.write_memento(writer);
+        self.address.write_memento(writer);
+        self.bytes_remaining.write_memento(writer);
+        self.bits_remaining.write_memento(writer);
+        self.sample_length.write_memento(writer);
+        self.timer.write_memento(writer);
+        self.enabled.write_memento(writer);
+        self.sample_buffer.write_memento(writer);
+        self.shift_register.write_memento(writer);
+        self.silence.write_memento(writer);
+        self.output_level.write_memento(writer);
+        self.current_address.write_memento(writer);
     }
 }
 

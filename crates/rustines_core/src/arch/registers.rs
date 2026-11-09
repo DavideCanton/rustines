@@ -136,13 +136,13 @@ impl fmt::Debug for Registers {
 }
 
 impl MementoWriteable for Registers {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.pc);
-        writer.write_memento(self.sp);
-        writer.write_memento(self.a_reg);
-        writer.write_memento(self.x_reg);
-        writer.write_memento(self.y_reg);
-        writer.write_memento(self.p_reg.0);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.pc.write_memento(writer);
+        self.sp.write_memento(writer);
+        self.a_reg.write_memento(writer);
+        self.x_reg.write_memento(writer);
+        self.y_reg.write_memento(writer);
+        self.p_reg.0.write_memento(writer);
     }
 }
 

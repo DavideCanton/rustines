@@ -10,6 +10,7 @@ pub use arch::controller::{NesController, NesKey};
 pub use arch::cpu::Cpu;
 pub use arch::debug_utils;
 pub use arch::mappers::mapper::{Mapper, MapperBox};
+pub use arch::memento::MementoWriter;
 pub use arch::ppu::{Ppu, compose_rgba, decompose_rgba};
 pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
 pub use audio::{AudioOutput, AudioOutputBox, NoAudio};

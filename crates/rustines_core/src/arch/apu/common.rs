@@ -1,4 +1,4 @@
-use crate::arch::memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter};
+use crate::arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter};
 
 #[derive(Default, Debug)]
 pub struct LengthCounter {
@@ -28,8 +28,8 @@ impl LengthCounter {
 }
 
 impl MementoWriteable for LengthCounter {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.counter);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.counter.write_memento(writer);
     }
 }
 
@@ -95,13 +95,13 @@ impl Envelope {
 }
 
 impl MementoWriteable for Envelope {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.start);
-        writer.write_memento(self.divider);
-        writer.write_memento(self.decay);
-        writer.write_memento(self.loop_flag);
-        writer.write_memento(self.const_vol);
-        writer.write_memento(self.vol);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.start.write_memento(writer);
+        self.divider.write_memento(writer);
+        self.decay.write_memento(writer);
+        self.loop_flag.write_memento(writer);
+        self.const_vol.write_memento(writer);
+        self.vol.write_memento(writer);
     }
 }
 
@@ -139,9 +139,9 @@ impl Sequencer {
 }
 
 impl MementoWriteable for Sequencer {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.value);
-        writer.write_memento(self.max);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.value.write_memento(writer);
+        self.max.write_memento(writer);
     }
 }
 

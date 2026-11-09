@@ -2,6 +2,7 @@ use rustines_macro::Named;
 
 use crate::arch::mappers::common::{BankedMemory, ChrMemory, skip_trainer};
 use crate::arch::mappers::mapper::Mapper;
+use crate::arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter};
 use crate::arch::rom_structs::{
     CHR_ROM_BANK_SIZE, INesHeader, MirroringType, PRG_RAM_BANK_SIZE, PRG_ROM_BANK_SIZE,
 };
@@ -210,6 +211,34 @@ impl Mapper for Mapper1 {
 
     fn set_prg_ram(&mut self, content: &[u8]) {
         self.prg_ram.write_all(content);
+    }
+}
+
+impl MementoReadAndFill for Mapper1 {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.prg_ram.read_and_fill(data);
+        self.chr.read_and_fill(data);
+        self.last_prg_bank = data.read_memento();
+        self.shift_register = data.read_memento();
+        self.count = data.read_memento();
+        self.ctrl_register.0 = data.read_memento();
+        self.chr_1_reg = data.read_memento();
+        self.chr_2_reg = data.read_memento();
+        self.prg_reg = data.read_memento();
+    }
+}
+
+impl MementoWriteable for Mapper1 {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.prg_ram.write_memento(writer);
+        self.chr.write_memento(writer);
+        self.last_prg_bank.write_memento(writer);
+        self.shift_register.write_memento(writer);
+        self.count.write_memento(writer);
+        self.ctrl_register.0.write_memento(writer);
+        self.chr_1_reg.write_memento(writer);
+        self.chr_2_reg.write_memento(writer);
+        self.prg_reg.write_memento(writer);
     }
 }
 

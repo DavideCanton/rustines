@@ -9,13 +9,19 @@ use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{
-    self as core, AudioOutputBox, NesRom, NoAudio, arch::bus::Controller2, renderer::RendererBox,
+    self as core, AudioOutputBox, MementoWriter, NesRom, NoAudio,
+    arch::{
+        bus::Controller2,
+        memento::{MementoReadAndFill, MementoReader},
+    },
+    renderer::RendererBox,
 };
 use rustines_gui_utils::FpsCounter;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     fs::File,
+    path::PathBuf,
     rc::Rc,
     sync::Arc,
 };
@@ -82,6 +88,7 @@ pub struct AppState {
     last_frame_time: Instant,
     accumulator: Duration,
     last_save: u64,
+    proxy: EventLoopProxy<CustomEvents>,
 }
 
 impl AppState {
@@ -109,7 +116,7 @@ impl AppState {
             let mut p = p.clone();
             p.set_extension("sav");
             info!("Writing save file");
-            platform.start_write_file(&p, m);
+            platform.start_write_file(p, &self.proxy, m, Box::new(CustomEvents::SavedState));
         }
     }
 
@@ -206,7 +213,8 @@ impl<P: Platform> App<P> {
             let mut p = p.clone();
             p.set_extension("sav");
 
-            self.platform.start_read_file(&p, &self.proxy);
+            self.platform
+                .start_read_file(p, &self.proxy, Box::new(CustomEvents::LoadedPrgRam));
         }
 
         let mut bus = core::Bus::new(info.mapper, ppu, apu, ctrl2);
@@ -242,6 +250,7 @@ impl<P: Platform> App<P> {
             accumulator: Duration::ZERO,
             last_frame_time: Instant::now(),
             last_save: 0,
+            proxy: self.proxy.clone(),
         }
     }
 }
@@ -251,6 +260,9 @@ pub enum CustomEvents {
     Pause,
     Resume,
     LoadedPrgRam(Option<Vec<u8>>),
+    LoadedState(Option<Vec<u8>>),
+    SavedPrgRam(PathBuf),
+    SavedState(PathBuf),
 }
 
 impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
@@ -348,11 +360,26 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                 CustomEvents::Resume => {
                     app_state.resume();
                 }
-                CustomEvents::LoadedPrgRam(Some(content)) => {
-                    info!("Read save file");
-                    app_state.bus.mapper_mut().set_prg_ram(&content);
+                CustomEvents::LoadedPrgRam(c) => {
+                    if let Some(content) = c {
+                        info!("Read save file");
+                        app_state.bus.mapper_mut().set_prg_ram(&content);
+                    }
                 }
-                _ => {}
+                CustomEvents::LoadedState(c) => {
+                    if let Some(content) = c {
+                        info!("Read state");
+                        let mut reader = MementoReader::new(&content);
+                        app_state.bus.read_and_fill(&mut reader);
+                        app_state.cpu.read_and_fill(&mut reader);
+                    }
+                }
+                CustomEvents::SavedState(..) => {
+                    info!("Wrote state");
+                }
+                CustomEvents::SavedPrgRam(..) => {
+                    info!("Wrote save file");
+                }
             }
         }
     }
@@ -419,7 +446,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &impl Platform, event_loop:
             event_loop.exit();
         }
     } else {
-        handle_special_keys(app_state, event_loop);
+        handle_special_keys(app_state, event_loop, platform);
 
         // reborrow
         let input = &app_state.main_window_helper;
@@ -484,7 +511,11 @@ fn update_zapper_input(app_state: &mut AppState) {
         .set_zapper_input(position, app_state.zapper_trigger_pressed);
 }
 
-fn handle_special_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
+fn handle_special_keys(
+    app_state: &mut AppState,
+    event_loop: &ActiveEventLoop,
+    platform: &impl Platform,
+) {
     let input = &app_state.main_window_helper;
 
     // keep this enabled even when debug keys are disabled
@@ -495,6 +526,31 @@ fn handle_special_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 
     let input = &app_state.main_window_helper;
+
+    if input.key_pressed(KeyCode::F5)
+        && let Some(p) = app_state.nes_rom.file_path.as_ref()
+    {
+        let mut state = vec![];
+        state.write_memento_ref(&app_state.bus);
+        state.write_memento_ref(&app_state.cpu);
+        let mut path = p.clone();
+        path.set_extension("sst");
+        platform.start_write_file(
+            path,
+            &app_state.proxy,
+            &state,
+            Box::new(CustomEvents::SavedPrgRam),
+        );
+    }
+    if input.key_pressed(KeyCode::F9)
+        && let Some(p) = app_state.nes_rom.file_path.as_ref()
+    {
+        let mut path = p.clone();
+        path.set_extension("sst");
+        if path.exists() {
+            platform.start_read_file(path, &app_state.proxy, Box::new(CustomEvents::LoadedState));
+        }
+    }
 
     if input.held_shift() {
         let bus = &mut app_state.bus;

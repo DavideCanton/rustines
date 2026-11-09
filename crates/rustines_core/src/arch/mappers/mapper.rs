@@ -1,6 +1,12 @@
-use crate::{arch::rom_structs::MirroringType, utils::named::Named};
+use crate::{
+    arch::{
+        memento::{MementoReadAndFill, MementoWriteable},
+        rom_structs::MirroringType,
+    },
+    utils::named::Named,
+};
 
-pub trait Mapper: Named {
+pub trait Mapper: Named + MementoReadAndFill + MementoWriteable {
     fn reset(&mut self) {}
     fn fetch_cpu(&self, addr: u16) -> u8;
     fn store_cpu(&mut self, addr: u16, val: u8);

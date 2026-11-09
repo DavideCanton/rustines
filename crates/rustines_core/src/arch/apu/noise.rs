@@ -103,14 +103,14 @@ impl Noise {
 }
 
 impl MementoWriteable for Noise {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento_ref(&self.length_counter);
-        writer.write_memento(self.noise_mode);
-        writer.write_memento(self.period);
-        writer.write_memento(self.enabled);
-        writer.write_memento(self.timer_counter);
-        writer.write_memento(self.shift_register);
-        writer.write_memento_ref(&self.envelope);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.length_counter.write_memento(writer);
+        self.noise_mode.write_memento(writer);
+        self.period.write_memento(writer);
+        self.enabled.write_memento(writer);
+        self.timer_counter.write_memento(writer);
+        self.shift_register.write_memento(writer);
+        self.envelope.write_memento(writer);
     }
 }
 

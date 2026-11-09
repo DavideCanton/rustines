@@ -373,12 +373,12 @@ impl Cpu {
 }
 
 impl MementoWriteable for Cpu {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento_ref(&self.registers);
-        writer.write_memento(self.clock);
-        writer.write_memento(self.pending_irq_execution);
-        writer.write_memento(self.pending_nmi_execution);
-        writer.write_memento(self.pending_rst_execution);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.registers.write_memento(writer);
+        self.clock.write_memento(writer);
+        self.pending_irq_execution.write_memento(writer);
+        self.pending_nmi_execution.write_memento(writer);
+        self.pending_rst_execution.write_memento(writer);
         // ignore tracer
     }
 }

@@ -38,7 +38,7 @@ pub trait MementoReadable {
 }
 
 pub trait MementoWriteable {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W);
+    fn write_memento(&self, writer: &mut dyn MementoWriter);
 }
 
 impl MementoReadable for u8 {
@@ -48,7 +48,7 @@ impl MementoReadable for u8 {
 }
 
 impl MementoWriteable for u8 {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write(*self);
     }
 }
@@ -61,7 +61,7 @@ impl MementoReadable for u16 {
 }
 
 impl MementoWriteable for u16 {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write_many(&self.to_le_bytes());
     }
 }
@@ -74,7 +74,7 @@ impl MementoReadable for u32 {
 }
 
 impl MementoWriteable for u32 {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write_many(&self.to_le_bytes());
     }
 }
@@ -93,7 +93,7 @@ impl MementoReadable for u64 {
 }
 
 impl MementoWriteable for u64 {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write_many(&self.to_le_bytes());
     }
 }
@@ -113,7 +113,7 @@ impl MementoReadable for usize {
 }
 
 impl MementoWriteable for usize {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write_many(&self.to_le_bytes());
     }
 }
@@ -125,7 +125,7 @@ impl MementoReadable for bool {
 }
 
 impl MementoWriteable for bool {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         writer.write(*self as u8);
     }
 }
@@ -137,21 +137,43 @@ impl<const N: usize, M: MementoReadable> MementoReadable for [M; N] {
 }
 
 impl<M: MementoWriteable> MementoWriteable for &[M] {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         for v in *self {
-            writer.write_memento_ref(v);
+            v.write_memento(writer);
         }
     }
 }
 
+impl<const N: usize, M: MementoWriteable> MementoWriteable for [M; N] {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        for v in self {
+            v.write_memento(writer);
+        }
+    }
+}
+
+impl MementoReadable for Vec<u8> {
+    fn read_memento(reader: &mut MementoReader) -> Self {
+        let len: usize = reader.read_memento();
+        reader.read_many_dyn(len)
+    }
+}
+
+impl MementoWriteable for Vec<u8> {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.len().write_memento(writer);
+        writer.write_many(self);
+    }
+}
+
 impl<T: MementoWriteable> MementoWriteable for Option<T> {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         match self {
             Some(v) => {
-                writer.write_memento(1u8);
-                writer.write_memento_ref(v);
+                1u8.write_memento(writer);
+                v.write_memento(writer);
             }
-            None => writer.write_memento(1u8),
+            None => 0u8.write_memento(writer),
         }
     }
 }
@@ -167,15 +189,31 @@ impl<T: MementoReadable> MementoReadable for Option<T> {
 }
 
 impl<T: MementoWriteable, U: MementoWriteable> MementoWriteable for (T, U) {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento_ref(&self.0);
-        writer.write_memento_ref(&self.1);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.0.write_memento(writer);
+        self.1.write_memento(writer);
     }
 }
 
 impl<T: MementoReadable, U: MementoReadable> MementoReadable for (T, U) {
     fn read_memento(reader: &mut MementoReader) -> Self {
         (T::read_memento(reader), U::read_memento(reader))
+    }
+}
+
+impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        match self {
+            Some(v) => {
+                // skip the 1
+                let _ = data.read_memento::<u8>();
+                v.read_and_fill(data);
+            }
+            None => {
+                // skip the 0
+                let _ = data.read_memento::<u8>();
+            }
+        }
     }
 }
 
@@ -201,6 +239,14 @@ impl<'a> MementoReader<'a> {
 
     fn read_many<const N: usize>(&mut self) -> [u8; N] {
         from_fn(|_| self.next().unwrap())
+    }
+
+    fn read_many_dyn(&mut self, size: usize) -> Vec<u8> {
+        let mut v = Vec::with_capacity(size);
+        for _ in 0..size {
+            v.push(self.next().unwrap());
+        }
+        v
     }
 
     pub fn read_memento<M: MementoReadable>(&mut self) -> M {

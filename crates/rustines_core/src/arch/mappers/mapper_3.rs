@@ -3,6 +3,7 @@ use rustines_macro::Named;
 
 use crate::arch::mappers::common::{BankedMemory, skip_trainer};
 use crate::arch::mappers::mapper::Mapper;
+use crate::arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter};
 use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, INesHeader, MirroringType};
 use crate::utils::named::Named;
 
@@ -90,6 +91,20 @@ impl Mapper for Mapper3 {
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type
+    }
+}
+
+impl MementoReadAndFill for Mapper3 {
+    fn read_and_fill(&mut self, data: &mut MementoReader) {
+        self.prg_ram.read_and_fill(data);
+        self.selected_bank = data.read_memento();
+    }
+}
+
+impl MementoWriteable for Mapper3 {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.prg_ram.write_memento(writer);
+        self.selected_bank.write_memento(writer);
     }
 }
 

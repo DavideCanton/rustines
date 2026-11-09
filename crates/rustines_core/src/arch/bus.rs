@@ -406,17 +406,17 @@ impl Bus {
 }
 
 impl MementoWriteable for Bus {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento_ref(&self.nes_ram.as_slice());
-        writer.write_memento_ref(self.ppu.state());
-        writer.write_memento_ref(self.apu.state());
-        // mapper
-        writer.write_memento(self.open_bus_value);
-        writer.write_memento(self.cycles_cnt);
-        writer.write_memento(self.total_cycles);
-        writer.write_memento(self.tracing_enabled);
-        writer.write_memento(self.oam_dma_state);
-        writer.write_memento(self.dmc_dma_state);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.nes_ram.as_slice().write_memento(writer);
+        self.ppu.state().write_memento(writer);
+        self.apu.state().write_memento(writer);
+        self.mapper.write_memento(writer);
+        self.open_bus_value.write_memento(writer);
+        self.cycles_cnt.write_memento(writer);
+        self.total_cycles.write_memento(writer);
+        self.tracing_enabled.write_memento(writer);
+        self.oam_dma_state.write_memento(writer);
+        self.dmc_dma_state.write_memento(writer);
     }
 }
 
@@ -425,7 +425,8 @@ impl MementoReadAndFill for Bus {
         self.nes_ram = data.read_memento();
         self.ppu.state_mut().read_and_fill(data);
         self.apu.state_mut().read_and_fill(data);
-        // mapper
+        self.mapper.read_and_fill(data);
+        // reset controllers
         self.controller1.reset();
         self.controller2.reset();
         self.open_bus_value = data.read_memento();
@@ -461,34 +462,34 @@ pub enum OamDmaState {
 }
 
 impl MementoWriteable for OamDmaState {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         match self {
-            OamDmaState::NotRunning => writer.write_memento(0u8),
+            OamDmaState::NotRunning => 0u8.write_memento(writer),
             OamDmaState::Starting {
                 cnt,
                 address,
                 needs_alignment,
             } => {
-                writer.write_memento(1u8);
-                writer.write_memento_ref(cnt);
-                writer.write_memento_ref(address);
-                writer.write_memento_ref(needs_alignment);
+                1u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
+                needs_alignment.write_memento(writer);
             }
             OamDmaState::Aligning { cnt, address } => {
-                writer.write_memento(2u8);
-                writer.write_memento_ref(cnt);
-                writer.write_memento_ref(address);
+                2u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
             }
             OamDmaState::Reading { cnt, address } => {
-                writer.write_memento(3u8);
-                writer.write_memento_ref(cnt);
-                writer.write_memento_ref(address);
+                3u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
             }
             OamDmaState::Writing { cnt, address, data } => {
-                writer.write_memento(4u8);
-                writer.write_memento_ref(cnt);
-                writer.write_memento_ref(address);
-                writer.write_memento_ref(data);
+                4u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
+                data.write_memento(writer);
             }
         }
     }
@@ -530,24 +531,24 @@ pub enum DmcDmaState {
 }
 
 impl MementoWriteable for DmcDmaState {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         match self {
-            DmcDmaState::NotRunning => writer.write_memento(0u8),
+            DmcDmaState::NotRunning => 0u8.write_memento(writer),
             DmcDmaState::Halt { address } => {
-                writer.write_memento(1u8);
-                writer.write_memento_ref(address);
+                1u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Dummy { address } => {
-                writer.write_memento(2u8);
-                writer.write_memento_ref(address);
+                2u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Alignment { address } => {
-                writer.write_memento(3u8);
-                writer.write_memento_ref(address);
+                3u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Read { address } => {
-                writer.write_memento(4u8);
-                writer.write_memento_ref(address);
+                4u8.write_memento(writer);
+                address.write_memento(writer);
             }
         }
     }

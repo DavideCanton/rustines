@@ -19,7 +19,7 @@
     },
     "rust-analyzer.check.command": "clippy",
     "rust-analyzer.cargo.buildScripts.useRustcWrapper": false,
-    "rust-analyzer.checkOnSave": true
+    "rust-analyzer.checkOnSave": true,
     // "rust-analyzer.cargo.allTargets": false,
     // "rust-analyzer.cargo.target": "wasm32-unknown-unknown"
 }

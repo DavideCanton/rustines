@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs, path::Path, rc::Rc, sync::Arc};
+use std::{cell::RefCell, fs, path::PathBuf, rc::Rc, sync::Arc};
 
 use log::info;
 use rustines_core::Renderer;
@@ -43,19 +43,31 @@ impl Platform for DesktopPlatform {
         true
     }
 
-    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
-        let ret = fs::read(path)
+    fn start_read_file(
+        &self,
+        path: PathBuf,
+        proxy: &EventLoopProxy<CustomEvents>,
+        evt_ctor: Box<dyn FnOnce(Option<Vec<u8>>) -> CustomEvents>,
+    ) {
+        let ret = fs::read(&path)
             .inspect_err(|e| {
                 info!("Cannot read {path:?}: {e}");
             })
             .ok();
-        let _ = proxy.send_event(CustomEvents::LoadedPrgRam(ret));
+        let _ = proxy.send_event(evt_ctor(ret));
     }
 
-    fn start_write_file(&self, path: &Path, content: &[u8]) {
-        let _ = fs::write(path, content).inspect_err(|e| {
+    fn start_write_file(
+        &self,
+        path: PathBuf,
+        proxy: &EventLoopProxy<CustomEvents>,
+        content: &[u8],
+        evt_ctor: Box<dyn FnOnce(PathBuf) -> CustomEvents>,
+    ) {
+        let _ = fs::write(&path, content).inspect_err(|e| {
             info!("Cannot read {path:?}: {e}");
         });
+        let _ = proxy.send_event(evt_ctor(path));
     }
 
     fn should_exit(&self) -> bool {

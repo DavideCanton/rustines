@@ -5,7 +5,7 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::{
     arch::{
-        memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter},
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
         ppu::utils::get_bits_mask,
     },
     utils::bit_utils::NumberFormat,
@@ -111,11 +111,11 @@ impl fmt::Display for SpriteShifters {
     }
 }
 impl MementoWriteable for SpriteShifters {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.lo_shifter);
-        writer.write_memento(self.hi_shifter);
-        writer.write_memento(self.x);
-        writer.write_memento(self.attributes.0);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.lo_shifter.write_memento(writer);
+        self.hi_shifter.write_memento(writer);
+        self.x.write_memento(writer);
+        self.attributes.0.write_memento(writer);
     }
 }
 

@@ -116,18 +116,18 @@ impl Triangle {
 }
 
 impl MementoWriteable for Triangle {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.counter_ctl);
-        writer.write_memento(self.counter_load);
-        writer.write_memento(self.timer_low);
-        writer.write_memento(self.timer_high);
-        writer.write_memento(self.length_counter_load);
-        writer.write_memento(self.enabled);
-        writer.write_memento(self.timer_counter);
-        writer.write_memento_ref(&self.length_counter);
-        writer.write_memento(self.linear_counter);
-        writer.write_memento(self.linear_counter_reload);
-        writer.write_memento_ref(&self.sequencer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.counter_ctl.write_memento(writer);
+        self.counter_load.write_memento(writer);
+        self.timer_low.write_memento(writer);
+        self.timer_high.write_memento(writer);
+        self.length_counter_load.write_memento(writer);
+        self.enabled.write_memento(writer);
+        self.timer_counter.write_memento(writer);
+        self.length_counter.write_memento(writer);
+        self.linear_counter.write_memento(writer);
+        self.linear_counter_reload.write_memento(writer);
+        self.sequencer.write_memento(writer);
     }
 }
 

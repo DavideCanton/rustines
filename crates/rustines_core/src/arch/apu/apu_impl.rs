@@ -83,20 +83,20 @@ impl ApuState {
 }
 
 impl MementoWriteable for ApuState {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento_ref(&self.pulse1);
-        writer.write_memento_ref(&self.pulse2);
-        writer.write_memento_ref(&self.triangle);
-        writer.write_memento_ref(&self.noise);
-        writer.write_memento_ref(&self.dmc);
-        writer.write_memento(self.irq_disabled);
-        writer.write_memento(Into::<bool>::into(self.mode));
-        writer.write_memento(self.frame_irq_active);
-        writer.write_memento(self.frame_cycles);
-        writer.write_memento(self.delayed_reset_cycles);
-        writer.write_memento(self.delayed_write_value);
-        writer.write_memento(self.cpu_cycle_count);
-        writer.write_memento(self.sample_accumulator);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.pulse1.write_memento(writer);
+        self.pulse2.write_memento(writer);
+        self.triangle.write_memento(writer);
+        self.noise.write_memento(writer);
+        self.dmc.write_memento(writer);
+        self.irq_disabled.write_memento(writer);
+        Into::<bool>::into(self.mode).write_memento(writer);
+        self.frame_irq_active.write_memento(writer);
+        self.frame_cycles.write_memento(writer);
+        self.delayed_reset_cycles.write_memento(writer);
+        self.delayed_write_value.write_memento(writer);
+        self.cpu_cycle_count.write_memento(writer);
+        self.sample_accumulator.write_memento(writer);
     }
 }
 

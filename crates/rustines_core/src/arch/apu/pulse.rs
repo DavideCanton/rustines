@@ -1,7 +1,7 @@
 use crate::{
     arch::{
         apu::common::{Envelope, LengthCounter, Sequencer},
-        memento::{MementoReader, MementoReadAndFill, MementoWriteable, MementoWriter},
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
     },
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
@@ -176,23 +176,23 @@ impl Pulse {
 }
 
 impl MementoWriteable for Pulse {
-    fn write_memento<W: MementoWriter>(&self, writer: &mut W) {
-        writer.write_memento(self.duty);
-        writer.write_memento(self.sweep_enabled);
-        writer.write_memento(self.sweep_period);
-        writer.write_memento(self.sweep_negate);
-        writer.write_memento(self.sweep_shift);
-        writer.write_memento(self.timer_low);
-        writer.write_memento(self.timer_high);
-        writer.write_memento(self.length_counter_load);
-        writer.write_memento_ref(&self.envelope);
-        writer.write_memento(self.timer_counter);
-        writer.write_memento_ref(&self.sequencer);
-        writer.write_memento_ref(&self.length_counter);
-        writer.write_memento(self.enabled);
-        writer.write_memento(self.sweep_divider);
-        writer.write_memento(self.sweep_reload);
-        writer.write_memento(self.is_pulse1);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        self.duty.write_memento(writer);
+        self.sweep_enabled.write_memento(writer);
+        self.sweep_period.write_memento(writer);
+        self.sweep_negate.write_memento(writer);
+        self.sweep_shift.write_memento(writer);
+        self.timer_low.write_memento(writer);
+        self.timer_high.write_memento(writer);
+        self.length_counter_load.write_memento(writer);
+        self.envelope.write_memento(writer);
+        self.timer_counter.write_memento(writer);
+        self.sequencer.write_memento(writer);
+        self.length_counter.write_memento(writer);
+        self.enabled.write_memento(writer);
+        self.sweep_divider.write_memento(writer);
+        self.sweep_reload.write_memento(writer);
+        self.is_pulse1.write_memento(writer);
     }
 }
 
