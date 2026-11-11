@@ -12,6 +12,7 @@ anyhow = { workspace = true }
 log = { workspace = true }
 rustines-macro = { path = "../rustines_macro" }
 bitfield = "0.20"
+thiserror = { workspace = true }
 
 [dev-dependencies]
 rand = "0.10"

@@ -9,7 +9,9 @@ use crate::{
             pulse::Pulse,
             triangle::Triangle,
         },
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
     },
     utils::bit_utils::{BitIndex, BitManip},
 };
@@ -83,38 +85,40 @@ impl ApuState {
 }
 
 impl MementoWriteable for ApuState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.pulse1.write_memento(writer);
-        self.pulse2.write_memento(writer);
-        self.triangle.write_memento(writer);
-        self.noise.write_memento(writer);
-        self.dmc.write_memento(writer);
-        self.irq_disabled.write_memento(writer);
-        Into::<bool>::into(self.mode).write_memento(writer);
-        self.frame_irq_active.write_memento(writer);
-        self.frame_cycles.write_memento(writer);
-        self.delayed_reset_cycles.write_memento(writer);
-        self.delayed_write_value.write_memento(writer);
-        self.cpu_cycle_count.write_memento(writer);
-        self.sample_accumulator.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.pulse1.write_memento(writer)?;
+        self.pulse2.write_memento(writer)?;
+        self.triangle.write_memento(writer)?;
+        self.noise.write_memento(writer)?;
+        self.dmc.write_memento(writer)?;
+        self.irq_disabled.write_memento(writer)?;
+        Into::<bool>::into(self.mode).write_memento(writer)?;
+        self.frame_irq_active.write_memento(writer)?;
+        self.frame_cycles.write_memento(writer)?;
+        self.delayed_reset_cycles.write_memento(writer)?;
+        self.delayed_write_value.write_memento(writer)?;
+        self.cpu_cycle_count.write_memento(writer)?;
+        self.sample_accumulator.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for ApuState {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.pulse1.read_and_fill(data);
-        self.pulse2.read_and_fill(data);
-        self.triangle.read_and_fill(data);
-        self.noise.read_and_fill(data);
-        self.dmc.read_and_fill(data);
-        self.irq_disabled = data.read_memento();
-        self.mode = data.read_memento::<bool>().into();
-        self.frame_irq_active = data.read_memento();
-        self.frame_cycles = data.read_memento();
-        self.delayed_reset_cycles = data.read_memento();
-        self.delayed_write_value = data.read_memento();
-        self.cpu_cycle_count = data.read_memento();
-        self.sample_accumulator = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.pulse1.read_and_fill(data)?;
+        self.pulse2.read_and_fill(data)?;
+        self.triangle.read_and_fill(data)?;
+        self.noise.read_and_fill(data)?;
+        self.dmc.read_and_fill(data)?;
+        self.irq_disabled = data.read_memento()?;
+        self.mode = data.read_memento::<bool>()?.into();
+        self.frame_irq_active = data.read_memento()?;
+        self.frame_cycles = data.read_memento()?;
+        self.delayed_reset_cycles = data.read_memento()?;
+        self.delayed_write_value = data.read_memento()?;
+        self.cpu_cycle_count = data.read_memento()?;
+        self.sample_accumulator = data.read_memento()?;
+        Ok(())
     }
 }
 

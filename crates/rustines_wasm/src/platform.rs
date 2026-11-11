@@ -5,17 +5,19 @@ use rustines_gui::{
     AppState, CustomEvents, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
     create_pixels,
 };
-use std::path::PathBuf;
-use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::Arc,
+};
 use wasm_bindgen::JsValue;
 use web_sys::js_sys::Uint8Array;
 use winit::event_loop::EventLoopProxy;
 
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
-use winit::dpi::PhysicalSize;
-use winit::platform::web::WindowExtWebSys;
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, platform::web::WindowExtWebSys, window::Window};
 
 pub struct WasmPlatform;
 

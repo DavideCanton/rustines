@@ -1,12 +1,13 @@
-use std::io::Cursor;
-use std::{io, io::Read};
+use std::{
+    io,
+    io::{Cursor, Read},
+};
 
 use log::info;
 use rustines_macro::Named;
 use zip::ZipArchive;
 
-use crate::loaders::loader::Loader;
-use crate::utils::named::Named;
+use crate::{loaders::loader::Loader, utils::named::Named};
 
 #[derive(Named)]
 pub struct ZipLoader;

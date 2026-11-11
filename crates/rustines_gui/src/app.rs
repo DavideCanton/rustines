@@ -370,8 +370,14 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                     if let Some(content) = c {
                         info!("Read state");
                         let mut reader = MementoReader::new(&content);
-                        app_state.bus.read_and_fill(&mut reader);
-                        app_state.cpu.read_and_fill(&mut reader);
+                        app_state
+                            .bus
+                            .read_and_fill(&mut reader)
+                            .expect("Failed to read saved state");
+                        app_state
+                            .cpu
+                            .read_and_fill(&mut reader)
+                            .expect("Failed to read saved state");
                     }
                 }
                 CustomEvents::SavedState(..) => {
@@ -531,8 +537,14 @@ fn handle_special_keys(
         && let Some(p) = app_state.nes_rom.file_path.as_ref()
     {
         let mut state = vec![];
-        app_state.bus.write_memento(&mut state);
-        app_state.cpu.write_memento(&mut state);
+        app_state
+            .bus
+            .write_memento(&mut state)
+            .expect("Failed to write saved state");
+        app_state
+            .cpu
+            .write_memento(&mut state)
+            .expect("Failed to write saved state");
         let mut path = p.clone();
         path.set_extension("sst");
         platform.start_write_file(

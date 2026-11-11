@@ -1,11 +1,19 @@
 use anyhow::bail;
 use rustines_macro::Named;
 
-use crate::arch::mappers::common::{BankedMemory, ChrMemory, skip_trainer};
-use crate::arch::mappers::mapper::Mapper;
-use crate::arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter};
-use crate::arch::rom_structs::{INesHeader, MirroringType};
-use crate::utils::named::Named;
+use crate::{
+    arch::{
+        mappers::{
+            common::{BankedMemory, ChrMemory, skip_trainer},
+            mapper::Mapper,
+        },
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
+        rom_structs::{INesHeader, MirroringType},
+    },
+    utils::named::Named,
+};
 
 #[derive(Named, Debug)]
 pub struct Mapper0 {
@@ -65,14 +73,16 @@ impl Mapper for Mapper0 {
 }
 
 impl MementoReadAndFill for Mapper0 {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.chr.read_and_fill(data);
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.chr.read_and_fill(data)?;
+        Ok(())
     }
 }
 
 impl MementoWriteable for Mapper0 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.chr.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.chr.write_memento(writer)?;
+        Ok(())
     }
 }
 

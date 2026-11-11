@@ -1,5 +1,4 @@
-use crate::arch::bus::Bus;
-use crate::arch::cpu::Cpu;
+use crate::arch::{bus::Bus, cpu::Cpu};
 
 pub fn implied(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     cpu.burn_internal_cycle(bus);

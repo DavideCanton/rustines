@@ -1,4 +1,6 @@
-use crate::arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter};
+use crate::arch::memento::{
+    MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+};
 
 #[derive(Default, Debug)]
 pub struct LengthCounter {
@@ -28,14 +30,15 @@ impl LengthCounter {
 }
 
 impl MementoWriteable for LengthCounter {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.counter.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.counter.write_memento(writer)
     }
 }
 
 impl MementoReadAndFill for LengthCounter {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.counter = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.counter = data.read_memento()?;
+        Ok(())
     }
 }
 
@@ -95,24 +98,26 @@ impl Envelope {
 }
 
 impl MementoWriteable for Envelope {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.start.write_memento(writer);
-        self.divider.write_memento(writer);
-        self.decay.write_memento(writer);
-        self.loop_flag.write_memento(writer);
-        self.const_vol.write_memento(writer);
-        self.vol.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.start.write_memento(writer)?;
+        self.divider.write_memento(writer)?;
+        self.decay.write_memento(writer)?;
+        self.loop_flag.write_memento(writer)?;
+        self.const_vol.write_memento(writer)?;
+        self.vol.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Envelope {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.start = data.read_memento();
-        self.divider = data.read_memento();
-        self.decay = data.read_memento();
-        self.loop_flag = data.read_memento();
-        self.const_vol = data.read_memento();
-        self.vol = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.start = data.read_memento()?;
+        self.divider = data.read_memento()?;
+        self.decay = data.read_memento()?;
+        self.loop_flag = data.read_memento()?;
+        self.const_vol = data.read_memento()?;
+        self.vol = data.read_memento()?;
+        Ok(())
     }
 }
 
@@ -139,15 +144,17 @@ impl Sequencer {
 }
 
 impl MementoWriteable for Sequencer {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.value.write_memento(writer);
-        self.max.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.value.write_memento(writer)?;
+        self.max.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Sequencer {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.value = data.read_memento();
-        self.max = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.value = data.read_memento()?;
+        self.max = data.read_memento()?;
+        Ok(())
     }
 }

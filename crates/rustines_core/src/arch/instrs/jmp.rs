@@ -1,6 +1,7 @@
-use crate::arch::bus::Bus;
-use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::to_u16;
+use crate::{
+    arch::{bus::Bus, cpu::Cpu},
+    utils::bit_utils::to_u16,
+};
 
 pub fn absolute(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let addr = cpu.decode_absolute(bus);

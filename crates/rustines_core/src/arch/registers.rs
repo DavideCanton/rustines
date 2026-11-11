@@ -2,7 +2,9 @@ use bitfield::bitfield;
 use std::fmt;
 
 use crate::{
-    arch::memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+    arch::memento::{
+        MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+    },
     utils::bit_utils::{BitIndex, BitManip},
 };
 
@@ -136,24 +138,26 @@ impl fmt::Debug for Registers {
 }
 
 impl MementoWriteable for Registers {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.pc.write_memento(writer);
-        self.sp.write_memento(writer);
-        self.a_reg.write_memento(writer);
-        self.x_reg.write_memento(writer);
-        self.y_reg.write_memento(writer);
-        self.p_reg.0.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.pc.write_memento(writer)?;
+        self.sp.write_memento(writer)?;
+        self.a_reg.write_memento(writer)?;
+        self.x_reg.write_memento(writer)?;
+        self.y_reg.write_memento(writer)?;
+        self.p_reg.0.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Registers {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.pc = data.read_memento();
-        self.sp = data.read_memento();
-        self.a_reg = data.read_memento();
-        self.x_reg = data.read_memento();
-        self.y_reg = data.read_memento();
-        self.p_reg.0 = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.pc = data.read_memento()?;
+        self.sp = data.read_memento()?;
+        self.a_reg = data.read_memento()?;
+        self.x_reg = data.read_memento()?;
+        self.y_reg = data.read_memento()?;
+        self.p_reg.0 = data.read_memento()?;
+        Ok(())
     }
 }
 

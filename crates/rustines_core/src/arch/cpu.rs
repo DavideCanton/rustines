@@ -5,7 +5,9 @@ use crate::{
         bus::{Bus, DmcDmaState, DummyReadResult, OamDmaState},
         instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
         registers::*,
     },
     utils::bit_utils::*,
@@ -373,23 +375,25 @@ impl Cpu {
 }
 
 impl MementoWriteable for Cpu {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.registers.write_memento(writer);
-        self.clock.write_memento(writer);
-        self.pending_irq_execution.write_memento(writer);
-        self.pending_nmi_execution.write_memento(writer);
-        self.pending_rst_execution.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.registers.write_memento(writer)?;
+        self.clock.write_memento(writer)?;
+        self.pending_irq_execution.write_memento(writer)?;
+        self.pending_nmi_execution.write_memento(writer)?;
+        self.pending_rst_execution.write_memento(writer)?;
         // ignore tracer
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Cpu {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.registers.read_and_fill(data);
-        self.clock = data.read_memento();
-        self.pending_irq_execution = data.read_memento();
-        self.pending_nmi_execution = data.read_memento();
-        self.pending_rst_execution = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.registers.read_and_fill(data)?;
+        self.clock = data.read_memento()?;
+        self.pending_irq_execution = data.read_memento()?;
+        self.pending_nmi_execution = data.read_memento()?;
+        self.pending_rst_execution = data.read_memento()?;
+        Ok(())
     }
 }
 

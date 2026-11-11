@@ -1,7 +1,9 @@
 use crate::{
     arch::{
         apu::common::{LengthCounter, Sequencer},
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
     },
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
@@ -116,34 +118,36 @@ impl Triangle {
 }
 
 impl MementoWriteable for Triangle {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.counter_ctl.write_memento(writer);
-        self.counter_load.write_memento(writer);
-        self.timer_low.write_memento(writer);
-        self.timer_high.write_memento(writer);
-        self.length_counter_load.write_memento(writer);
-        self.enabled.write_memento(writer);
-        self.timer_counter.write_memento(writer);
-        self.length_counter.write_memento(writer);
-        self.linear_counter.write_memento(writer);
-        self.linear_counter_reload.write_memento(writer);
-        self.sequencer.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.counter_ctl.write_memento(writer)?;
+        self.counter_load.write_memento(writer)?;
+        self.timer_low.write_memento(writer)?;
+        self.timer_high.write_memento(writer)?;
+        self.length_counter_load.write_memento(writer)?;
+        self.enabled.write_memento(writer)?;
+        self.timer_counter.write_memento(writer)?;
+        self.length_counter.write_memento(writer)?;
+        self.linear_counter.write_memento(writer)?;
+        self.linear_counter_reload.write_memento(writer)?;
+        self.sequencer.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Triangle {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.counter_ctl = data.read_memento();
-        self.counter_load = data.read_memento();
-        self.timer_low = data.read_memento();
-        self.timer_high = data.read_memento();
-        self.length_counter_load = data.read_memento();
-        self.enabled = data.read_memento();
-        self.timer_counter = data.read_memento();
-        self.length_counter.read_and_fill(data);
-        self.linear_counter = data.read_memento();
-        self.linear_counter_reload = data.read_memento();
-        self.sequencer.read_and_fill(data);
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.counter_ctl = data.read_memento()?;
+        self.counter_load = data.read_memento()?;
+        self.timer_low = data.read_memento()?;
+        self.timer_high = data.read_memento()?;
+        self.length_counter_load = data.read_memento()?;
+        self.enabled = data.read_memento()?;
+        self.timer_counter = data.read_memento()?;
+        self.length_counter.read_and_fill(data)?;
+        self.linear_counter = data.read_memento()?;
+        self.linear_counter_reload = data.read_memento()?;
+        self.sequencer.read_and_fill(data)?;
+        Ok(())
     }
 }
 

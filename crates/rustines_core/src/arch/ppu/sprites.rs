@@ -5,7 +5,9 @@ use bytemuck::{Pod, Zeroable};
 
 use crate::{
     arch::{
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
         ppu::utils::get_bits_mask,
     },
     utils::bit_utils::NumberFormat,
@@ -111,19 +113,21 @@ impl fmt::Display for SpriteShifters {
     }
 }
 impl MementoWriteable for SpriteShifters {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.lo_shifter.write_memento(writer);
-        self.hi_shifter.write_memento(writer);
-        self.x.write_memento(writer);
-        self.attributes.0.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.lo_shifter.write_memento(writer)?;
+        self.hi_shifter.write_memento(writer)?;
+        self.x.write_memento(writer)?;
+        self.attributes.0.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for SpriteShifters {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.lo_shifter = data.read_memento();
-        self.hi_shifter = data.read_memento();
-        self.x = data.read_memento();
-        self.attributes.0 = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.lo_shifter = data.read_memento()?;
+        self.hi_shifter = data.read_memento()?;
+        self.x = data.read_memento()?;
+        self.attributes.0 = data.read_memento()?;
+        Ok(())
     }
 }

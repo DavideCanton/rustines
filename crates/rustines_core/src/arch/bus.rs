@@ -6,7 +6,8 @@ use crate::{
         controller::NesController,
         mappers::mapper::{Mapper, MapperBox},
         memento::{
-            MementoReadAndFill, MementoReadable, MementoReader, MementoWriteable, MementoWriter,
+            MementoError, MementoReadAndFill, MementoReadable, MementoReader, MementoResult,
+            MementoWriteable, MementoWriter,
         },
         ppu::Ppu,
         zapper::Zapper,
@@ -406,35 +407,37 @@ impl Bus {
 }
 
 impl MementoWriteable for Bus {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.nes_ram.as_slice().write_memento(writer);
-        self.ppu.state().write_memento(writer);
-        self.apu.state().write_memento(writer);
-        self.mapper.write_memento(writer);
-        self.open_bus_value.write_memento(writer);
-        self.cycles_cnt.write_memento(writer);
-        self.total_cycles.write_memento(writer);
-        self.tracing_enabled.write_memento(writer);
-        self.oam_dma_state.write_memento(writer);
-        self.dmc_dma_state.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.nes_ram.as_slice().write_memento(writer)?;
+        self.ppu.state().write_memento(writer)?;
+        self.apu.state().write_memento(writer)?;
+        self.mapper.write_memento(writer)?;
+        self.open_bus_value.write_memento(writer)?;
+        self.cycles_cnt.write_memento(writer)?;
+        self.total_cycles.write_memento(writer)?;
+        self.tracing_enabled.write_memento(writer)?;
+        self.oam_dma_state.write_memento(writer)?;
+        self.dmc_dma_state.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for Bus {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.nes_ram = data.read_memento();
-        self.ppu.state_mut().read_and_fill(data);
-        self.apu.state_mut().read_and_fill(data);
-        self.mapper.read_and_fill(data);
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.nes_ram = data.read_memento()?;
+        self.ppu.state_mut().read_and_fill(data)?;
+        self.apu.state_mut().read_and_fill(data)?;
+        self.mapper.read_and_fill(data)?;
         // reset controllers
         self.controller1.reset();
         self.controller2.reset();
-        self.open_bus_value = data.read_memento();
-        self.cycles_cnt = data.read_memento();
-        self.total_cycles = data.read_memento();
-        self.tracing_enabled = data.read_memento();
-        self.oam_dma_state = data.read_memento();
-        self.dmc_dma_state = data.read_memento();
+        self.open_bus_value = data.read_memento()?;
+        self.cycles_cnt = data.read_memento()?;
+        self.total_cycles = data.read_memento()?;
+        self.tracing_enabled = data.read_memento()?;
+        self.oam_dma_state = data.read_memento()?;
+        self.dmc_dma_state = data.read_memento()?;
+        Ok(())
     }
 }
 
@@ -462,7 +465,7 @@ pub enum OamDmaState {
 }
 
 impl MementoWriteable for OamDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
         match self {
             OamDmaState::NotRunning => 0u8.write_memento(writer),
             OamDmaState::Starting {
@@ -470,53 +473,57 @@ impl MementoWriteable for OamDmaState {
                 address,
                 needs_alignment,
             } => {
-                1u8.write_memento(writer);
-                cnt.write_memento(writer);
-                address.write_memento(writer);
-                needs_alignment.write_memento(writer);
+                1u8.write_memento(writer)?;
+                cnt.write_memento(writer)?;
+                address.write_memento(writer)?;
+                needs_alignment.write_memento(writer)?;
+                Ok(())
             }
             OamDmaState::Aligning { cnt, address } => {
-                2u8.write_memento(writer);
-                cnt.write_memento(writer);
-                address.write_memento(writer);
+                2u8.write_memento(writer)?;
+                cnt.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
             OamDmaState::Reading { cnt, address } => {
-                3u8.write_memento(writer);
-                cnt.write_memento(writer);
-                address.write_memento(writer);
+                3u8.write_memento(writer)?;
+                cnt.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
             OamDmaState::Writing { cnt, address, data } => {
-                4u8.write_memento(writer);
-                cnt.write_memento(writer);
-                address.write_memento(writer);
-                data.write_memento(writer);
+                4u8.write_memento(writer)?;
+                cnt.write_memento(writer)?;
+                address.write_memento(writer)?;
+                data.write_memento(writer)?;
+                Ok(())
             }
         }
     }
 }
 impl MementoReadable for OamDmaState {
-    fn read_memento(reader: &mut MementoReader) -> Self {
-        match reader.read_memento::<u8>() {
-            0 => OamDmaState::NotRunning,
-            1 => OamDmaState::Starting {
-                cnt: reader.read_memento(),
-                address: reader.read_memento(),
-                needs_alignment: reader.read_memento(),
-            },
-            2 => OamDmaState::Aligning {
-                cnt: reader.read_memento(),
-                address: reader.read_memento(),
-            },
-            3 => OamDmaState::Reading {
-                cnt: reader.read_memento(),
-                address: reader.read_memento(),
-            },
-            4 => OamDmaState::Writing {
-                cnt: reader.read_memento(),
-                address: reader.read_memento(),
-                data: reader.read_memento(),
-            },
-            _ => panic!("Invalid value"),
+    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
+        match reader.read_memento::<u8>()? {
+            0 => Ok(OamDmaState::NotRunning),
+            1 => Ok(OamDmaState::Starting {
+                cnt: reader.read_memento()?,
+                address: reader.read_memento()?,
+                needs_alignment: reader.read_memento()?,
+            }),
+            2 => Ok(OamDmaState::Aligning {
+                cnt: reader.read_memento()?,
+                address: reader.read_memento()?,
+            }),
+            3 => Ok(OamDmaState::Reading {
+                cnt: reader.read_memento()?,
+                address: reader.read_memento()?,
+            }),
+            4 => Ok(OamDmaState::Writing {
+                cnt: reader.read_memento()?,
+                address: reader.read_memento()?,
+                data: reader.read_memento()?,
+            }),
+            v => Err(MementoError::InvalidValue(v)),
         }
     }
 }
@@ -531,45 +538,49 @@ pub enum DmcDmaState {
 }
 
 impl MementoWriteable for DmcDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
         match self {
             DmcDmaState::NotRunning => 0u8.write_memento(writer),
             DmcDmaState::Halt { address } => {
-                1u8.write_memento(writer);
-                address.write_memento(writer);
+                1u8.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
             DmcDmaState::Dummy { address } => {
-                2u8.write_memento(writer);
-                address.write_memento(writer);
+                2u8.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
             DmcDmaState::Alignment { address } => {
-                3u8.write_memento(writer);
-                address.write_memento(writer);
+                3u8.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
             DmcDmaState::Read { address } => {
-                4u8.write_memento(writer);
-                address.write_memento(writer);
+                4u8.write_memento(writer)?;
+                address.write_memento(writer)?;
+                Ok(())
             }
         }
     }
 }
 impl MementoReadable for DmcDmaState {
-    fn read_memento(reader: &mut MementoReader) -> Self {
-        match reader.read_memento::<u8>() {
-            0 => DmcDmaState::NotRunning,
-            1 => DmcDmaState::Halt {
-                address: reader.read_memento(),
-            },
-            2 => DmcDmaState::Dummy {
-                address: reader.read_memento(),
-            },
-            3 => DmcDmaState::Alignment {
-                address: reader.read_memento(),
-            },
-            4 => DmcDmaState::Read {
-                address: reader.read_memento(),
-            },
-            _ => panic!("Invalid value"),
+    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
+        match reader.read_memento::<u8>()? {
+            0 => Ok(DmcDmaState::NotRunning),
+            1 => Ok(DmcDmaState::Halt {
+                address: reader.read_memento()?,
+            }),
+            2 => Ok(DmcDmaState::Dummy {
+                address: reader.read_memento()?,
+            }),
+            3 => Ok(DmcDmaState::Alignment {
+                address: reader.read_memento()?,
+            }),
+            4 => Ok(DmcDmaState::Read {
+                address: reader.read_memento()?,
+            }),
+            v => Err(MementoError::InvalidValue(v)),
         }
     }
 }

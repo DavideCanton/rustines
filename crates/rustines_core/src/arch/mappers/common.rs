@@ -1,7 +1,7 @@
 use crate::{
     MementoWriter,
     arch::{
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable},
+        memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
         rom_structs::{INesHeader, TRAINER_SIZE},
     },
 };
@@ -86,16 +86,18 @@ impl BankedMemory {
 }
 
 impl MementoReadAndFill for BankedMemory {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
-        self.data = data.read_memento();
-        self.mask = data.read_memento();
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.data = data.read_memento()?;
+        self.mask = data.read_memento()?;
+        Ok(())
     }
 }
 
 impl MementoWriteable for BankedMemory {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.data.write_memento(writer);
-        self.mask.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.data.write_memento(writer)?;
+        self.mask.write_memento(writer)?;
+        Ok(())
     }
 }
 
@@ -136,18 +138,20 @@ impl ChrMemory {
 }
 
 impl MementoReadAndFill for ChrMemory {
-    fn read_and_fill(&mut self, data: &mut MementoReader) {
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
         if self.is_ram {
-            self.memory.read_and_fill(data);
+            self.memory.read_and_fill(data)?;
         }
+        Ok(())
     }
 }
 
 impl MementoWriteable for ChrMemory {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
         if self.is_ram {
-            self.memory.write_memento(writer);
+            self.memory.write_memento(writer)?;
         }
+        Ok(())
     }
 }
 

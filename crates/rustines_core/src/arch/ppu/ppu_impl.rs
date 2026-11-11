@@ -3,7 +3,9 @@ use std::{array, mem};
 use crate::{
     arch::{
         mappers::mapper::Mapper,
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter},
+        memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
         ppu::{
             OamSprite,
             background::BackgroundData,
@@ -129,86 +131,88 @@ impl PpuState {
 }
 
 impl MementoWriteable for PpuState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        self.nametables.write_memento(writer);
-        self.palette_table.write_memento(writer);
-        self.oam_data.write_memento(writer);
-        self.ctrl.0.write_memento(writer);
-        self.mask.0.write_memento(writer);
-        self.status.0.write_memento(writer);
-        self.open_bus_value.write_memento(writer);
-        self.open_bus_decay_timer.write_memento(writer);
-        self.v_reg.0.write_memento(writer);
-        self.t_reg.0.write_memento(writer);
-        self.x_reg.write_memento(writer);
-        self.w_toggle.write_memento(writer);
-        self.bg_data.write_memento(writer);
-        self.sprite_shifters.write_memento(writer);
-        self.secondary_oam.write_memento(writer);
-        self.secondary_oam_addr.write_memento(writer);
-        self.oam_data_latch.write_memento(writer);
-        self.sprite_zero_current.write_memento(writer);
-        self.sprite_zero_next.write_memento(writer);
-        self.secondary_oam_full.write_memento(writer);
-        self.oam_end.write_memento(writer);
-        self.to_copy.write_memento(writer);
-        self.suppress_vblank.write_memento(writer);
-        self.oam_addr.write_memento(writer);
-        self.data_buffer.write_memento(writer);
-        (self.scanline as u16).write_memento(writer);
-        self.cycle.write_memento(writer);
-        self.frame.write_memento(writer);
-        self.nmi_request.write_memento(writer);
-        self.frame_ready.write_memento(writer);
-        self.is_odd_frame.write_memento(writer);
-        self.zapper_position.write_memento(writer);
-        self.zapper_light_timer.write_memento(writer);
-        self.tracing_enabled.write_memento(writer);
-        self.debug_render_sprites_enabled.write_memento(writer);
-        self.debug_render_background_enabled.write_memento(writer);
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.nametables.write_memento(writer)?;
+        self.palette_table.write_memento(writer)?;
+        self.oam_data.write_memento(writer)?;
+        self.ctrl.0.write_memento(writer)?;
+        self.mask.0.write_memento(writer)?;
+        self.status.0.write_memento(writer)?;
+        self.open_bus_value.write_memento(writer)?;
+        self.open_bus_decay_timer.write_memento(writer)?;
+        self.v_reg.0.write_memento(writer)?;
+        self.t_reg.0.write_memento(writer)?;
+        self.x_reg.write_memento(writer)?;
+        self.w_toggle.write_memento(writer)?;
+        self.bg_data.write_memento(writer)?;
+        self.sprite_shifters.write_memento(writer)?;
+        self.secondary_oam.write_memento(writer)?;
+        self.secondary_oam_addr.write_memento(writer)?;
+        self.oam_data_latch.write_memento(writer)?;
+        self.sprite_zero_current.write_memento(writer)?;
+        self.sprite_zero_next.write_memento(writer)?;
+        self.secondary_oam_full.write_memento(writer)?;
+        self.oam_end.write_memento(writer)?;
+        self.to_copy.write_memento(writer)?;
+        self.suppress_vblank.write_memento(writer)?;
+        self.oam_addr.write_memento(writer)?;
+        self.data_buffer.write_memento(writer)?;
+        (self.scanline as u16).write_memento(writer)?;
+        self.cycle.write_memento(writer)?;
+        self.frame.write_memento(writer)?;
+        self.nmi_request.write_memento(writer)?;
+        self.frame_ready.write_memento(writer)?;
+        self.is_odd_frame.write_memento(writer)?;
+        self.zapper_position.write_memento(writer)?;
+        self.zapper_light_timer.write_memento(writer)?;
+        self.tracing_enabled.write_memento(writer)?;
+        self.debug_render_sprites_enabled.write_memento(writer)?;
+        self.debug_render_background_enabled.write_memento(writer)?;
+        Ok(())
     }
 }
 
 impl MementoReadAndFill for PpuState {
-    fn read_and_fill(&mut self, reader: &mut MementoReader) {
-        self.nametables = reader.read_memento();
-        self.palette_table = reader.read_memento();
-        self.oam_data = reader.read_memento();
-        self.ctrl.0 = reader.read_memento();
-        self.mask.0 = reader.read_memento();
-        self.status.0 = reader.read_memento();
-        self.open_bus_value = reader.read_memento();
-        self.open_bus_decay_timer = reader.read_memento();
-        self.v_reg.0 = reader.read_memento();
-        self.t_reg.0 = reader.read_memento();
-        self.x_reg = reader.read_memento();
-        self.w_toggle = reader.read_memento();
-        self.bg_data.read_and_fill(reader);
+    fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult {
+        self.nametables = reader.read_memento()?;
+        self.palette_table = reader.read_memento()?;
+        self.oam_data = reader.read_memento()?;
+        self.ctrl.0 = reader.read_memento()?;
+        self.mask.0 = reader.read_memento()?;
+        self.status.0 = reader.read_memento()?;
+        self.open_bus_value = reader.read_memento()?;
+        self.open_bus_decay_timer = reader.read_memento()?;
+        self.v_reg.0 = reader.read_memento()?;
+        self.t_reg.0 = reader.read_memento()?;
+        self.x_reg = reader.read_memento()?;
+        self.w_toggle = reader.read_memento()?;
+        self.bg_data.read_and_fill(reader)?;
         for shifter in &mut self.sprite_shifters {
-            shifter.read_and_fill(reader);
+            shifter.read_and_fill(reader)?;
         }
-        self.secondary_oam = reader.read_memento();
-        self.secondary_oam_addr = reader.read_memento();
-        self.oam_data_latch = reader.read_memento();
-        self.sprite_zero_current = reader.read_memento();
-        self.sprite_zero_next = reader.read_memento();
-        self.secondary_oam_full = reader.read_memento();
-        self.oam_end = reader.read_memento();
-        self.to_copy = reader.read_memento();
-        self.suppress_vblank = reader.read_memento();
-        self.oam_addr = reader.read_memento();
-        self.data_buffer = reader.read_memento();
-        self.scanline = reader.read_memento::<u16>() as i16;
-        self.cycle = reader.read_memento();
-        self.frame = reader.read_memento();
-        self.nmi_request = reader.read_memento();
-        self.frame_ready = reader.read_memento();
-        self.is_odd_frame = reader.read_memento();
-        self.zapper_position = reader.read_memento();
-        self.zapper_light_timer = reader.read_memento();
-        self.tracing_enabled = reader.read_memento();
-        self.debug_render_sprites_enabled = reader.read_memento();
-        self.debug_render_background_enabled = reader.read_memento();
+        self.secondary_oam = reader.read_memento()?;
+        self.secondary_oam_addr = reader.read_memento()?;
+        self.oam_data_latch = reader.read_memento()?;
+        self.sprite_zero_current = reader.read_memento()?;
+        self.sprite_zero_next = reader.read_memento()?;
+        self.secondary_oam_full = reader.read_memento()?;
+        self.oam_end = reader.read_memento()?;
+        self.to_copy = reader.read_memento()?;
+        self.suppress_vblank = reader.read_memento()?;
+        self.oam_addr = reader.read_memento()?;
+        self.data_buffer = reader.read_memento()?;
+        self.scanline = reader.read_memento::<u16>()? as i16;
+        self.cycle = reader.read_memento()?;
+        self.frame = reader.read_memento()?;
+        self.nmi_request = reader.read_memento()?;
+        self.frame_ready = reader.read_memento()?;
+        self.is_odd_frame = reader.read_memento()?;
+        self.zapper_position = reader.read_memento()?;
+        self.zapper_light_timer = reader.read_memento()?;
+        self.tracing_enabled = reader.read_memento()?;
+        self.debug_render_sprites_enabled = reader.read_memento()?;
+        self.debug_render_background_enabled = reader.read_memento()?;
+        Ok(())
     }
 }
 
@@ -1125,10 +1129,13 @@ const NES_PALETTE: [u32; 64] = [
 #[cfg(test)]
 mod tests {
     use super::{PpuMask, PpuScrollRegister};
-    use crate::arch::memento::{
-        MementoReadAndFill, MementoReader, MementoWriteable, MementoWriter,
+    use crate::{
+        Mapper, MirroringType, NoopRenderer, Ppu,
+        arch::memento::{
+            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
+        },
+        utils::named::Named,
     };
-    use crate::{Mapper, MirroringType, NoopRenderer, Ppu, utils::named::Named};
 
     struct FakeMapper;
 
@@ -1161,14 +1168,14 @@ mod tests {
     }
 
     impl MementoReadAndFill for FakeMapper {
-        fn read_and_fill(&mut self, _data: &mut MementoReader) {
-            todo!()
+        fn read_and_fill(&mut self, _data: &mut MementoReader) -> MementoResult {
+            Ok(())
         }
     }
 
     impl MementoWriteable for FakeMapper {
-        fn write_memento(&self, _writer: &mut dyn MementoWriter) {
-            todo!()
+        fn write_memento(&self, _writer: &mut dyn MementoWriter) -> MementoResult {
+            Ok(())
         }
     }
 

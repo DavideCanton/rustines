@@ -1,6 +1,7 @@
-use crate::arch::bus::Bus;
-use crate::arch::cpu::Cpu;
-use crate::utils::bit_utils::*;
+use crate::{
+    arch::{bus::Bus, cpu::Cpu},
+    utils::bit_utils::*,
+};
 
 pub fn implied(cpu: &mut Cpu, bus: &mut Bus) -> u8 {
     let pc = cpu.registers.pc;
