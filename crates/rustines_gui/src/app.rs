@@ -9,10 +9,10 @@ use log::info;
 use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{
-    self as core, AudioOutputBox, MementoWriter, NesRom, NoAudio,
+    self as core, AudioOutputBox, NesRom, NoAudio,
     arch::{
         bus::Controller2,
-        memento::{MementoReadAndFill, MementoReader},
+        memento::{MementoReadAndFill, MementoReader, MementoWriteable},
     },
     renderer::RendererBox,
 };
@@ -531,8 +531,8 @@ fn handle_special_keys(
         && let Some(p) = app_state.nes_rom.file_path.as_ref()
     {
         let mut state = vec![];
-        state.write_memento_ref(&app_state.bus);
-        state.write_memento_ref(&app_state.cpu);
+        app_state.bus.write_memento(&mut state);
+        app_state.cpu.write_memento(&mut state);
         let mut path = p.clone();
         path.set_extension("sst");
         platform.start_write_file(

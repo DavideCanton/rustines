@@ -1,23 +1,16 @@
 #![allow(clippy::just_underscores_and_digits)]
 
 /// Converts the two values provided `low` and `high` to an `u16`
-/// by making `(high << 8) | low`.
 #[inline(always)]
 pub fn to_u16(low: u8, high: u8) -> u16 {
-    let low = low as u16;
-    let high = high as u16;
-
-    (high << 8) | low
+    u16::from_le_bytes([low, high])
 }
 
 /// Converts the provided value `v` into a pair of `u8`,
 /// returning `(low, high)`.
 #[inline(always)]
 pub fn to_u8_lh(v: u16) -> (u8, u8) {
-    let low = (v & 0xFF) as u8;
-    let high = ((v >> 8) & 0xFF) as u8;
-
-    (low, high)
+    v.to_le_bytes().into()
 }
 
 pub trait NumberFormat {
