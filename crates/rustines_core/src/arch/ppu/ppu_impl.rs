@@ -1161,13 +1161,13 @@ mod tests {
     }
 
     impl MementoReadAndFill for FakeMapper {
-        fn read_and_fill(&mut self, data: &mut MementoReader) {
+        fn read_and_fill(&mut self, _data: &mut MementoReader) {
             todo!()
         }
     }
 
     impl MementoWriteable for FakeMapper {
-        fn write_memento(&self, writer: &mut dyn MementoWriter) {
+        fn write_memento(&self, _writer: &mut dyn MementoWriter) {
             todo!()
         }
     }
