@@ -617,9 +617,6 @@ impl Ppu {
                 let old_nmi_enable = self.state.ctrl.vblank_nmi_enable();
 
                 let ctrl = PpuCtrl(value);
-                if ctrl.ppu_write_ext() {
-                    panic!("Bit 6 of PPUCTRL should NEVER be set");
-                }
                 self.state.ctrl = ctrl;
                 self.state.t_reg.set_nametable_select(value & 0x03);
 
