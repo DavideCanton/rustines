@@ -1,13 +1,19 @@
-use std::fs::File;
-use std::io::{self, BufWriter, Write};
+use std::{
+    fs::File,
+    io::{self, BufWriter, Write},
+};
 
-use crate::MirroringType;
-use crate::arch::bus::Bus;
-use crate::arch::cpu::Cpu;
-use crate::arch::mappers::mapper::Mapper;
-use crate::arch::ppu::{OamSprite, Ppu, get_color_index, mirror_nametable_addr};
-use crate::arch::utils::generate_ppm;
-use crate::utils::bit_utils::{BitCount, BitIndex, NumberFormat};
+use crate::{
+    MirroringType,
+    arch::{
+        bus::Bus,
+        cpu::Cpu,
+        mappers::mapper::Mapper,
+        ppu::{OamSprite, Ppu, get_color_index, mirror_nametable_addr},
+        utils::generate_ppm,
+    },
+    utils::bit_utils::{BitCount, BitIndex, NumberFormat},
+};
 
 pub fn dump_pattern_tables(mapper: &dyn Mapper, scale: usize, save_file: bool) -> Vec<u8> {
     assert!(scale > 0, "Pattern table scale must be greater than zero");

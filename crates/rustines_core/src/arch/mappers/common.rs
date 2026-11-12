@@ -1,4 +1,10 @@
-use crate::arch::rom_structs::{INesHeader, TRAINER_SIZE};
+use crate::{
+    MementoWriter,
+    arch::{
+        memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
+        rom_structs::{INesHeader, TRAINER_SIZE},
+    },
+};
 
 const CHR_RAM_SIZE: usize = 0x2000;
 
@@ -79,6 +85,22 @@ impl BankedMemory {
     }
 }
 
+impl MementoReadAndFill for BankedMemory {
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        self.data = data.read_memento()?;
+        self.mask = data.read_memento()?;
+        Ok(())
+    }
+}
+
+impl MementoWriteable for BankedMemory {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        self.data.write_memento(writer)?;
+        self.mask.write_memento(writer)?;
+        Ok(())
+    }
+}
+
 /// CHR memory: CHR ROM from the cartridge, or 8KB of CHR RAM when the header declares no
 /// CHR ROM. Writes are ignored for CHR ROM.
 #[derive(Debug, Clone)]
@@ -112,6 +134,24 @@ impl ChrMemory {
         if self.is_ram {
             self.memory.write_banked(bank, bank_size, addr, val)
         }
+    }
+}
+
+impl MementoReadAndFill for ChrMemory {
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        if self.is_ram {
+            self.memory.read_and_fill(data)?;
+        }
+        Ok(())
+    }
+}
+
+impl MementoWriteable for ChrMemory {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        if self.is_ram {
+            self.memory.write_memento(writer)?;
+        }
+        Ok(())
     }
 }
 

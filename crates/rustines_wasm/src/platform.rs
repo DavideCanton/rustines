@@ -1,17 +1,23 @@
 use log::info;
 use rexie::{ObjectStore, Rexie, TransactionMode};
 use rustines_core::Renderer;
-use rustines_gui::{AppState, CustomEvents, INNER_SIZE, Platform, create_pixels};
-use std::{cell::RefCell, path::Path, rc::Rc, sync::Arc};
+use rustines_gui::{
+    AppState, CustomEvents, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
+    create_pixels,
+};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::Arc,
+};
 use wasm_bindgen::JsValue;
 use web_sys::js_sys::Uint8Array;
 use winit::event_loop::EventLoopProxy;
 
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
-use winit::dpi::PhysicalSize;
-use winit::platform::web::WindowExtWebSys;
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, platform::web::WindowExtWebSys, window::Window};
 
 pub struct WasmPlatform;
 
@@ -85,8 +91,13 @@ impl Platform for WasmPlatform {
         false
     }
 
-    fn start_read_file(&self, path: &Path, proxy: &EventLoopProxy<CustomEvents>) {
-        if let Ok(name) = resolve_filename(path) {
+    fn start_read_file(
+        &self,
+        path: PathBuf,
+        proxy: &EventLoopProxy<CustomEvents>,
+        evt_ctor: ReadEventConstructor,
+    ) {
+        if let Ok(name) = resolve_filename(&path) {
             let proxy = proxy.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let res = read_file(name)
@@ -96,18 +107,26 @@ impl Platform for WasmPlatform {
                     })
                     .ok()
                     .flatten();
-                let _ = proxy.send_event(CustomEvents::LoadedPrgRam(res));
+                let _ = proxy.send_event(evt_ctor(res));
             })
         }
     }
 
-    fn start_write_file(&self, path: &Path, content: &[u8]) {
-        if let Ok(name) = resolve_filename(path) {
+    fn start_write_file(
+        &self,
+        path: PathBuf,
+        proxy: &EventLoopProxy<CustomEvents>,
+        content: &[u8],
+        evt_ctor: WriteEventConstructor,
+    ) {
+        if let Ok(name) = resolve_filename(&path) {
             let content = content.to_vec();
+            let proxy = proxy.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 if let Err(e) = write_file(&name, &content).await {
                     info!("Failed to write save data: {e:?}");
                 }
+                let _ = proxy.send_event(evt_ctor(path));
             });
         }
     }

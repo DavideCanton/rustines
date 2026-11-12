@@ -1,9 +1,9 @@
 use log::warn;
 
-use crate::arch::bus::Bus;
-use crate::arch::cpu::Cpu;
-use crate::arch::instrs::*;
-use crate::utils::bit_utils::NumberFormat;
+use crate::{
+    arch::{bus::Bus, cpu::Cpu, instrs::*},
+    utils::bit_utils::NumberFormat,
+};
 
 macro_rules! instr {
     ( $fn: expr, $name: expr, $op: expr ) => {{ Instr::new($fn, $name, $op) }};
@@ -376,8 +376,7 @@ mod test {
     }
 
     mod test_macro {
-        use super::Instr;
-        use super::{compare_instr_fun, instr_fn1, instr_fn2};
+        use super::{Instr, compare_instr_fun, instr_fn1, instr_fn2};
 
         #[test]
         fn test_instr_macro_2() {
@@ -397,9 +396,7 @@ mod test {
     }
 
     mod test_instr {
-        use super::super::error_fn;
-        use super::Instr;
-        use super::{compare_instr_fun, instr_fn1};
+        use super::{super::error_fn, Instr, compare_instr_fun, instr_fn1};
 
         #[test]
         fn test_new() {

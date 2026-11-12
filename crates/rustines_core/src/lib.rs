@@ -4,15 +4,17 @@ pub mod loaders;
 pub mod renderer;
 pub mod utils;
 
-pub use arch::apu::Apu;
-pub use arch::bus::Bus;
-pub use arch::controller::{NesController, NesKey};
-pub use arch::cpu::Cpu;
-pub use arch::debug_utils;
-pub use arch::mappers::mapper::{Mapper, MapperBox};
-pub use arch::ppu::{Ppu, compose_rgba, decompose_rgba};
-pub use arch::rom_structs::{INesHeader, MirroringType, NesRom};
+pub use arch::{
+    apu::Apu,
+    bus::Bus,
+    controller::{NesController, NesKey},
+    cpu::Cpu,
+    debug_utils,
+    mappers::mapper::{Mapper, MapperBox},
+    memento::MementoWriter,
+    ppu::{Ppu, compose_rgba, decompose_rgba},
+    rom_structs::{INesHeader, MirroringType, NesRom},
+};
 pub use audio::{AudioOutput, AudioOutputBox, NoAudio};
-pub use loaders::loader::Loader;
-pub use loaders::loaders_factory::decode_loader;
+pub use loaders::{loader::Loader, loaders_factory::decode_loader};
 pub use renderer::{NoopRenderer, Renderer};

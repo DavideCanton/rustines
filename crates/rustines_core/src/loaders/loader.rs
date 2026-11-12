@@ -4,11 +4,13 @@ use anyhow::bail;
 use arrayref::array_ref;
 use log::{debug, error, info};
 
-use crate::arch::{
-    mappers::{mapper::MapperBox, mapper_factory::instantiate_mapper},
-    rom_structs::{HEADER, INesHeader, NesRom, TRAINER_SIZE},
+use crate::{
+    arch::{
+        mappers::{mapper::MapperBox, mapper_factory::instantiate_mapper},
+        rom_structs::{HEADER, INesHeader, NesRom, TRAINER_SIZE},
+    },
+    utils::named::Named,
 };
-use crate::utils::named::Named;
 
 const HEADER_SIZE: usize = 16;
 
@@ -91,13 +93,14 @@ pub trait Loader: Named {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-    use std::str::FromStr;
+    use std::{path::PathBuf, str::FromStr};
 
     use test_case::test_case;
 
-    use crate::arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, PRG_ROM_BANK_SIZE, TRAINER_SIZE};
-    use crate::loaders::{flat_loader::FlatLoader, loader::Loader};
+    use crate::{
+        arch::rom_structs::{CHR_ROM_BANK_SIZE, HEADER, PRG_ROM_BANK_SIZE, TRAINER_SIZE},
+        loaders::{flat_loader::FlatLoader, loader::Loader},
+    };
 
     const ROM_SIZE: usize = PRG_ROM_BANK_SIZE * 2 + CHR_ROM_BANK_SIZE;
 

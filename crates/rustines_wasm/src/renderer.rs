@@ -1,8 +1,7 @@
 use pixels::Pixels;
 use rustines_core::{Renderer, compose_rgba, decompose_rgba};
 use rustines_gui::PixelsRenderer;
-use std::fs::File;
-use std::io;
+use std::{fs::File, io};
 
 pub struct WasmRenderer {
     renderer: PixelsRenderer,
