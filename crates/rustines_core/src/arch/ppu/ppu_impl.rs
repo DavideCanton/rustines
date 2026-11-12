@@ -446,7 +446,7 @@ impl Ppu {
         if !self.state.secondary_oam_full {
             self.state.secondary_oam[self.state.secondary_oam_addr as usize] =
                 self.state.oam_data_latch;
-            self.state.secondary_oam_addr += 1;
+            self.incr_sec_oam_addr();
             (m, n) = self.incr(m, n);
         }
 
@@ -466,10 +466,6 @@ impl Ppu {
         n = (n + 1) & 0x3F;
         if n == 0 {
             self.state.oam_end = true;
-        }
-        if self.state.secondary_oam_addr == 32 {
-            self.state.secondary_oam_full = true;
-            self.state.secondary_oam_addr = 0;
         }
         n
     }
@@ -502,7 +498,7 @@ impl Ppu {
                     self.state.sprite_zero_next = true;
                 }
                 (m, n) = self.incr(m, n);
-                self.state.secondary_oam_addr += 1;
+                self.incr_sec_oam_addr();
             }
         } else {
             n = self.incr_n(n);
@@ -512,6 +508,14 @@ impl Ppu {
         self.state.oam_addr = (n << 2) | m;
 
         found
+    }
+
+    fn incr_sec_oam_addr(&mut self) {
+        self.state.secondary_oam_addr += 1;
+        if self.state.secondary_oam_addr == 32 {
+            self.state.secondary_oam_full = true;
+            self.state.secondary_oam_addr = 0;
+        }
     }
 
     fn is_sprite_in_range_y(&self, value: u8) -> bool {
