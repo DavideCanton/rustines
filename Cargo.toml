@@ -7,8 +7,6 @@ members = [
     "crates/rustines_debug_commands",
     "crates/rustines_gui_utils",
     "crates/rustines_macro",
-    "crates/pixels_tries",
-    "crates/cpal_tries"
 ]
 resolver = "2"
 
