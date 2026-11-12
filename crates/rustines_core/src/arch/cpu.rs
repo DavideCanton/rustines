@@ -1,4 +1,5 @@
 use log::warn;
+use rustines_macro::Memento;
 
 use crate::{
     arch::{
@@ -13,11 +14,17 @@ use crate::{
     utils::bit_utils::*,
 };
 
+#[derive(Memento)]
 pub struct Cpu {
+    #[memento(fill)]
     pub(crate) registers: Registers,
+    #[memento]
     clock: u64,
+    #[memento]
     pub(crate) pending_irq_execution: bool,
+    #[memento]
     pub(crate) pending_nmi_execution: bool,
+    #[memento]
     pub(crate) pending_rst_execution: bool,
     tracer: InstructionTracer,
 }
@@ -371,29 +378,6 @@ impl Cpu {
 
         bus.set_dmc_dma_state(next_state);
         self.clock += 1;
-    }
-}
-
-impl MementoWriteable for Cpu {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.registers.write_memento(writer)?;
-        self.clock.write_memento(writer)?;
-        self.pending_irq_execution.write_memento(writer)?;
-        self.pending_nmi_execution.write_memento(writer)?;
-        self.pending_rst_execution.write_memento(writer)?;
-        // ignore tracer
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Cpu {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.registers.read_and_fill(data)?;
-        self.clock = data.read_memento()?;
-        self.pending_irq_execution = data.read_memento()?;
-        self.pending_nmi_execution = data.read_memento()?;
-        self.pending_rst_execution = data.read_memento()?;
-        Ok(())
     }
 }
 

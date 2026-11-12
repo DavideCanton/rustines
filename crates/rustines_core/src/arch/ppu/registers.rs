@@ -1,6 +1,11 @@
 use bitfield::bitfield;
+use rustines_macro::MementoBitfield;
 
-use crate::utils::bit_utils::{BitIndex, BitManip};
+use crate::{
+    MementoWriter,
+    arch::memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
+    utils::bit_utils::{BitIndex, BitManip},
+};
 
 bitfield! {
     /// ```text
@@ -11,7 +16,7 @@ bitfield! {
     /// ||| +---------------- nametable select Y
     /// +++----------------- fine Y scroll
     /// ```
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     pub(crate) struct PpuScrollRegister(pub u16);
     impl Debug;
     u8;
@@ -75,7 +80,7 @@ impl PpuScrollRegister {
 }
 
 bitfield! {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     pub(crate) struct PpuCtrl(pub u8);
     impl Debug;
     /** 7 -> Vblank NMI enable (0: off, 1: on) */
@@ -101,7 +106,7 @@ impl PpuCtrl {
 }
 
 bitfield! {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     pub(crate) struct PpuMask(pub u8);
     impl Debug;
     /** 7 -> Emphasize blue */
@@ -133,7 +138,7 @@ impl PpuMask {
 }
 
 bitfield! {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     pub(crate) struct PpuStatus(pub u8);
     impl Debug;
     /** 7 -> Vblank flag, cleared on read. Unreliable. */

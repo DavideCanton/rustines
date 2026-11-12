@@ -2,6 +2,7 @@ use std::fmt;
 
 use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
+use rustines_macro::{Memento, MementoBitfield};
 
 use crate::{
     arch::{
@@ -32,7 +33,7 @@ impl OamSprite {
 }
 
 bitfield! {
-    #[derive(Clone, Copy, Pod, Zeroable, Default)]
+    #[derive(Clone, Copy, Pod, Zeroable, Default, MementoBitfield)]
     #[repr(C)]
     pub struct SpriteAttributes(u8);
     impl Debug;
@@ -46,13 +47,17 @@ bitfield! {
     pub palette, _: 1, 0;
 }
 
-#[derive(Debug, Clone, Copy, Zeroable)]
+#[derive(Debug, Clone, Copy, Zeroable, Memento)]
 pub struct SpriteShifters {
     #[allow(unused)]
     pub(super) index: usize,
+    #[memento]
     pub(super) lo_shifter: u8,
+    #[memento]
     pub(super) hi_shifter: u8,
+    #[memento]
     pub(super) x: u8,
+    #[memento(fill)]
     pub(super) attributes: SpriteAttributes,
 }
 
@@ -110,24 +115,5 @@ impl fmt::Display for SpriteShifters {
             self.x,
             self.attributes
         )
-    }
-}
-impl MementoWriteable for SpriteShifters {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.lo_shifter.write_memento(writer)?;
-        self.hi_shifter.write_memento(writer)?;
-        self.x.write_memento(writer)?;
-        self.attributes.0.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for SpriteShifters {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.lo_shifter = data.read_memento()?;
-        self.hi_shifter = data.read_memento()?;
-        self.x = data.read_memento()?;
-        self.attributes.0 = data.read_memento()?;
-        Ok(())
     }
 }

@@ -1,5 +1,5 @@
 use anyhow::bail;
-use rustines_macro::Named;
+use rustines_macro::{Memento, Named};
 
 use crate::{
     arch::{
@@ -15,16 +15,18 @@ use crate::{
     utils::named::Named,
 };
 
-#[derive(Named)]
+#[derive(Named, Memento)]
 pub struct Mapper3 {
     /// 16KB or 32KB, a 16KB PRG ROM is mirrored on $C000-$FFFF.
     prg_rom: BankedMemory,
     /// Mirrored over $6000-$7FFF when smaller than 8KB.
     /// not battery backed, so no need to implement get/set prg ram
+    #[memento(fill)]
     prg_ram: Option<BankedMemory>,
     chr_rom: BankedMemory,
     mirroring_type: MirroringType,
     /// 8KB CHR bank; out of range values wrap around.
+    #[memento]
     selected_bank: u8,
 }
 
@@ -99,22 +101,6 @@ impl Mapper for Mapper3 {
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type
-    }
-}
-
-impl MementoReadAndFill for Mapper3 {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.prg_ram.read_and_fill(data)?;
-        self.selected_bank = data.read_memento()?;
-        Ok(())
-    }
-}
-
-impl MementoWriteable for Mapper3 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.prg_ram.write_memento(writer)?;
-        self.selected_bank.write_memento(writer)?;
-        Ok(())
     }
 }
 

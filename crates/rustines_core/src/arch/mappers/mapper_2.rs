@@ -11,16 +11,19 @@ use crate::{
     },
     utils::named::Named,
 };
-use rustines_macro::Named;
+use rustines_macro::{Memento, Named};
 
-#[derive(Named)]
+#[derive(Named, Memento)]
 pub struct Mapper2 {
     prg_rom: BankedMemory,
+    #[memento(fill)]
     chr: ChrMemory,
     mirroring_type: MirroringType,
     /// 16KB bank mapped on $8000-$BFFF; out of range values wrap around.
+    #[memento]
     selected_bank: u8,
     /// 16KB bank fixed on $C000-$FFFF.
+    #[memento]
     last_bank: usize,
 }
 
@@ -83,24 +86,6 @@ impl Mapper for Mapper2 {
 
     fn mirroring_mode(&self) -> MirroringType {
         self.mirroring_type
-    }
-}
-
-impl MementoReadAndFill for Mapper2 {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.chr.read_and_fill(data)?;
-        self.selected_bank = data.read_memento()?;
-        self.last_bank = data.read_memento()?;
-        Ok(())
-    }
-}
-
-impl MementoWriteable for Mapper2 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.chr.write_memento(writer)?;
-        self.selected_bank.write_memento(writer)?;
-        self.last_bank.write_memento(writer)?;
-        Ok(())
     }
 }
 

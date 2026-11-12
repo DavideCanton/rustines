@@ -83,6 +83,19 @@ impl MementoWriteable for u16 {
     }
 }
 
+impl MementoReadable for i16 {
+    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
+        let [b1, b2] = reader.read_many()?;
+        Ok(to_u16(b1, b2) as i16)
+    }
+}
+
+impl MementoWriteable for i16 {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        writer.write_many(&self.to_le_bytes())
+    }
+}
+
 impl MementoReadable for u32 {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
         Ok(u32::from_le_bytes(reader.read_many()?))
@@ -141,6 +154,15 @@ impl<const N: usize, M: MementoReadable> MementoReadable for [M; N] {
             .collect::<MementoResult<_>>()?;
 
         Ok(vec.try_into().unwrap_or_else(|_| unreachable!()))
+    }
+}
+
+impl<const N: usize, M: MementoReadAndFill> MementoReadAndFill for [M; N] {
+    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+        for el in self {
+            el.read_and_fill(data)?;
+        }
+        Ok(())
     }
 }
 
@@ -291,6 +313,8 @@ impl<'a> MementoReader<'a> {
 
 #[cfg(test)]
 mod tests {
+    use rustines_macro::Memento;
+
     use super::*;
 
     #[test]
@@ -410,20 +434,9 @@ mod tests {
     }
 
     // Helper struct to test MementoReadAndFill
-    #[derive(Debug, PartialEq)]
-    struct TestFill(u32);
+    #[derive(Debug, PartialEq, Memento)]
+    struct TestFill(#[memento] u32);
 
-    impl MementoReadAndFill for TestFill {
-        fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-            self.0 = data.read_memento().unwrap();
-            Ok(())
-        }
-    }
-    impl MementoWriteable for TestFill {
-        fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-            self.0.write_memento(writer)
-        }
-    }
     impl MementoReadable for TestFill {
         fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
             Ok(Self(reader.read_memento()?))

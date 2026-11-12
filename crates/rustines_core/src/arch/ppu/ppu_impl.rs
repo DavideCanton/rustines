@@ -19,6 +19,7 @@ use crate::{
     utils::bit_utils::{BitCount as BC, BitIndex as BI, BitManip},
 };
 use log::trace;
+use rustines_macro::Memento;
 
 #[derive(Debug)]
 enum RenderType {
@@ -29,52 +30,90 @@ enum RenderType {
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
+#[derive(Memento)]
 pub struct PpuState {
+    #[memento]
     nametables: [u8; 2048],
+    #[memento]
     palette_table: [u8; 32],
+    #[memento]
     oam_data: [u8; 256],
 
+    #[memento(fill)]
     pub(crate) ctrl: PpuCtrl,
+    #[memento(fill)]
     pub(crate) mask: PpuMask,
+    #[memento(fill)]
     pub(crate) status: PpuStatus,
+    #[memento]
     pub(crate) open_bus_value: u8,
+    #[memento]
     open_bus_decay_timer: u8,
 
+    #[memento(fill)]
     pub(crate) v_reg: PpuScrollRegister,
+    #[memento(fill)]
     pub(crate) t_reg: PpuScrollRegister,
+    #[memento]
     pub(crate) x_reg: u8,
+    #[memento]
     pub(crate) w_toggle: bool,
 
+    #[memento(fill)]
     pub(crate) bg_data: BackgroundData,
 
+    #[memento(fill)]
     pub(crate) sprite_shifters: [SpriteShifters; 8],
+    #[memento]
     secondary_oam: [u8; 32],
+    #[memento]
     sprite_in_range: [bool; 8],
+    #[memento]
     secondary_oam_addr: u8,
+    #[memento]
     oam_data_latch: u8,
+    #[memento]
     sprite_zero_current: bool,
+    #[memento]
     sprite_zero_next: bool,
+    #[memento]
     secondary_oam_full: bool,
+    #[memento]
     oam_end: bool,
+    #[memento]
     to_copy: u8,
+    #[memento]
     suppress_vblank: bool,
 
+    #[memento]
     pub(crate) oam_addr: u8,
+    #[memento]
     pub(crate) data_buffer: u8,
 
+    #[memento]
     pub(crate) scanline: i16,
+    #[memento]
     pub(crate) cycle: u16,
+    #[memento]
     pub(crate) frame: u64,
 
+    #[memento]
     pub(crate) nmi_request: bool,
+    #[memento]
     pub(crate) frame_ready: bool,
+    #[memento]
     pub(crate) is_odd_frame: bool,
 
+    #[memento]
     zapper_position: Option<(usize, usize)>,
+    #[memento]
     zapper_light_timer: usize,
 
+    #[memento]
     tracing_enabled: bool,
+    #[memento]
     debug_render_sprites_enabled: bool,
+    #[memento]
     debug_render_background_enabled: bool,
 }
 
@@ -130,93 +169,9 @@ impl PpuState {
     }
 }
 
-impl MementoWriteable for PpuState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.nametables.write_memento(writer)?;
-        self.palette_table.write_memento(writer)?;
-        self.oam_data.write_memento(writer)?;
-        self.ctrl.0.write_memento(writer)?;
-        self.mask.0.write_memento(writer)?;
-        self.status.0.write_memento(writer)?;
-        self.open_bus_value.write_memento(writer)?;
-        self.open_bus_decay_timer.write_memento(writer)?;
-        self.v_reg.0.write_memento(writer)?;
-        self.t_reg.0.write_memento(writer)?;
-        self.x_reg.write_memento(writer)?;
-        self.w_toggle.write_memento(writer)?;
-        self.bg_data.write_memento(writer)?;
-        self.sprite_shifters.write_memento(writer)?;
-        self.secondary_oam.write_memento(writer)?;
-        self.secondary_oam_addr.write_memento(writer)?;
-        self.oam_data_latch.write_memento(writer)?;
-        self.sprite_zero_current.write_memento(writer)?;
-        self.sprite_zero_next.write_memento(writer)?;
-        self.secondary_oam_full.write_memento(writer)?;
-        self.oam_end.write_memento(writer)?;
-        self.to_copy.write_memento(writer)?;
-        self.suppress_vblank.write_memento(writer)?;
-        self.oam_addr.write_memento(writer)?;
-        self.data_buffer.write_memento(writer)?;
-        (self.scanline as u16).write_memento(writer)?;
-        self.cycle.write_memento(writer)?;
-        self.frame.write_memento(writer)?;
-        self.nmi_request.write_memento(writer)?;
-        self.frame_ready.write_memento(writer)?;
-        self.is_odd_frame.write_memento(writer)?;
-        self.zapper_position.write_memento(writer)?;
-        self.zapper_light_timer.write_memento(writer)?;
-        self.tracing_enabled.write_memento(writer)?;
-        self.debug_render_sprites_enabled.write_memento(writer)?;
-        self.debug_render_background_enabled.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for PpuState {
-    fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult {
-        self.nametables = reader.read_memento()?;
-        self.palette_table = reader.read_memento()?;
-        self.oam_data = reader.read_memento()?;
-        self.ctrl.0 = reader.read_memento()?;
-        self.mask.0 = reader.read_memento()?;
-        self.status.0 = reader.read_memento()?;
-        self.open_bus_value = reader.read_memento()?;
-        self.open_bus_decay_timer = reader.read_memento()?;
-        self.v_reg.0 = reader.read_memento()?;
-        self.t_reg.0 = reader.read_memento()?;
-        self.x_reg = reader.read_memento()?;
-        self.w_toggle = reader.read_memento()?;
-        self.bg_data.read_and_fill(reader)?;
-        for shifter in &mut self.sprite_shifters {
-            shifter.read_and_fill(reader)?;
-        }
-        self.secondary_oam = reader.read_memento()?;
-        self.secondary_oam_addr = reader.read_memento()?;
-        self.oam_data_latch = reader.read_memento()?;
-        self.sprite_zero_current = reader.read_memento()?;
-        self.sprite_zero_next = reader.read_memento()?;
-        self.secondary_oam_full = reader.read_memento()?;
-        self.oam_end = reader.read_memento()?;
-        self.to_copy = reader.read_memento()?;
-        self.suppress_vblank = reader.read_memento()?;
-        self.oam_addr = reader.read_memento()?;
-        self.data_buffer = reader.read_memento()?;
-        self.scanline = reader.read_memento::<u16>()? as i16;
-        self.cycle = reader.read_memento()?;
-        self.frame = reader.read_memento()?;
-        self.nmi_request = reader.read_memento()?;
-        self.frame_ready = reader.read_memento()?;
-        self.is_odd_frame = reader.read_memento()?;
-        self.zapper_position = reader.read_memento()?;
-        self.zapper_light_timer = reader.read_memento()?;
-        self.tracing_enabled = reader.read_memento()?;
-        self.debug_render_sprites_enabled = reader.read_memento()?;
-        self.debug_render_background_enabled = reader.read_memento()?;
-        Ok(())
-    }
-}
-
+#[derive(Memento)]
 pub struct Ppu {
+    #[memento(fill)]
     pub(crate) state: PpuState,
     renderer: RendererBox,
 }
@@ -1129,6 +1084,8 @@ const NES_PALETTE: [u32; 64] = [
 
 #[cfg(test)]
 mod tests {
+    use rustines_macro::Memento;
+
     use super::{PpuMask, PpuScrollRegister};
     use crate::{
         Mapper, MirroringType, NoopRenderer, Ppu,
@@ -1138,6 +1095,7 @@ mod tests {
         utils::named::Named,
     };
 
+    #[derive(Memento)]
     struct FakeMapper;
 
     impl Named for FakeMapper {
@@ -1165,18 +1123,6 @@ mod tests {
 
         fn store_ppu(&mut self, _addr: u16, _val: u8) {
             todo!()
-        }
-    }
-
-    impl MementoReadAndFill for FakeMapper {
-        fn read_and_fill(&mut self, _data: &mut MementoReader) -> MementoResult {
-            Ok(())
-        }
-    }
-
-    impl MementoWriteable for FakeMapper {
-        fn write_memento(&self, _writer: &mut dyn MementoWriter) -> MementoResult {
-            Ok(())
         }
     }
 

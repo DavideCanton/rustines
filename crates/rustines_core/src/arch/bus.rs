@@ -1,4 +1,5 @@
 use log::trace;
+use rustines_macro::Memento;
 
 use crate::{
     arch::{
@@ -37,18 +38,29 @@ impl Controller2 {
     }
 }
 
+#[derive(Memento)]
 pub struct Bus {
+    #[memento]
     nes_ram: [u8; 2048],
+    #[memento(fill)]
     ppu: Ppu,
+    #[memento(fill)]
     apu: Apu,
+    #[memento(fill)]
     mapper: MapperBox,
     controller1: NesController,
     controller2: Controller2,
+    #[memento]
     open_bus_value: u8,
+    #[memento]
     cycles_cnt: usize,
+    #[memento]
     total_cycles: usize,
+    #[memento]
     tracing_enabled: bool,
+    #[memento]
     oam_dma_state: OamDmaState,
+    #[memento]
     dmc_dma_state: DmcDmaState,
 }
 
@@ -403,41 +415,6 @@ impl Bus {
 
     pub(crate) fn set_dmc_dma_state(&mut self, next_state: DmcDmaState) {
         self.dmc_dma_state = next_state;
-    }
-}
-
-impl MementoWriteable for Bus {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.nes_ram.as_slice().write_memento(writer)?;
-        self.ppu.state().write_memento(writer)?;
-        self.apu.state().write_memento(writer)?;
-        self.mapper.write_memento(writer)?;
-        self.open_bus_value.write_memento(writer)?;
-        self.cycles_cnt.write_memento(writer)?;
-        self.total_cycles.write_memento(writer)?;
-        self.tracing_enabled.write_memento(writer)?;
-        self.oam_dma_state.write_memento(writer)?;
-        self.dmc_dma_state.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Bus {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.nes_ram = data.read_memento()?;
-        self.ppu.state_mut().read_and_fill(data)?;
-        self.apu.state_mut().read_and_fill(data)?;
-        self.mapper.read_and_fill(data)?;
-        // reset controllers
-        self.controller1.reset();
-        self.controller2.reset();
-        self.open_bus_value = data.read_memento()?;
-        self.cycles_cnt = data.read_memento()?;
-        self.total_cycles = data.read_memento()?;
-        self.tracing_enabled = data.read_memento()?;
-        self.oam_dma_state = data.read_memento()?;
-        self.dmc_dma_state = data.read_memento()?;
-        Ok(())
     }
 }
 

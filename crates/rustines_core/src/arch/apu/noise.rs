@@ -1,3 +1,5 @@
+use rustines_macro::Memento;
+
 use crate::{
     arch::{
         apu::common::{Envelope, LengthCounter},
@@ -8,15 +10,23 @@ use crate::{
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
+#[derive(Memento)]
 pub struct Noise {
+    #[memento(fill)]
     length_counter: LengthCounter,
+    #[memento]
     noise_mode: bool,
+    #[memento]
     period: u8,
+    #[memento]
     enabled: bool,
 
+    #[memento]
     timer_counter: u16,
+    #[memento]
     shift_register: u16,
 
+    #[memento(fill)]
     envelope: Envelope,
 }
 
@@ -101,32 +111,6 @@ impl Noise {
 
     fn timer_period(&self) -> u16 {
         NOISE_PERIOD_TABLE[self.period as usize]
-    }
-}
-
-impl MementoWriteable for Noise {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.length_counter.write_memento(writer)?;
-        self.noise_mode.write_memento(writer)?;
-        self.period.write_memento(writer)?;
-        self.enabled.write_memento(writer)?;
-        self.timer_counter.write_memento(writer)?;
-        self.shift_register.write_memento(writer)?;
-        self.envelope.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Noise {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.length_counter.read_and_fill(data)?;
-        self.noise_mode = data.read_memento()?;
-        self.period = data.read_memento()?;
-        self.enabled = data.read_memento()?;
-        self.timer_counter = data.read_memento()?;
-        self.shift_register = data.read_memento()?;
-        self.envelope.read_and_fill(data)?;
-        Ok(())
     }
 }
 

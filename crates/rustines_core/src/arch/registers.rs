@@ -1,4 +1,5 @@
 use bitfield::bitfield;
+use rustines_macro::{Memento, MementoBitfield};
 use std::fmt;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
 };
 
 bitfield! {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     #[repr(C)]
     struct P_Register(u8);
     impl Debug;
@@ -48,12 +49,19 @@ impl P_Register {
     }
 }
 
+#[derive(Memento)]
 pub struct Registers {
+    #[memento]
     pub pc: u16,
+    #[memento]
     pub sp: u8,
+    #[memento]
     pub a_reg: u8,
+    #[memento]
     pub x_reg: u8,
+    #[memento]
     pub y_reg: u8,
+    #[memento(fill)]
     p_reg: P_Register,
 }
 
@@ -134,30 +142,6 @@ impl fmt::Debug for Registers {
             .field("y_reg", &format!("{:#04x}", self.y_reg))
             .field("p_reg", &format!("{:?}", self.p_reg))
             .finish()
-    }
-}
-
-impl MementoWriteable for Registers {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.pc.write_memento(writer)?;
-        self.sp.write_memento(writer)?;
-        self.a_reg.write_memento(writer)?;
-        self.x_reg.write_memento(writer)?;
-        self.y_reg.write_memento(writer)?;
-        self.p_reg.0.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Registers {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.pc = data.read_memento()?;
-        self.sp = data.read_memento()?;
-        self.a_reg = data.read_memento()?;
-        self.x_reg = data.read_memento()?;
-        self.y_reg = data.read_memento()?;
-        self.p_reg.0 = data.read_memento()?;
-        Ok(())
     }
 }
 

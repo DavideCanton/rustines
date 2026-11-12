@@ -1,3 +1,5 @@
+use rustines_macro::Memento;
+
 use crate::{
     arch::{
         apu::common::{Envelope, LengthCounter, Sequencer},
@@ -8,27 +10,44 @@ use crate::{
     utils::bit_utils::{BitCount, BitIndex, BitManip},
 };
 
+#[derive(Memento)]
 pub struct Pulse {
+    #[memento]
     duty: u8,
 
+    #[memento]
     sweep_enabled: bool,
+    #[memento]
     sweep_period: u8,
+    #[memento]
     sweep_negate: bool,
+    #[memento]
     sweep_shift: u8,
 
+    #[memento]
     timer_low: u8,
+    #[memento]
     timer_high: u8,
+    #[memento]
     length_counter_load: u8,
 
+    #[memento(fill)]
     envelope: Envelope,
 
     // Internal state
+    #[memento]
     timer_counter: u16,
+    #[memento(fill)]
     sequencer: Sequencer,
+    #[memento(fill)]
     length_counter: LengthCounter,
+    #[memento]
     enabled: bool,
+    #[memento]
     sweep_divider: u8,
+    #[memento]
     sweep_reload: bool,
+    #[memento]
     is_pulse1: bool,
 }
 
@@ -174,50 +193,6 @@ impl Pulse {
     fn sweep_mute(&self) -> bool {
         let target = self.sweep_target_period();
         self.timer_period() < 8 || target > 0x07FF
-    }
-}
-
-impl MementoWriteable for Pulse {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.duty.write_memento(writer)?;
-        self.sweep_enabled.write_memento(writer)?;
-        self.sweep_period.write_memento(writer)?;
-        self.sweep_negate.write_memento(writer)?;
-        self.sweep_shift.write_memento(writer)?;
-        self.timer_low.write_memento(writer)?;
-        self.timer_high.write_memento(writer)?;
-        self.length_counter_load.write_memento(writer)?;
-        self.envelope.write_memento(writer)?;
-        self.timer_counter.write_memento(writer)?;
-        self.sequencer.write_memento(writer)?;
-        self.length_counter.write_memento(writer)?;
-        self.enabled.write_memento(writer)?;
-        self.sweep_divider.write_memento(writer)?;
-        self.sweep_reload.write_memento(writer)?;
-        self.is_pulse1.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Pulse {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.duty = data.read_memento()?;
-        self.sweep_enabled = data.read_memento()?;
-        self.sweep_period = data.read_memento()?;
-        self.sweep_negate = data.read_memento()?;
-        self.sweep_shift = data.read_memento()?;
-        self.timer_low = data.read_memento()?;
-        self.timer_high = data.read_memento()?;
-        self.length_counter_load = data.read_memento()?;
-        self.envelope.read_and_fill(data)?;
-        self.timer_counter = data.read_memento()?;
-        self.sequencer.read_and_fill(data)?;
-        self.length_counter.read_and_fill(data)?;
-        self.enabled = data.read_memento()?;
-        self.sweep_divider = data.read_memento()?;
-        self.sweep_reload = data.read_memento()?;
-        self.is_pulse1 = data.read_memento()?;
-        Ok(())
     }
 }
 
