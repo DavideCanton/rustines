@@ -13,7 +13,7 @@ pub enum MementoError {
     #[error("Unexpected end of data")]
     UnexpectedEnd,
     #[error("Unexpected value found {0}")]
-    InvalidValue(u8),
+    InvalidValue(u8, usize),
 }
 
 pub type MementoResult<T = ()> = Result<T, MementoError>;
@@ -21,7 +21,7 @@ pub type MementoResult<T = ()> = Result<T, MementoError>;
 /// A trait for types that can be populated in-place from a [`MementoReader`].
 pub trait MementoReadAndFill {
     /// Reads data from the `MementoReader` and fills the current instance.
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult;
+    fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult;
 }
 
 /// A trait for types that can write bytes to a destination.
@@ -158,9 +158,9 @@ impl<const N: usize, M: MementoReadable> MementoReadable for [M; N] {
 }
 
 impl<const N: usize, M: MementoReadAndFill> MementoReadAndFill for [M; N] {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+    fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult {
         for el in self {
-            el.read_and_fill(data)?;
+            el.read_and_fill(reader)?;
         }
         Ok(())
     }
@@ -215,7 +215,7 @@ impl<T: MementoReadable> MementoReadable for Option<T> {
         match reader.read()? {
             1 => Ok(Some(T::read_memento(reader)?)),
             0 => Ok(None),
-            v => Err(MementoError::InvalidValue(v)),
+            v => Err(MementoError::InvalidValue(v, reader.pointer())),
         }
     }
 }
@@ -234,24 +234,24 @@ impl<T: MementoReadable, U: MementoReadable> MementoReadable for (T, U) {
 }
 
 impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
+    fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult {
         match self {
             Some(v) => {
-                let tag = data.read_memento::<u8>()?;
+                let tag = reader.read_memento::<u8>()?;
                 if tag == 1 {
-                    v.read_and_fill(data)?;
+                    v.read_and_fill(reader)?;
                     Ok(())
                 } else {
-                    Err(MementoError::InvalidValue(tag))
+                    Err(MementoError::InvalidValue(tag, reader.pointer()))
                 }
             }
             None => {
                 // skip the 0
-                let tag = data.read_memento::<u8>()?;
+                let tag = reader.read_memento::<u8>()?;
                 if tag == 0 {
                     Ok(())
                 } else {
-                    Err(MementoError::InvalidValue(tag))
+                    Err(MementoError::InvalidValue(tag, reader.pointer()))
                 }
             }
         }
@@ -308,6 +308,11 @@ impl<'a> MementoReader<'a> {
     /// Deserializes a type `M` from the reader using the [`MementoReadable`] trait.
     pub fn read_memento<M: MementoReadable>(&mut self) -> MementoResult<M> {
         M::read_memento(self)
+    }
+
+    /// The current address
+    pub fn pointer(&self) -> usize {
+        self.pointer
     }
 }
 

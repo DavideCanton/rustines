@@ -69,7 +69,7 @@ pub(crate) fn derive_memento_impl(item: TokenStream) -> TokenStream {
             .field
             .attrs
             .iter()
-            .find(|a| a.path().is_ident("memento"));
+            .find(|attr| attr.path().is_ident("memento"));
 
         if let Some(attr) = attr {
             let mut is_fill: bool = false;
@@ -152,17 +152,18 @@ fn generate_memento_writeable(struct_name: &Ident, fields: &[MemberFill]) -> Tok
     for field in fields {
         let fname = &field.member;
         statements.push(quote! {
+            log::trace!("Writing {}...", stringify!(#fname));
             self.#fname.write_memento(writer)?;
         });
     }
 
     TokenStream::from(quote! {
-        impl MementoWriteable for #struct_name {
-            fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-                #(#statements)*
-                Ok(())
+        impl crate::arch::memento::MementoWriteable for #struct_name {
+            fn write_memento(&self, writer: &mut dyn crate::arch::memento::MementoWriter) -> crate::arch::memento::MementoResult {
+                    #(#statements)*
+                    Ok(())
+                }
             }
-        }
     })
 }
 
@@ -173,19 +174,22 @@ fn generate_memento_readable(struct_name: &Ident, fields: &[MemberFill]) -> Toke
         let fname = &field.member;
         let statement = if field.is_fill {
             quote! {
+                log::trace!("Filling {}...", stringify!(#fname));
                 self.#fname.read_and_fill(reader)?;
             }
         } else {
             quote! {
+                log::trace!("Reading {}...", stringify!(#fname));
                 self.#fname = reader.read_memento()?;
+                log::trace!("Read {:?}", self.#fname);
             }
         };
         statements.push(statement);
     }
 
     TokenStream::from(quote! {
-        impl MementoReadAndFill for #struct_name {
-            fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult {
+        impl crate::arch::memento::MementoReadAndFill for #struct_name {
+            fn read_and_fill(&mut self, reader: &mut crate::arch::memento::MementoReader) -> crate::arch::memento::MementoResult {
                 #(#statements)*
                 Ok(())
             }

@@ -2,12 +2,7 @@ use bitfield::bitfield;
 use rustines_macro::{Memento, MementoBitfield};
 use std::fmt;
 
-use crate::{
-    arch::memento::{
-        MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-    },
-    utils::bit_utils::{BitIndex, BitManip},
-};
+use crate::utils::bit_utils::{BitIndex, BitManip};
 
 bitfield! {
     #[derive(Clone, Copy, MementoBitfield)]

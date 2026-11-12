@@ -1,11 +1,6 @@
 use rustines_macro::Memento;
 
-use crate::{
-    arch::memento::{
-        MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-    },
-    utils::bit_utils::{BitCount, BitIndex, BitManip},
-};
+use crate::utils::bit_utils::{BitCount, BitIndex, BitManip};
 
 #[derive(Memento)]
 pub struct Dmc {

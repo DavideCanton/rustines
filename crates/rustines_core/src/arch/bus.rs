@@ -7,8 +7,8 @@ use crate::{
         controller::NesController,
         mappers::mapper::{Mapper, MapperBox},
         memento::{
-            MementoError, MementoReadAndFill, MementoReadable, MementoReader, MementoResult,
-            MementoWriteable, MementoWriter,
+            MementoError, MementoReadable, MementoReader, MementoResult, MementoWriteable,
+            MementoWriter,
         },
         ppu::Ppu,
         zapper::Zapper,
@@ -418,7 +418,7 @@ impl Bus {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum OamDmaState {
     NotRunning,
     Starting {
@@ -478,6 +478,7 @@ impl MementoWriteable for OamDmaState {
         }
     }
 }
+
 impl MementoReadable for OamDmaState {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
         match reader.read_memento::<u8>()? {
@@ -500,12 +501,12 @@ impl MementoReadable for OamDmaState {
                 address: reader.read_memento()?,
                 data: reader.read_memento()?,
             }),
-            v => Err(MementoError::InvalidValue(v)),
+            v => Err(MementoError::InvalidValue(v, reader.pointer())),
         }
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum DmcDmaState {
     NotRunning,
     Halt { address: u16 },
@@ -557,7 +558,7 @@ impl MementoReadable for DmcDmaState {
             4 => Ok(DmcDmaState::Read {
                 address: reader.read_memento()?,
             }),
-            v => Err(MementoError::InvalidValue(v)),
+            v => Err(MementoError::InvalidValue(v, reader.pointer())),
         }
     }
 }

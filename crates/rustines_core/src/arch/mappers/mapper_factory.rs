@@ -15,7 +15,7 @@ where
 }
 
 pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> Result<MapperBox> {
-    dispatch_mapper!(0, 1, 2, 3)
+    dispatch_mapper!(0 - 3)
 }
 
 #[cfg(test)]

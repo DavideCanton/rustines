@@ -11,10 +11,7 @@ use crate::{
             pulse::Pulse,
             triangle::Triangle,
         },
-        memento::{
-            MementoReadAndFill, MementoReadable, MementoReader, MementoResult, MementoWriteable,
-            MementoWriter,
-        },
+        memento::{MementoReadable, MementoReader, MementoResult, MementoWriteable, MementoWriter},
     },
     utils::bit_utils::{BitIndex, BitManip},
 };

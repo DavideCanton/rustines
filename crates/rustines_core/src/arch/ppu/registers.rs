@@ -1,11 +1,7 @@
 use bitfield::bitfield;
 use rustines_macro::MementoBitfield;
 
-use crate::{
-    MementoWriter,
-    arch::memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
-    utils::bit_utils::{BitIndex, BitManip},
-};
+use crate::utils::bit_utils::{BitIndex, BitManip};
 
 bitfield! {
     /// ```text

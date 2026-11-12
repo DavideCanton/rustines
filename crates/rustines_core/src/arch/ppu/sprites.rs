@@ -4,15 +4,7 @@ use bitfield::bitfield;
 use bytemuck::{Pod, Zeroable};
 use rustines_macro::{Memento, MementoBitfield};
 
-use crate::{
-    arch::{
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        ppu::utils::get_bits_mask,
-    },
-    utils::bit_utils::NumberFormat,
-};
+use crate::{arch::ppu::utils::get_bits_mask, utils::bit_utils::NumberFormat};
 
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]

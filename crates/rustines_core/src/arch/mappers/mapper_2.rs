@@ -1,15 +1,9 @@
-use crate::{
-    arch::{
-        mappers::{
-            common::{BankedMemory, ChrMemory, skip_trainer},
-            mapper::Mapper,
-        },
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        rom_structs::{INesHeader, MirroringType, PRG_ROM_BANK_SIZE},
+use crate::arch::{
+    mappers::{
+        common::{BankedMemory, ChrMemory, skip_trainer},
+        mapper::Mapper,
     },
-    utils::named::Named,
+    rom_structs::{INesHeader, MirroringType, PRG_ROM_BANK_SIZE},
 };
 use rustines_macro::{Memento, Named};
 

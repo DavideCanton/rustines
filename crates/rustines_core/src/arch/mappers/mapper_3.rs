@@ -1,18 +1,12 @@
 use anyhow::bail;
 use rustines_macro::{Memento, Named};
 
-use crate::{
-    arch::{
-        mappers::{
-            common::{BankedMemory, skip_trainer},
-            mapper::Mapper,
-        },
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        rom_structs::{CHR_ROM_BANK_SIZE, INesHeader, MirroringType},
+use crate::arch::{
+    mappers::{
+        common::{BankedMemory, skip_trainer},
+        mapper::Mapper,
     },
-    utils::named::Named,
+    rom_structs::{CHR_ROM_BANK_SIZE, INesHeader, MirroringType},
 };
 
 #[derive(Named, Memento)]

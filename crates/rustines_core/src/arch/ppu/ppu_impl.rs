@@ -3,9 +3,6 @@ use std::{array, mem};
 use crate::{
     arch::{
         mappers::mapper::Mapper,
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
         ppu::{
             OamSprite,
             background::BackgroundData,
@@ -1087,13 +1084,7 @@ mod tests {
     use rustines_macro::Memento;
 
     use super::{PpuMask, PpuScrollRegister};
-    use crate::{
-        Mapper, MirroringType, NoopRenderer, Ppu,
-        arch::memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        utils::named::Named,
-    };
+    use crate::{Mapper, MirroringType, NoopRenderer, Ppu, utils::named::Named};
 
     #[derive(Memento)]
     struct FakeMapper;

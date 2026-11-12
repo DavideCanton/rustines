@@ -6,17 +6,11 @@ use crate::{
             common::{BankedMemory, ChrMemory, skip_trainer},
             mapper::Mapper,
         },
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
         rom_structs::{
             CHR_ROM_BANK_SIZE, INesHeader, MirroringType, PRG_RAM_BANK_SIZE, PRG_ROM_BANK_SIZE,
         },
     },
-    utils::{
-        bit_utils::{BitIndex, BitManip},
-        named::Named,
-    },
+    utils::bit_utils::{BitIndex, BitManip},
 };
 use bitfield::bitfield;
 

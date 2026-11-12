@@ -3,12 +3,7 @@ use std::fmt;
 use rustines_macro::Memento;
 
 use crate::{
-    arch::{
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        ppu::utils::get_bits_mask,
-    },
+    arch::ppu::utils::get_bits_mask,
     utils::bit_utils::{BitIndex as BI, BitManip, NumberFormat},
 };
 

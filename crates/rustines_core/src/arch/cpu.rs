@@ -6,9 +6,6 @@ use crate::{
         bus::{Bus, DmcDmaState, DummyReadResult, OamDmaState},
         instr_tracer::InstructionTracer,
         instrs::instr_table::INSTR_TABLE,
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
         registers::*,
     },
     utils::bit_utils::*,
