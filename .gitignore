@@ -27,3 +27,5 @@ data/
 __pycache__/
 .venv/
 .python-version
+
+.continue/
