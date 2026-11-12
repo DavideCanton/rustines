@@ -261,8 +261,8 @@ pub enum CustomEvents {
     Resume,
     LoadedPrgRam(Option<Vec<u8>>),
     LoadedState(Option<Vec<u8>>),
-    SavedPrgRam(PathBuf),
-    SavedState(PathBuf),
+    SavedPrgRam(PathBuf, bool),
+    SavedState(PathBuf, bool),
 }
 
 impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
@@ -559,9 +559,7 @@ fn handle_special_keys(
     {
         let mut path = p.clone();
         path.set_extension("sst");
-        if path.exists() {
-            platform.start_read_file(path, &app_state.proxy, Box::new(CustomEvents::LoadedState));
-        }
+        platform.start_read_file(path, &app_state.proxy, Box::new(CustomEvents::LoadedState));
     }
 
     if input.held_shift() {

@@ -109,6 +109,8 @@ impl Platform for WasmPlatform {
                     .flatten();
                 let _ = proxy.send_event(evt_ctor(res));
             })
+        } else {
+            let _ = proxy.send_event(evt_ctor(None));
         }
     }
 
@@ -123,11 +125,15 @@ impl Platform for WasmPlatform {
             let content = content.to_vec();
             let proxy = proxy.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                if let Err(e) = write_file(&name, &content).await {
+                let res = write_file(&name, &content).await;
+                let ok = res.is_ok();
+                if let Err(e) = res {
                     info!("Failed to write save data: {e:?}");
                 }
-                let _ = proxy.send_event(evt_ctor(path));
+                let _ = proxy.send_event(evt_ctor(path, ok));
             });
+        } else {
+            let _ = proxy.send_event(evt_ctor(path, false));
         }
     }
 

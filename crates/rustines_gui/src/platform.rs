@@ -7,7 +7,7 @@ use crate::{CustomEvents, app::AppState};
 
 pub type PendingRenderer = Rc<RefCell<Option<Box<dyn Renderer>>>>;
 pub type ReadEventConstructor = Box<dyn FnOnce(Option<Vec<u8>>) -> CustomEvents>;
-pub type WriteEventConstructor = Box<dyn FnOnce(PathBuf) -> CustomEvents>;
+pub type WriteEventConstructor = Box<dyn FnOnce(PathBuf, bool) -> CustomEvents>;
 
 pub trait Platform {
     fn set_title(&self, app_state: &AppState);

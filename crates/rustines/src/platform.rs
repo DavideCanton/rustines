@@ -2,7 +2,10 @@ use std::{cell::RefCell, fs, path::PathBuf, rc::Rc, sync::Arc};
 
 use log::info;
 use rustines_core::Renderer;
-use rustines_gui::{AppState, CustomEvents, INNER_SIZE, PixelsRenderer, Platform, create_pixels};
+use rustines_gui::{
+    AppState, CustomEvents, INNER_SIZE, PixelsRenderer, Platform, ReadEventConstructor,
+    WriteEventConstructor, create_pixels,
+};
 use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
 
 pub struct DesktopPlatform;
@@ -47,13 +50,18 @@ impl Platform for DesktopPlatform {
         &self,
         path: PathBuf,
         proxy: &EventLoopProxy<CustomEvents>,
-        evt_ctor: Box<dyn FnOnce(Option<Vec<u8>>) -> CustomEvents>,
+        evt_ctor: ReadEventConstructor,
     ) {
-        let ret = fs::read(&path)
-            .inspect_err(|e| {
-                info!("Cannot read {path:?}: {e}");
-            })
-            .ok();
+        let ret = if !path.exists() {
+            info!("Saved state not found");
+            None
+        } else {
+            fs::read(&path)
+                .inspect_err(|e| {
+                    info!("Cannot read {path:?}: {e}");
+                })
+                .ok()
+        };
         let _ = proxy.send_event(evt_ctor(ret));
     }
 
@@ -62,12 +70,12 @@ impl Platform for DesktopPlatform {
         path: PathBuf,
         proxy: &EventLoopProxy<CustomEvents>,
         content: &[u8],
-        evt_ctor: Box<dyn FnOnce(PathBuf) -> CustomEvents>,
+        evt_ctor: WriteEventConstructor,
     ) {
-        let _ = fs::write(&path, content).inspect_err(|e| {
-            info!("Cannot read {path:?}: {e}");
+        let res = fs::write(&path, content).inspect_err(|e| {
+            info!("Cannot write {path:?}: {e}");
         });
-        let _ = proxy.send_event(evt_ctor(path));
+        let _ = proxy.send_event(evt_ctor(path, res.is_ok()));
     }
 
     fn should_exit(&self) -> bool {
