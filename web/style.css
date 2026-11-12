@@ -45,10 +45,15 @@ label {
 
 #game_canvas {
     flex: 0 0 auto;
-    border: 3px solid red;
+    border: 3px solid gray;
     border-radius: 6px;
     outline: none;
 }
+
+#game_canvas:focus {
+    border-color: red;
+}
+
 
 #run_status {
     display: none;
