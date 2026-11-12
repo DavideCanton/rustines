@@ -1,29 +1,21 @@
-use anyhow::{Result as AResult, bail};
+use anyhow::Result;
+use rustines_macro::dispatch_mapper;
 
-use crate::{
-    Mapper, MapperBox,
-    arch::{mappers, rom_structs::INesHeader},
-};
+use crate::{Mapper, MapperBox, arch::rom_structs::INesHeader};
 
 fn boxed_mapper<M>(
-    ctor: impl FnOnce(&INesHeader, Vec<u8>) -> AResult<M>,
+    ctor: impl FnOnce(&INesHeader, Vec<u8>) -> Result<M>,
     header: &INesHeader,
     buf: Vec<u8>,
-) -> AResult<MapperBox>
+) -> Result<MapperBox>
 where
     M: Mapper + 'static,
 {
     ctor(header, buf).map(|m| Box::new(m) as MapperBox)
 }
 
-pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> AResult<MapperBox> {
-    match header.mapping_number() {
-        0 => boxed_mapper(mappers::Mapper0::new, header, buf),
-        1 => boxed_mapper(mappers::Mapper1::new, header, buf),
-        2 => boxed_mapper(mappers::Mapper2::new, header, buf),
-        3 => boxed_mapper(mappers::Mapper3::new, header, buf),
-        _ => bail!("Invalid mapper"),
-    }
+pub fn instantiate_mapper(header: &INesHeader, buf: Vec<u8>) -> Result<MapperBox> {
+    dispatch_mapper!(0, 1, 2, 3)
 }
 
 #[cfg(test)]

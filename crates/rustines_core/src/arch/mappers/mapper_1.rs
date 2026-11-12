@@ -258,9 +258,10 @@ impl MementoWriteable for Mapper1 {
 mod tests {
     use test_case::test_case;
 
+    use super::Mapper1;
+
     use crate::arch::{
         mappers::{
-            Mapper1,
             common::test_utils::{FLAG_TRAINER, build_rom, chr_byte, header, prg_byte},
             mapper::Mapper,
         },

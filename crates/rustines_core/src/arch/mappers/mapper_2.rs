@@ -106,11 +106,9 @@ impl MementoWriteable for Mapper2 {
 
 #[cfg(test)]
 mod tests {
-    use test_case::test_case;
-
+    use super::Mapper2;
     use crate::arch::{
         mappers::{
-            Mapper2,
             common::test_utils::{
                 FLAG_TRAINER, FLAG_VERTICAL, build_rom, chr_byte, header, prg_byte,
             },
@@ -118,6 +116,7 @@ mod tests {
         },
         rom_structs::{CHR_ROM_BANK_SIZE, MirroringType, PRG_ROM_BANK_SIZE},
     };
+    use test_case::test_case;
 
     const LAST: usize = PRG_ROM_BANK_SIZE - 1;
 

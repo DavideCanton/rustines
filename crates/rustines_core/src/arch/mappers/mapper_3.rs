@@ -120,11 +120,11 @@ impl MementoWriteable for Mapper3 {
 
 #[cfg(test)]
 mod tests {
+    use super::Mapper3;
     use test_case::test_case;
 
     use crate::arch::{
         mappers::{
-            Mapper3,
             common::test_utils::{
                 FLAG_TRAINER, FLAG_VERTICAL, build_rom, chr_byte, header, prg_byte,
             },

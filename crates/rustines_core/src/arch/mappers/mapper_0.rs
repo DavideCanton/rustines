@@ -90,9 +90,10 @@ impl MementoWriteable for Mapper0 {
 mod tests {
     use test_case::test_case;
 
+    use super::Mapper0;
+
     use crate::arch::{
         mappers::{
-            Mapper0,
             common::test_utils::{
                 FLAG_TRAINER, FLAG_VERTICAL, build_rom, chr_byte, header, prg_byte,
             },

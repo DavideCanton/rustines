@@ -4,7 +4,7 @@ use crate::{
     Apu, Cpu, NoAudio, NoopRenderer, Ppu,
     arch::{
         bus::{Bus, Controller2},
-        mappers::Mapper0,
+        mappers::mapper_factory::instantiate_mapper,
         rom_structs::{CHR_ROM_BANK_SIZE, HEADER, INesHeader, PRG_ROM_BANK_SIZE},
     },
 };
@@ -16,8 +16,8 @@ pub fn setup_tests() -> (Cpu, Bus) {
     header.prg_rom_banks = 1;
     header.chr_rom_banks = 1;
 
-    let mapper = Mapper0::new(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap();
-    let mapper = Box::new(mapper);
+    let mapper =
+        instantiate_mapper(&header, vec![0; PRG_ROM_BANK_SIZE + CHR_ROM_BANK_SIZE]).unwrap();
 
     let bus = Bus::new(
         mapper,
