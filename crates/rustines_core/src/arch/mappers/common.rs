@@ -1,3 +1,5 @@
+use rustines_macro::Memento;
+
 use crate::{
     MementoWriter,
     arch::{
@@ -12,10 +14,12 @@ const CHR_RAM_SIZE: usize = 0x2000;
 ///
 /// Every access wraps around the memory size, so out of range banks are mirrored like on
 /// real hardware (e.g. a 16KB PRG ROM seen through a 32KB window).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Memento)]
 pub struct BankedMemory {
+    #[memento]
     data: Vec<u8>,
     /// `len - 1` when the size is a power of two, so wrapping is a cheap mask.
+    #[memento]
     mask: Option<usize>,
 }
 
@@ -82,22 +86,6 @@ impl BankedMemory {
 
     pub(crate) fn write_all(&mut self, content: &[u8]) {
         self.data.copy_from_slice(content);
-    }
-}
-
-impl MementoReadAndFill for BankedMemory {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.data = data.read_memento()?;
-        self.mask = data.read_memento()?;
-        Ok(())
-    }
-}
-
-impl MementoWriteable for BankedMemory {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.data.write_memento(writer)?;
-        self.mask.write_memento(writer)?;
-        Ok(())
     }
 }
 

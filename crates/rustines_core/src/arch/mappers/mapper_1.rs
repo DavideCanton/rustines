@@ -1,4 +1,4 @@
-use rustines_macro::Named;
+use rustines_macro::{Memento, MementoBitfield, Named};
 
 use crate::{
     arch::{
@@ -6,17 +6,11 @@ use crate::{
             common::{BankedMemory, ChrMemory, skip_trainer},
             mapper::Mapper,
         },
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
         rom_structs::{
             CHR_ROM_BANK_SIZE, INesHeader, MirroringType, PRG_RAM_BANK_SIZE, PRG_ROM_BANK_SIZE,
         },
     },
-    utils::{
-        bit_utils::{BitIndex, BitManip},
-        named::Named,
-    },
+    utils::bit_utils::{BitIndex, BitManip},
 };
 use bitfield::bitfield;
 
@@ -24,7 +18,7 @@ const CHR_4KB_BANK_SIZE: usize = 0x1000;
 const PRG_32KB_BANK_SIZE: usize = 0x8000;
 
 bitfield! {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, MementoBitfield)]
     struct ControlRegister(u8);
     impl Debug;
     u8;
@@ -39,18 +33,27 @@ impl Default for ControlRegister {
     }
 }
 
-#[derive(Named, Debug)]
+#[derive(Named, Debug, Memento)]
 pub struct Mapper1 {
     prg_rom: BankedMemory,
+    #[memento(fill)]
     prg_ram: BankedMemory,
+    #[memento(fill)]
     chr: ChrMemory,
     /// 16KB bank fixed on $C000-$FFFF in PRG mode 3.
+    #[memento]
     last_prg_bank: usize,
+    #[memento]
     shift_register: u8,
+    #[memento]
     count: u8,
+    #[memento(fill)]
     ctrl_register: ControlRegister,
+    #[memento]
     chr_1_reg: u8,
+    #[memento]
     chr_2_reg: u8,
+    #[memento]
     prg_reg: u8,
 }
 
@@ -221,36 +224,6 @@ impl Mapper for Mapper1 {
 
     fn set_prg_ram(&mut self, content: &[u8]) {
         self.prg_ram.write_all(content);
-    }
-}
-
-impl MementoReadAndFill for Mapper1 {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.prg_ram.read_and_fill(data)?;
-        self.chr.read_and_fill(data)?;
-        self.last_prg_bank = data.read_memento()?;
-        self.shift_register = data.read_memento()?;
-        self.count = data.read_memento()?;
-        self.ctrl_register.0 = data.read_memento()?;
-        self.chr_1_reg = data.read_memento()?;
-        self.chr_2_reg = data.read_memento()?;
-        self.prg_reg = data.read_memento()?;
-        Ok(())
-    }
-}
-
-impl MementoWriteable for Mapper1 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.prg_ram.write_memento(writer)?;
-        self.chr.write_memento(writer)?;
-        self.last_prg_bank.write_memento(writer)?;
-        self.shift_register.write_memento(writer)?;
-        self.count.write_memento(writer)?;
-        self.ctrl_register.0.write_memento(writer)?;
-        self.chr_1_reg.write_memento(writer)?;
-        self.chr_2_reg.write_memento(writer)?;
-        self.prg_reg.write_memento(writer)?;
-        Ok(())
     }
 }
 

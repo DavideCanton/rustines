@@ -1,27 +1,41 @@
-use crate::{
-    arch::memento::{
-        MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-    },
-    utils::bit_utils::{BitCount, BitIndex, BitManip},
-};
+use rustines_macro::Memento;
 
+use crate::utils::bit_utils::{BitCount, BitIndex, BitManip};
+
+#[derive(Memento)]
 pub struct Dmc {
+    #[memento]
     irq_enable: bool,
+    #[memento]
     irq_active: bool,
+    #[memento]
     loop_flag: bool,
+    #[memento]
     freq: u8,
+    #[memento]
     direct_load: u8,
+    #[memento]
     address: u16,
+    #[memento]
     bytes_remaining: u16,
+    #[memento]
     bits_remaining: u8,
+    #[memento]
     sample_length: u16,
+    #[memento]
     timer: u16,
+    #[memento]
     enabled: bool,
 
+    #[memento]
     sample_buffer: Option<u8>,
+    #[memento]
     shift_register: u8,
+    #[memento]
     silence: bool,
+    #[memento]
     output_level: u8,
+    #[memento]
     current_address: u16,
 }
 
@@ -173,50 +187,6 @@ impl Dmc {
 
         self.shift_register >>= 1;
         self.bits_remaining -= 1;
-    }
-}
-
-impl MementoWriteable for Dmc {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.irq_enable.write_memento(writer)?;
-        self.irq_active.write_memento(writer)?;
-        self.loop_flag.write_memento(writer)?;
-        self.freq.write_memento(writer)?;
-        self.direct_load.write_memento(writer)?;
-        self.address.write_memento(writer)?;
-        self.bytes_remaining.write_memento(writer)?;
-        self.bits_remaining.write_memento(writer)?;
-        self.sample_length.write_memento(writer)?;
-        self.timer.write_memento(writer)?;
-        self.enabled.write_memento(writer)?;
-        self.sample_buffer.write_memento(writer)?;
-        self.shift_register.write_memento(writer)?;
-        self.silence.write_memento(writer)?;
-        self.output_level.write_memento(writer)?;
-        self.current_address.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for Dmc {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.irq_enable = data.read_memento()?;
-        self.irq_active = data.read_memento()?;
-        self.loop_flag = data.read_memento()?;
-        self.freq = data.read_memento()?;
-        self.direct_load = data.read_memento()?;
-        self.address = data.read_memento()?;
-        self.bytes_remaining = data.read_memento()?;
-        self.bits_remaining = data.read_memento()?;
-        self.sample_length = data.read_memento()?;
-        self.timer = data.read_memento()?;
-        self.enabled = data.read_memento()?;
-        self.sample_buffer = data.read_memento()?;
-        self.shift_register = data.read_memento()?;
-        self.silence = data.read_memento()?;
-        self.output_level = data.read_memento()?;
-        self.current_address = data.read_memento()?;
-        Ok(())
     }
 }
 

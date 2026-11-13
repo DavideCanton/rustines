@@ -1,45 +1,28 @@
-use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{DeriveInput, LitInt, Token, parse_macro_input, punctuated::Punctuated};
+mod mapper;
+mod memento;
+
 extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+use proc_macro::TokenStream;
+
 #[proc_macro_derive(Named)]
 pub fn derive_named(item: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(item as DeriveInput);
-
-    let name = &ast.ident;
-
-    let ret = quote! {
-        impl Named for #name {
-            fn name(&self) -> &str {
-                &stringify!(#name)
-            }
-        }
-    };
-
-    TokenStream::from(ret)
+    mapper::derive_named_impl(item)
 }
 
 #[proc_macro]
 pub fn dispatch_mapper(input: TokenStream) -> TokenStream {
-    let ids = parse_macro_input!(input with Punctuated::<LitInt, Token![,]>::parse_terminated);
+    mapper::dispatch_mapper_impl(input)
+}
 
-    let arms = ids.iter().map(|lit| {
-        let num = lit.base10_parse::<u16>().unwrap();
-        let mod_ident = format_ident!("mapper_{}", num);
-        let struct_ident = format_ident!("Mapper{}", num);
+#[proc_macro_derive(Memento, attributes(memento))]
+pub fn derive_memento(item: TokenStream) -> TokenStream {
+    memento::derive_memento_impl(item)
+}
 
-        quote! {
-            #lit => boxed_mapper(crate::arch::mappers::#mod_ident::#struct_ident::new, header, buf),
-        }
-    });
-
-    TokenStream::from(quote! {
-        match header.mapping_number() {
-            #(#arms)*
-            _ => anyhow::bail!("Invalid mapper"),
-        }
-    })
+#[proc_macro_derive(MementoBitfield)]
+pub fn derive_memento_bitfield(item: TokenStream) -> TokenStream {
+    memento::derive_memento_bitfield_impl(item)
 }

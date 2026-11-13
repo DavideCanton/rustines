@@ -1,24 +1,29 @@
 use std::fmt;
 
+use rustines_macro::Memento;
+
 use crate::{
-    arch::{
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
-        ppu::utils::get_bits_mask,
-    },
+    arch::ppu::utils::get_bits_mask,
     utils::bit_utils::{BitIndex as BI, BitManip, NumberFormat},
 };
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Memento)]
 pub struct BackgroundData {
+    #[memento]
     pub shifter_pattern_lo: u16,
+    #[memento]
     pub shifter_pattern_hi: u16,
+    #[memento]
     pub shifter_attrib_lo: u16,
+    #[memento]
     pub shifter_attrib_hi: u16,
+    #[memento]
     pub latch_nt: u8,
+    #[memento]
     pub latch_at: u8,
+    #[memento]
     pub latch_pl: u8,
+    #[memento]
     pub latch_ph: u8,
 }
 
@@ -69,32 +74,5 @@ impl fmt::Display for BackgroundData {
             self.latch_pl.hex(),
             self.latch_ph.hex(),
         )
-    }
-}
-
-impl MementoWriteable for BackgroundData {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.shifter_pattern_lo.write_memento(writer)?;
-        self.shifter_pattern_hi.write_memento(writer)?;
-        self.shifter_attrib_lo.write_memento(writer)?;
-        self.shifter_attrib_hi.write_memento(writer)?;
-        self.latch_nt.write_memento(writer)?;
-        self.latch_at.write_memento(writer)?;
-        self.latch_pl.write_memento(writer)?;
-        self.latch_ph.write_memento(writer)?;
-        Ok(())
-    }
-}
-impl MementoReadAndFill for BackgroundData {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.shifter_pattern_lo = data.read_memento()?;
-        self.shifter_pattern_hi = data.read_memento()?;
-        self.shifter_attrib_lo = data.read_memento()?;
-        self.shifter_attrib_hi = data.read_memento()?;
-        self.latch_nt = data.read_memento()?;
-        self.latch_at = data.read_memento()?;
-        self.latch_pl = data.read_memento()?;
-        self.latch_ph = data.read_memento()?;
-        Ok(())
     }
 }

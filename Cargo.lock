@@ -571,13 +571,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cpal_tries"
-version = "0.1.0"
-dependencies = [
- "cpal",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1847,17 +1840,6 @@ dependencies = [
  "thiserror 2.0.21",
  "ultraviolet",
  "wgpu",
-]
-
-[[package]]
-name = "pixels-tries"
-version = "0.1.0"
-dependencies = [
- "flexi_logger",
- "log",
- "pixels",
- "rustines-gui-utils",
- "winit",
 ]
 
 [[package]]

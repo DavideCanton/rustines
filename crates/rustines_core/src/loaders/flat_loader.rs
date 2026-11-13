@@ -2,7 +2,7 @@ use std::io;
 
 use rustines_macro::Named;
 
-use crate::{loaders::loader::Loader, utils::named::Named};
+use crate::loaders::loader::Loader;
 
 #[derive(Named)]
 pub struct FlatLoader;

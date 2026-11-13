@@ -1,3 +1,5 @@
+use rustines_macro::Memento;
+
 use crate::{
     AudioOutputBox,
     arch::{
@@ -9,9 +11,7 @@ use crate::{
             pulse::Pulse,
             triangle::Triangle,
         },
-        memento::{
-            MementoReadAndFill, MementoReader, MementoResult, MementoWriteable, MementoWriter,
-        },
+        memento::{MementoReadable, MementoReader, MementoResult, MementoWriteable, MementoWriter},
     },
     utils::bit_utils::{BitIndex, BitManip},
 };
@@ -44,21 +44,52 @@ impl From<ApuMode> for bool {
     }
 }
 
+impl MementoReadable for ApuMode {
+    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self>
+    where
+        Self: Sized,
+    {
+        let b: bool = reader.read_memento()?;
+        Ok(Self::from(b))
+    }
+}
+
+impl MementoWriteable for ApuMode {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+        let b: bool = (*self).into();
+        b.write_memento(writer)
+    }
+}
+
+#[derive(Memento)]
 pub struct ApuState {
+    #[memento(fill)]
     pulse1: Pulse,
+    #[memento(fill)]
     pulse2: Pulse,
+    #[memento(fill)]
     triangle: Triangle,
+    #[memento(fill)]
     noise: Noise,
+    #[memento(fill)]
     dmc: Dmc,
+    #[memento]
     irq_disabled: bool,
+    #[memento]
     mode: ApuMode,
+    #[memento]
     frame_irq_active: bool,
+    #[memento]
     frame_cycles: u32,
 
+    #[memento]
     delayed_reset_cycles: Option<u8>,
+    #[memento]
     delayed_write_value: u8,
+    #[memento]
     cpu_cycle_count: u64,
 
+    #[memento]
     sample_accumulator: u64,
 }
 
@@ -84,45 +115,9 @@ impl ApuState {
     }
 }
 
-impl MementoWriteable for ApuState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        self.pulse1.write_memento(writer)?;
-        self.pulse2.write_memento(writer)?;
-        self.triangle.write_memento(writer)?;
-        self.noise.write_memento(writer)?;
-        self.dmc.write_memento(writer)?;
-        self.irq_disabled.write_memento(writer)?;
-        Into::<bool>::into(self.mode).write_memento(writer)?;
-        self.frame_irq_active.write_memento(writer)?;
-        self.frame_cycles.write_memento(writer)?;
-        self.delayed_reset_cycles.write_memento(writer)?;
-        self.delayed_write_value.write_memento(writer)?;
-        self.cpu_cycle_count.write_memento(writer)?;
-        self.sample_accumulator.write_memento(writer)?;
-        Ok(())
-    }
-}
-
-impl MementoReadAndFill for ApuState {
-    fn read_and_fill(&mut self, data: &mut MementoReader) -> MementoResult {
-        self.pulse1.read_and_fill(data)?;
-        self.pulse2.read_and_fill(data)?;
-        self.triangle.read_and_fill(data)?;
-        self.noise.read_and_fill(data)?;
-        self.dmc.read_and_fill(data)?;
-        self.irq_disabled = data.read_memento()?;
-        self.mode = data.read_memento::<bool>()?.into();
-        self.frame_irq_active = data.read_memento()?;
-        self.frame_cycles = data.read_memento()?;
-        self.delayed_reset_cycles = data.read_memento()?;
-        self.delayed_write_value = data.read_memento()?;
-        self.cpu_cycle_count = data.read_memento()?;
-        self.sample_accumulator = data.read_memento()?;
-        Ok(())
-    }
-}
-
+#[derive(Memento)]
 pub struct Apu {
+    #[memento(fill)]
     state: ApuState,
     output: AudioOutputBox,
     filter: SequenceFilter,

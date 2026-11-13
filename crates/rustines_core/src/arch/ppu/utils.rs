@@ -36,7 +36,7 @@ pub fn decompose_rgba(rgba: u32) -> [u8; 4] {
 
 #[inline(always)]
 pub fn compose_rgba(r: u8, g: u8, b: u8, a: u8) -> u32 {
-    ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32)
+    u32::from_be_bytes([r, g, b, a])
 }
 
 #[cfg(test)]
