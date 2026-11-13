@@ -1,5 +1,6 @@
 use flexi_logger::{DeferredNow, FileSpec, LogSpecBuilder, Logger, LoggerHandle, WriteMode};
 use log::{LevelFilter, Record, debug};
+use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 use rustines_core::{self as core, arch::mappers::mapper::MapperBox};
 use std::{
     collections::HashSet,
@@ -7,7 +8,11 @@ use std::{
     io::{self, Read},
     path,
     str::FromStr,
+    sync::Arc,
 };
+use winit::{dpi::PhysicalSize, window::Window};
+
+use crate::INNER_SIZE;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum TraceTargets {
@@ -95,6 +100,31 @@ pub fn read_file(file_path: &path::Path) -> Result<(core::NesRom, MapperBox), St
         .map_err(|e| format!("Failed to load ROM: {}", e))?;
 
     Ok(loaded)
+}
+
+pub async fn create_pixels(
+    window: Arc<Window>,
+    size: PhysicalSize<u32>,
+    texture_format: Option<TextureFormat>,
+) -> Result<Pixels<'static>, String> {
+    if size.width == 0 || size.height == 0 {
+        return Err(format!(
+            "Window surface has invalid size: {}x{}",
+            size.width, size.height
+        ));
+    }
+
+    let surface_texture = SurfaceTexture::new(size.width, size.height, window);
+
+    let mut builder = PixelsBuilder::new(INNER_SIZE.width, INNER_SIZE.height, surface_texture);
+    if let Some(texture_format) = texture_format {
+        builder = builder.surface_texture_format(texture_format);
+    }
+
+    let mut pixels = builder.build_async().await.map_err(|e| format!("{}", e))?;
+    pixels.set_scaling_mode(ScalingMode::Fill);
+
+    Ok(pixels)
 }
 
 fn log_format(

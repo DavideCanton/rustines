@@ -3,10 +3,10 @@ use std::{cell::RefCell, fs, path::PathBuf, rc::Rc, sync::Arc};
 use log::info;
 use rustines_core::Renderer;
 use rustines_gui::{
-    AppState, CustomEvents, INNER_SIZE, PixelsRenderer, Platform, ReadEventConstructor,
+    AppEventLoopProxy, AppState, INNER_SIZE, PixelsRenderer, Platform, ReadEventConstructor,
     WriteEventConstructor, create_pixels,
 };
-use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
+use winit::{dpi::PhysicalSize, window::Window};
 
 pub struct DesktopPlatform;
 
@@ -49,7 +49,7 @@ impl Platform for DesktopPlatform {
     fn start_read_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         evt_ctor: ReadEventConstructor,
     ) {
         let ret = if !path.exists() {
@@ -68,7 +68,7 @@ impl Platform for DesktopPlatform {
     fn start_write_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         content: &[u8],
         evt_ctor: WriteEventConstructor,
     ) {

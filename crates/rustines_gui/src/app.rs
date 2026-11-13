@@ -1,30 +1,23 @@
+use crate::input;
 use crate::{
-    CpalOutput, Platform,
+    AppState, CpalOutput, Platform,
+    app_state::{AppStateInfo, SpeedupState},
     constants::{INNER_SIZE, width_to_size},
+    input::handle_input_keys,
     pattern_window::PatternTableWindow,
     platform::PendingRenderer,
+    save_game::{load_save_game, save_game},
+    types::AppEventLoopProxy,
 };
-use gilrs::{Button, EventType, Gilrs};
+use gilrs::{EventType, Gilrs};
 use log::info;
-use pixels::{Pixels, PixelsBuilder, ScalingMode, SurfaceTexture, wgpu::TextureFormat};
 
 use rustines_core::{
-    self as core, AudioOutputBox, NesRom, NoAudio,
-    arch::{
-        bus::Controller2,
-        memento::{MementoReadAndFill, MementoReader, MementoWriteable},
-    },
-    renderer::RendererBox,
+    self as core,
+    arch::memento::{MementoReadAndFill, MementoReader},
 };
 use rustines_gui_utils::FpsCounter;
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    fs::File,
-    path::PathBuf,
-    rc::Rc,
-    sync::Arc,
-};
+use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc};
 
 use web_time::{Duration, Instant};
 
@@ -32,7 +25,7 @@ use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
     event::{ElementState, MouseButton, StartCause, WindowEvent},
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoopProxy},
+    event_loop::{ActiveEventLoop, ControlFlow},
     keyboard::KeyCode,
     window::{Window, WindowAttributes, WindowId},
 };
@@ -41,101 +34,14 @@ use winit_input_helper::WinitInputHelper;
 const TARGET_FPS: u64 = 60;
 const SAVE_INTERVAL: u64 = 10;
 
-type KeyMap = HashMap<KeyCode, rustines_core::NesKey>;
-type GamepadMap = HashMap<Button, rustines_core::NesKey>;
-
-#[derive(Default)]
-struct SpeedupState {
-    active: bool,
-    changed: bool,
-}
-
-impl SpeedupState {
-    fn update(&mut self, active: bool) {
-        self.changed = active != self.active;
-        self.active = active;
-    }
-}
-
-pub struct AppState {
-    rom_name: String,
-    nes_rom: NesRom,
-
-    bus: core::Bus,
-    cpu: core::Cpu,
-
-    render_counter: FpsCounter,
-    update_counter: FpsCounter,
-    log_point: u32,
-
-    key_map1: KeyMap,
-    key_map2: KeyMap,
-    gamepad_map1: GamepadMap,
-
-    pattern_window: PatternTableWindow,
-
-    main_window: Arc<Window>,
-    main_window_helper: WinitInputHelper,
-
-    cursor_position: Option<(f64, f64)>,
-    zapper_trigger_pressed: bool,
-    zapper_needs_update: bool,
-    enable_debug_keys: bool,
-
-    pause: bool,
-    frame_duration: Duration,
-    speedup: SpeedupState,
-    last_frame_time: Instant,
-    accumulator: Duration,
-    last_save: u64,
-    proxy: EventLoopProxy<CustomEvents>,
-}
-
-impl AppState {
-    pub fn main_window(&self) -> &Window {
-        &self.main_window
-    }
-
-    pub fn rom_name(&self) -> &str {
-        &self.rom_name
-    }
-
-    pub fn render_fps(&self) -> f64 {
-        self.render_counter.current_fps()
-    }
-
-    pub fn update_fps(&self) -> f64 {
-        self.update_counter.current_fps()
-    }
-
-    fn save_data(&self, platform: &impl Platform) {
-        if self.nes_rom.header.battery_backed_prg_ram()
-            && let Some(p) = self.nes_rom.file_path.as_ref()
-            && let Some(m) = self.bus.mapper_ref().get_prg_ram()
-        {
-            let mut p = p.clone();
-            p.set_extension("sav");
-            info!("Writing save file");
-            platform.start_write_file(p, &self.proxy, m, Box::new(CustomEvents::SavedState));
-        }
-    }
-
-    pub fn pause(&mut self) {
-        self.pause = true;
-        self.accumulator = Duration::ZERO;
-    }
-
-    pub fn resume(&mut self) {
-        self.pause = false;
-        self.last_frame_time = Instant::now();
-        self.pause = false;
-    }
-}
-
-struct AppStateInfo {
-    nes_rom: NesRom,
-    mapper: core::MapperBox,
-    rom_name: String,
+#[derive(PartialEq, Eq)]
+pub enum CustomEvents {
+    Pause,
+    Resume,
+    LoadedPrgRam(Option<Vec<u8>>),
+    LoadedState(Option<Vec<u8>>),
+    SavedPrgRam(PathBuf, bool),
+    SavedState(PathBuf, bool),
 }
 
 pub struct App<P> {
@@ -149,20 +55,20 @@ pub struct App<P> {
     size: PhysicalSize<u32>,
     gilrs: Gilrs,
     enable_debug_keys: bool,
-    proxy: EventLoopProxy<CustomEvents>,
+    proxy: AppEventLoopProxy,
 }
 
 impl<P: Platform> App<P> {
     pub fn new(
         rom_name: String,
-        nes_rom: NesRom,
+        nes_rom: core::NesRom,
         mapper: core::MapperBox,
         trace_boot: bool,
         zapper: bool,
         width: u32,
         platform: P,
         enable_debug_keys: bool,
-        proxy: EventLoopProxy<CustomEvents>,
+        proxy: AppEventLoopProxy,
     ) -> Self {
         App {
             info: Some(AppStateInfo {
@@ -183,39 +89,39 @@ impl<P: Platform> App<P> {
         }
     }
 
-    fn init_app_state(&mut self, main_window: Arc<Window>, renderer: RendererBox) -> AppState {
+    fn init_app_state(
+        &mut self,
+        main_window: Arc<Window>,
+        renderer: core::RendererBox,
+    ) -> AppState {
         let ppu = core::Ppu::new(renderer);
 
-        let audio: AudioOutputBox = match CpalOutput::new() {
+        let audio: core::AudioOutputBox = match CpalOutput::new() {
             Ok(mut cpal) => {
                 cpal.play().expect("Can't play");
                 Box::new(cpal)
             }
             Err(e) => {
                 eprintln!("Cannot initialize audio: {}", e);
-                Box::new(NoAudio)
+                Box::new(core::NoAudio)
             }
         };
 
         let apu = core::Apu::new(audio);
 
         let ctrl2 = if self.zapper {
-            Controller2::zapper()
+            core::Controller2::zapper()
         } else {
-            Controller2::nes_controller()
+            core::Controller2::nes_controller()
         };
 
         let info = self.info.take().unwrap();
-
-        if info.nes_rom.header.battery_backed_prg_ram()
-            && let Some(p) = info.nes_rom.file_path.as_ref()
-        {
-            let mut p = p.clone();
-            p.set_extension("sav");
-
-            self.platform
-                .start_read_file(p, &self.proxy, Box::new(CustomEvents::LoadedPrgRam));
-        }
+        load_save_game(
+            &info.nes_rom,
+            info.mapper.as_ref(),
+            &self.platform,
+            &self.proxy,
+        );
 
         let mut bus = core::Bus::new(info.mapper, ppu, apu, ctrl2);
         let mut cpu = core::Cpu::new();
@@ -233,9 +139,9 @@ impl<P: Platform> App<P> {
             render_counter: FpsCounter::new(),
             update_counter: FpsCounter::new(),
             cpu,
-            key_map1: build_keymap_c1(),
-            key_map2: build_keymap_c2(),
-            gamepad_map1: build_gamepadmap_c1(),
+            key_map1: input::build_keymap_c1(),
+            key_map2: input::build_keymap_c2(),
+            gamepad_map1: input::build_gamepadmap_c1(),
             log_point: 1,
             pattern_window: PatternTableWindow::new(),
             main_window,
@@ -253,16 +159,6 @@ impl<P: Platform> App<P> {
             proxy: self.proxy.clone(),
         }
     }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum CustomEvents {
-    Pause,
-    Resume,
-    LoadedPrgRam(Option<Vec<u8>>),
-    LoadedState(Option<Vec<u8>>),
-    SavedPrgRam(PathBuf, bool),
-    SavedState(PathBuf, bool),
 }
 
 impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
@@ -355,31 +251,44 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
             match event {
                 CustomEvents::Pause => {
                     app_state.pause();
-                    app_state.save_data(&self.platform);
+                    save_game(
+                        &app_state.nes_rom,
+                        app_state.bus.mapper_ref(),
+                        &self.platform,
+                        &app_state.proxy,
+                    );
                 }
                 CustomEvents::Resume => {
                     app_state.resume();
                 }
-                CustomEvents::LoadedPrgRam(c) => {
-                    if let Some(content) = c {
-                        info!("Read save file");
-                        app_state.bus.mapper_mut().set_prg_ram(&content);
-                    }
-                }
-                CustomEvents::LoadedState(c) => {
-                    if let Some(content) = c {
-                        info!("Read state");
-                        let mut reader = MementoReader::new(&content);
-                        app_state
-                            .bus
-                            .read_and_fill(&mut reader)
-                            .expect("Failed to read saved state");
-                        app_state
-                            .cpu
-                            .read_and_fill(&mut reader)
-                            .expect("Failed to read saved state");
-                    }
-                }
+                CustomEvents::LoadedPrgRam(c) => match c {
+                    Some(content) => match zstd::decode_all(content.as_slice()) {
+                        Ok(decoded) => {
+                            info!("Read save file");
+                            app_state.bus.mapper_mut().set_prg_ram(&decoded);
+                        }
+                        Err(e) => info!("Load save decompress failed: {e}"),
+                    },
+                    None => info!("Load state failed"),
+                },
+                CustomEvents::LoadedState(c) => match c {
+                    Some(content) => match zstd::decode_all(content.as_slice()) {
+                        Ok(decoded) => {
+                            info!("Read state");
+                            let mut reader = MementoReader::new(&decoded);
+                            app_state
+                                .bus
+                                .read_and_fill(&mut reader)
+                                .expect("Failed to read saved state");
+                            app_state
+                                .cpu
+                                .read_and_fill(&mut reader)
+                                .expect("Failed to read saved state");
+                        }
+                        Err(e) => info!("Load state decompress failed: {e}"),
+                    },
+                    None => info!("Load state failed"),
+                },
                 CustomEvents::SavedState(..) => {
                     info!("Wrote state");
                 }
@@ -426,11 +335,18 @@ fn update_logic(app_state: &mut AppState, platform: &impl Platform) {
             app_state.update_counter.update();
             while !app_state.bus.ppu().frame_ready() {
                 app_state.cpu.tick(&mut app_state.bus);
+
+                // save if enough frames have passed
                 let current_frame = app_state.bus.ppu().current_frame();
                 if current_frame != app_state.last_save
                     && current_frame.is_multiple_of(TARGET_FPS * SAVE_INTERVAL)
                 {
-                    app_state.save_data(platform);
+                    save_game(
+                        &app_state.nes_rom,
+                        app_state.bus.mapper_ref(),
+                        platform,
+                        &app_state.proxy,
+                    );
                     app_state.last_save = current_frame;
                 }
             }
@@ -447,12 +363,17 @@ fn handle_inputs(app_state: &mut AppState, platform: &impl Platform, event_loop:
     let esc_pressed = platform.esc_pressed_enabled() && input.key_pressed(KeyCode::Escape);
 
     if esc_pressed || input.close_requested() {
-        app_state.save_data(platform);
+        save_game(
+            &app_state.nes_rom,
+            app_state.bus.mapper_ref(),
+            platform,
+            &app_state.proxy,
+        );
         if platform.should_exit() {
             event_loop.exit();
         }
     } else {
-        handle_special_keys(app_state, event_loop, platform);
+        input::handle_special_keys(app_state, event_loop, platform);
 
         // reborrow
         let input = &app_state.main_window_helper;
@@ -515,239 +436,4 @@ fn update_zapper_input(app_state: &mut AppState) {
     app_state
         .bus
         .set_zapper_input(position, app_state.zapper_trigger_pressed);
-}
-
-fn handle_special_keys(
-    app_state: &mut AppState,
-    event_loop: &ActiveEventLoop,
-    platform: &impl Platform,
-) {
-    let input = &app_state.main_window_helper;
-
-    // keep this enabled even when debug keys are disabled
-    app_state.speedup.update(input.key_held(KeyCode::Backquote));
-
-    if app_state.enable_debug_keys {
-        handle_debug_keys(app_state, event_loop);
-    }
-
-    let input = &app_state.main_window_helper;
-
-    if input.key_pressed(KeyCode::F5)
-        && let Some(p) = app_state.nes_rom.file_path.as_ref()
-    {
-        let mut state = vec![];
-        app_state
-            .bus
-            .write_memento(&mut state)
-            .expect("Failed to write saved state");
-        app_state
-            .cpu
-            .write_memento(&mut state)
-            .expect("Failed to write saved state");
-        let mut path = p.clone();
-        path.set_extension("sst");
-        platform.start_write_file(
-            path,
-            &app_state.proxy,
-            &state,
-            Box::new(CustomEvents::SavedPrgRam),
-        );
-    }
-    if input.key_pressed(KeyCode::F9)
-        && let Some(p) = app_state.nes_rom.file_path.as_ref()
-    {
-        let mut path = p.clone();
-        path.set_extension("sst");
-        platform.start_read_file(path, &app_state.proxy, Box::new(CustomEvents::LoadedState));
-    }
-
-    if input.held_shift() {
-        let bus = &mut app_state.bus;
-        let cpu = &mut app_state.cpu;
-
-        let mixer = bus.apu_mut().mixer_mut();
-
-        if input.key_pressed(KeyCode::Digit1) {
-            mixer.pulse1().toggle();
-        }
-        if input.key_pressed(KeyCode::Digit2) {
-            mixer.pulse2().toggle();
-        }
-        if input.key_pressed(KeyCode::Digit3) {
-            mixer.triangle().toggle();
-        }
-        if input.key_pressed(KeyCode::Digit4) {
-            mixer.noise().toggle();
-        }
-        if input.key_pressed(KeyCode::Digit5) {
-            mixer.dmc().toggle();
-        }
-        if input.key_pressed(KeyCode::Digit0) {
-            mixer.enable_all();
-        }
-
-        if input.key_pressed(KeyCode::Digit6) {
-            bus.ppu_mut().toggle_sprite_render();
-        }
-        if input.key_pressed(KeyCode::Digit7) {
-            bus.ppu_mut().toggle_background_render();
-        }
-
-        if input.key_pressed(KeyCode::KeyR) {
-            bus.reset();
-            cpu.reset();
-        }
-    }
-}
-
-fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
-    let input = &app_state.main_window_helper;
-
-    if input.held_shift() {
-        if input.key_pressed(KeyCode::KeyX) {
-            if app_state.pause {
-                app_state.resume();
-            } else {
-                app_state.pause();
-            }
-        }
-
-        let input = &app_state.main_window_helper;
-
-        if input.key_pressed(KeyCode::KeyD) {
-            core::debug_utils::debug_dump_nametables(&app_state.bus);
-            core::debug_utils::debug_dump_attribute_tables(&app_state.bus);
-        }
-
-        if input.key_pressed(KeyCode::KeyP) {
-            core::debug_utils::debug_dump_palette(&app_state.bus);
-        }
-
-        if input.key_pressed(KeyCode::KeyO) {
-            core::debug_utils::debug_dump_oam(app_state.bus.ppu());
-        }
-
-        if input.key_pressed(KeyCode::KeyQ) {
-            core::debug_utils::debug_dump_state(&app_state.bus, &app_state.cpu);
-        }
-
-        if input.key_pressed(KeyCode::KeyF) {
-            let mut file = File::create("frame.ppm").expect("cannot create file");
-            app_state
-                .bus
-                .ppu()
-                .renderer()
-                .dump_frame(&mut file)
-                .expect("cannot dump frame");
-        }
-
-        if input.key_pressed(KeyCode::KeyT) {
-            let log_point = app_state.log_point;
-            println!("LOG_POINT {}", log_point);
-            info!("LOG_POINT {}", log_point);
-
-            app_state.log_point += 1;
-
-            app_state.cpu.enable_tracing(true);
-            app_state.bus.enable_tracing(true);
-            app_state.bus.ppu_mut().enable_tracing(true);
-        }
-
-        if input.key_pressed(KeyCode::KeyS) {
-            app_state
-                .pattern_window
-                .show(app_state.bus.mapper_ref(), event_loop, 4);
-        }
-    }
-}
-
-pub async fn create_pixels(
-    window: Arc<Window>,
-    size: PhysicalSize<u32>,
-    texture_format: Option<TextureFormat>,
-) -> Result<Pixels<'static>, String> {
-    if size.width == 0 || size.height == 0 {
-        return Err(format!(
-            "Window surface has invalid size: {}x{}",
-            size.width, size.height
-        ));
-    }
-
-    let surface_texture = SurfaceTexture::new(size.width, size.height, window);
-
-    let mut builder = PixelsBuilder::new(INNER_SIZE.width, INNER_SIZE.height, surface_texture);
-    if let Some(texture_format) = texture_format {
-        builder = builder.surface_texture_format(texture_format);
-    }
-
-    let mut pixels = builder.build_async().await.map_err(|e| format!("{}", e))?;
-    pixels.set_scaling_mode(ScalingMode::Fill);
-
-    Ok(pixels)
-}
-
-fn build_keymap_c1() -> KeyMap {
-    // TODO read from config file
-    use core::NesKey;
-
-    let mut key_map = HashMap::new();
-    key_map.insert(KeyCode::KeyZ, NesKey::A);
-    key_map.insert(KeyCode::KeyX, NesKey::B);
-    key_map.insert(KeyCode::Space, NesKey::Select);
-    key_map.insert(KeyCode::Enter, NesKey::Start);
-    key_map.insert(KeyCode::ArrowUp, NesKey::Up);
-    key_map.insert(KeyCode::ArrowDown, NesKey::Down);
-    key_map.insert(KeyCode::ArrowLeft, NesKey::Left);
-    key_map.insert(KeyCode::ArrowRight, NesKey::Right);
-    key_map
-}
-
-fn build_keymap_c2() -> KeyMap {
-    // TODO read from config file
-    use core::NesKey;
-
-    let mut key_map = HashMap::new();
-    key_map.insert(KeyCode::KeyC, NesKey::A);
-    key_map.insert(KeyCode::KeyV, NesKey::B);
-    key_map.insert(KeyCode::KeyB, NesKey::Select);
-    key_map.insert(KeyCode::KeyN, NesKey::Start);
-    key_map.insert(KeyCode::KeyW, NesKey::Up);
-    key_map.insert(KeyCode::KeyS, NesKey::Down);
-    key_map.insert(KeyCode::KeyA, NesKey::Left);
-    key_map.insert(KeyCode::KeyD, NesKey::Right);
-    key_map
-}
-
-fn build_gamepadmap_c1() -> GamepadMap {
-    // TODO read from config file
-    use core::NesKey;
-
-    let mut key_map = HashMap::new();
-    key_map.insert(Button::East, NesKey::A);
-    key_map.insert(Button::West, NesKey::A);
-    key_map.insert(Button::North, NesKey::B);
-    key_map.insert(Button::South, NesKey::B);
-    key_map.insert(Button::Select, NesKey::Select);
-    key_map.insert(Button::Start, NesKey::Start);
-    key_map.insert(Button::DPadUp, NesKey::Up);
-    key_map.insert(Button::DPadDown, NesKey::Down);
-    key_map.insert(Button::DPadLeft, NesKey::Left);
-    key_map.insert(Button::DPadRight, NesKey::Right);
-    key_map
-}
-
-fn handle_input_keys(
-    input: &WinitInputHelper,
-    ctrl: &mut core::NesController,
-    key_map: &HashMap<KeyCode, core::NesKey>,
-) {
-    for (k, v) in key_map.iter() {
-        if input.key_pressed(*k) {
-            ctrl.pressed(*v);
-        }
-        if input.key_released(*k) {
-            ctrl.released(*v);
-        }
-    }
 }

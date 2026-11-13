@@ -6,7 +6,7 @@ pub mod utils;
 
 pub use arch::{
     apu::Apu,
-    bus::Bus,
+    bus::{Bus, Controller2},
     controller::{NesController, NesKey},
     cpu::Cpu,
     debug_utils,
@@ -17,4 +17,4 @@ pub use arch::{
 };
 pub use audio::{AudioOutput, AudioOutputBox, NoAudio};
 pub use loaders::{loader::Loader, loaders_factory::decode_loader};
-pub use renderer::{NoopRenderer, Renderer};
+pub use renderer::{NoopRenderer, Renderer, RendererBox};

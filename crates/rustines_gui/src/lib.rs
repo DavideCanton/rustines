@@ -1,14 +1,20 @@
 mod app;
+mod app_state;
 mod audio;
 mod constants;
+mod input;
 mod pattern_window;
 mod platform;
 mod renderer;
+mod save_game;
+mod types;
 mod utils;
 
-pub use app::{App, AppState, CustomEvents, create_pixels};
+pub use app::{App, CustomEvents};
+pub use app_state::AppState;
 pub use audio::CpalOutput;
 pub use constants::INNER_SIZE;
 pub use platform::{Platform, ReadEventConstructor, WriteEventConstructor};
 pub use renderer::PixelsRenderer;
-pub use utils::{TraceTargets, init_logger, read_file};
+pub use types::AppEventLoopProxy;
+pub use utils::{TraceTargets, create_pixels, init_logger, read_file};

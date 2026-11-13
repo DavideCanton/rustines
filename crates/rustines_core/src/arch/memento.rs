@@ -60,7 +60,7 @@ pub trait MementoWriteable {
 
 impl MementoReadable for u8 {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        reader.read()
+        reader.read_single()
     }
 }
 
@@ -134,7 +134,7 @@ impl MementoWriteable for usize {
 
 impl MementoReadable for bool {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        let v = reader.read()?;
+        let v = reader.read_single()?;
         Ok(!matches!(v, 0))
     }
 }
@@ -212,7 +212,7 @@ impl<T: MementoWriteable> MementoWriteable for Option<T> {
 
 impl<T: MementoReadable> MementoReadable for Option<T> {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        match reader.read()? {
+        match reader.read_single()? {
             1 => Ok(Some(T::read_memento(reader)?)),
             0 => Ok(None),
             v => Err(MementoError::InvalidValue(v, reader.pointer())),
@@ -271,7 +271,7 @@ impl<'a> MementoReader<'a> {
     }
 
     /// Reads the next byte from the reader. Returns `None` if the end of the data is reached.
-    fn read(&mut self) -> MementoResult<u8> {
+    fn read_single(&mut self) -> MementoResult<u8> {
         if self.pointer == self.data.len() {
             Err(MementoError::UnexpectedEnd)
         } else {
@@ -288,7 +288,7 @@ impl<'a> MementoReader<'a> {
     fn read_many<const N: usize>(&mut self) -> MementoResult<[u8; N]> {
         let mut arr = [0; N];
         for c in &mut arr {
-            *c = self.read()?;
+            *c = self.read_single()?;
         }
         Ok(arr)
     }
@@ -300,7 +300,7 @@ impl<'a> MementoReader<'a> {
     fn read_many_dyn(&mut self, size: usize) -> MementoResult<Vec<u8>> {
         let mut v = Vec::with_capacity(size);
         for _ in 0..size {
-            v.push(self.read()?);
+            v.push(self.read_single()?);
         }
         Ok(v)
     }

@@ -2,7 +2,7 @@ use log::info;
 use rexie::{ObjectStore, Rexie, TransactionMode};
 use rustines_core::Renderer;
 use rustines_gui::{
-    AppState, CustomEvents, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
+    AppEventLoopProxy, AppState, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
     create_pixels,
 };
 use std::{
@@ -13,7 +13,6 @@ use std::{
 };
 use wasm_bindgen::JsValue;
 use web_sys::js_sys::Uint8Array;
-use winit::event_loop::EventLoopProxy;
 
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
@@ -94,7 +93,7 @@ impl Platform for WasmPlatform {
     fn start_read_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         evt_ctor: ReadEventConstructor,
     ) {
         if let Ok(name) = resolve_filename(&path) {
@@ -117,7 +116,7 @@ impl Platform for WasmPlatform {
     fn start_write_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         content: &[u8],
         evt_ctor: WriteEventConstructor,
     ) {

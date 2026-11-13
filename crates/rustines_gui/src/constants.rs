@@ -14,3 +14,9 @@ pub const fn width_to_size(width: u32) -> PhysicalSize<u32> {
     let height = ((width as f64) * RATIO) as u32;
     PhysicalSize::new(width, height)
 }
+
+pub const SAVE_COMPRESSION_LEVEL: i32 = 0;
+
+pub const SAVE_GAME_EXTENSION: &str = "sav";
+
+pub const SAVE_STATE_EXTENSION: &str = "sst";

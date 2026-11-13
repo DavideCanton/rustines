@@ -17,7 +17,8 @@ web-time = { workspace = true }
 gilrs = "0.11"
 cpal = { version = "0.18" }
 ringbuf = "0.6"
-
+zstd = "0.14.4"
+anyhow = { workspace = true }
 
 [lints.clippy]
 too_many_arguments = "allow"

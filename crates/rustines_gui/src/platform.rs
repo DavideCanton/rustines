@@ -1,9 +1,9 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 
 use rustines_core::Renderer;
-use winit::{dpi::PhysicalSize, event_loop::EventLoopProxy, window::Window};
+use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::{CustomEvents, app::AppState};
+use crate::{AppEventLoopProxy, AppState, CustomEvents};
 
 pub type PendingRenderer = Rc<RefCell<Option<Box<dyn Renderer>>>>;
 pub type ReadEventConstructor = Box<dyn FnOnce(Option<Vec<u8>>) -> CustomEvents>;
@@ -22,13 +22,13 @@ pub trait Platform {
     fn start_read_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         evt_ctor: ReadEventConstructor,
     );
     fn start_write_file(
         &self,
         path: PathBuf,
-        proxy: &EventLoopProxy<CustomEvents>,
+        proxy: &AppEventLoopProxy,
         content: &[u8],
         evt_ctor: WriteEventConstructor,
     );
