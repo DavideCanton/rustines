@@ -22,4 +22,4 @@ web-sys = { workspace = true }
 winit = { workspace = true }
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-Oz", "--strip-debug"]
+wasm-opt = ["-O3", "--strip-debug"]

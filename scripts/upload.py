@@ -11,6 +11,7 @@ EXT = {
     ".js": "t",
     ".css": "t",
     ".wasm": "b",
+    ".gz": "b",
 }
 ROOT = PurePosixPath("/")
 

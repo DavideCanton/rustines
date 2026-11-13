@@ -84,19 +84,19 @@
 
         btn.addEventListener("click", async () => {
             let zapper = document.getElementById("zapper").checked;
+
             try {
-                await init();
+                await init({module_or_path: "assets/rustines_wasm_bg.wasm.gz"});
                 start_wasm(romBytes, romName, zapper);
                 document.getElementById("header").style.display = "none";
                 document.getElementById("zapper_container").style.display = "none";
                 btn.style.display = "none";
                 document.getElementById("run_status").style.display =
                     "flex";
+                document.getElementById("game_canvas").focus();
             } catch (error) {
                 loaded.textContent = `Could not start ROM: ${error}`;
             }
-
-            document.getElementById("game_canvas").focus();
         });
     </script>
 </body>
