@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use rustines_core::{self as core};
-use rustines_gui_utils::FpsCounter;
 use winit::window::Window;
 use winit_input_helper::WinitInputHelper;
 
 use crate::{
+    fps_counter::FpsCounter,
     pattern_window::PatternTableWindow,
     types::{AppEventLoopProxy, GamepadMap, KeyMap},
 };

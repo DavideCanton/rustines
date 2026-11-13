@@ -1,12 +1,10 @@
 [workspace]
 members = [
+    "crates/core",
+    "crates/gui",
+    "crates/macro",
     "crates/rustines",
-    "crates/rustines_gui",
-    "crates/rustines_wasm",
-    "crates/rustines_core",
-    "crates/rustines_debug_commands",
-    "crates/rustines_gui_utils",
-    "crates/rustines_macro",
+    "crates/wasm",
 ]
 resolver = "2"
 

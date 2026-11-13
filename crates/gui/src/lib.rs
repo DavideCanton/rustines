@@ -2,6 +2,7 @@ mod app;
 mod app_state;
 mod audio;
 mod constants;
+mod fps_counter;
 mod input;
 mod pattern_window;
 mod platform;

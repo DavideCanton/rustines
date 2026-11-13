@@ -2125,13 +2125,13 @@ dependencies = [
  "clap",
  "log",
  "pollster 1.0.1",
- "rustines-core",
- "rustines-gui",
+ "rustines_core",
+ "rustines_gui",
  "winit",
 ]
 
 [[package]]
-name = "rustines-core"
+name = "rustines_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2142,26 +2142,14 @@ dependencies = [
  "num-complex",
  "rand",
  "rustfft",
- "rustines-macro",
+ "rustines_macro",
  "test-case",
  "thiserror 2.0.21",
  "zip",
 ]
 
 [[package]]
-name = "rustines-debug-commands"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "flexi_logger",
- "log",
- "rustines-core",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "rustines-gui"
+name = "rustines_gui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2172,8 +2160,7 @@ dependencies = [
  "pixels",
  "pollster 1.0.1",
  "ringbuf",
- "rustines-core",
- "rustines-gui-utils",
+ "rustines_core",
  "web-time",
  "winit",
  "winit_input_helper",
@@ -2181,14 +2168,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustines-gui-utils"
-version = "0.1.0"
-dependencies = [
- "web-time",
-]
-
-[[package]]
-name = "rustines-macro"
+name = "rustines_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
@@ -2205,8 +2185,8 @@ dependencies = [
  "log",
  "pixels",
  "rexie",
- "rustines-core",
- "rustines-gui",
+ "rustines_core",
+ "rustines_gui",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

@@ -1,9 +1,9 @@
-use crate::input;
 use crate::{
     AppState, CpalOutput, Platform,
     app_state::{AppStateInfo, SpeedupState},
     constants::{INNER_SIZE, width_to_size},
-    input::handle_input_keys,
+    fps_counter::FpsCounter,
+    input::{self, handle_input_keys},
     pattern_window::PatternTableWindow,
     platform::PendingRenderer,
     save_game::{load_save_game, save_game},
@@ -16,7 +16,6 @@ use rustines_core::{
     self as core,
     arch::memento::{MementoReadAndFill, MementoReader},
 };
-use rustines_gui_utils::FpsCounter;
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc};
 
 use web_time::{Duration, Instant};
@@ -59,6 +58,7 @@ pub struct App<P> {
 }
 
 impl<P: Platform> App<P> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rom_name: String,
         nes_rom: core::NesRom,

@@ -1,24 +1,21 @@
 [package]
-name = "rustines-core"
+name = "rustines_core"
 version = "0.1.0"
 authors = ["DavideCanton <davide.canton5@gmail.com>"]
 edition = "2024"
 
 [dependencies]
-zip = { version = "9.0", features = ["deflate"], default-features = false }
-arrayref = "0.3"
-bytemuck = { version = "1.25", features = ["derive"] }
 anyhow = { workspace = true }
-log = { workspace = true }
-rustines-macro = { path = "../rustines_macro" }
+arrayref = "0.3"
 bitfield = "0.20"
+bytemuck = { version = "1.25", features = ["derive"] }
+log = { workspace = true }
+rustines_macro = { path = "../macro" }
 thiserror = { workspace = true }
+zip = { version = "9.0", features = ["deflate"], default-features = false }
 
 [dev-dependencies]
-rand = "0.10"
-test-case = "3.1"
-rustfft = "6.1"
 num-complex = "0.4"
-
-[lints.clippy]
-undocumented_unsafe_blocks = "warn"
+rand = "0.10"
+rustfft = "6.1"
+test-case = "3.1"

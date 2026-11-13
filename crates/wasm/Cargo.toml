@@ -8,18 +8,18 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-wasm-bindgen = "0.2"
-web-sys = { workspace = true }
 console_error_panic_hook = { version = "0.1" }
 console_log = "1.0"
-winit = { workspace = true }
-rustines-core = { path = "../rustines_core" }
-rustines-gui = { path = "../rustines_gui" }
-log = { workspace = true }
-wasm-bindgen-futures = "0.4"
-pixels = { workspace = true }
 cpal = { version = "0.18", features = ["wasm-bindgen"] }
+log = { workspace = true }
+pixels = { workspace = true }
 rexie = "0.6"
+rustines_core = { path = "../core" }
+rustines_gui = { path = "../gui" }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { workspace = true }
+winit = { workspace = true }
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--strip-debug"]

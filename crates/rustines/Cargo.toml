@@ -7,8 +7,8 @@ default-run = "rustines"
 
 [dependencies]
 clap = { workspace = true }
-rustines-gui = { path = "../rustines_gui" }
-rustines-core = { path = "../rustines_core" }
 log = { workspace = true }
-winit = { workspace = true }
 pollster = "1"
+rustines_core = { path = "../core" }
+rustines_gui = { path = "../gui" }
+winit = { workspace = true }
