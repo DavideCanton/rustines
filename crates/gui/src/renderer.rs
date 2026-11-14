@@ -1,7 +1,7 @@
 use std::{fs::File, io::Write};
 
 use pixels::Pixels;
-use rustines_core::{arch::utils::generate_ppm, decompose_rgba, renderer::Renderer};
+use rustines_core::{arch::utils::generate_ppm, renderer::Renderer};
 
 pub struct PixelsRenderer {
     pixels: Pixels<'static>,
@@ -24,7 +24,7 @@ impl Renderer for PixelsRenderer {
     fn render_pixel(&mut self, x: usize, y: usize, rgba: u32) {
         let i = (y * self.width + x) * 4;
         let buf = self.pixels.frame_mut();
-        buf[i..i + 4].copy_from_slice(&decompose_rgba(rgba));
+        buf[i..i + 4].copy_from_slice(&rgba.to_be_bytes());
     }
 
     fn draw(&mut self) {

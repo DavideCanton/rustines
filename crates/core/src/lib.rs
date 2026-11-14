@@ -12,7 +12,7 @@ pub use arch::{
     debug_utils,
     mappers::mapper::{Mapper, MapperBox},
     memento::MementoWriter,
-    ppu::{Ppu, compose_rgba, decompose_rgba},
+    ppu::Ppu,
     rom_structs::{INesHeader, MirroringType, NesRom},
 };
 pub use audio::{AudioOutput, AudioOutputBox, NoAudio};

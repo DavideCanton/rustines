@@ -1,3 +1,10 @@
+//! Implementation of the Picture Processing Unit (PPU).
+//!
+//! This module contains the core logic for the PPU, including state management,
+//! register handling, and rendering logic for backgrounds and sprites.
+//!
+//! The `PpuState` struct holds the complete state of the PPU, which is used
+//! to simulate the hardware behavior accurately.
 use std::{array, mem};
 
 use crate::{
@@ -11,13 +18,13 @@ use crate::{
         },
         rom_structs::MirroringType,
     },
-    compose_rgba, decompose_rgba,
     renderer::{Renderer, RendererBox},
     utils::bit_utils::{BitCount as BC, BitIndex as BI, BitManip},
 };
 use log::trace;
 use rustines_macro::Memento;
 
+/// Represents the type of rendering being performed in the current cycle.
 #[derive(Debug)]
 enum RenderType {
     Sprite,
@@ -27,6 +34,11 @@ enum RenderType {
 
 const OPEN_BUS_DECAY_FRAMES: u8 = 25;
 
+/// The complete state of the Picture Processing Unit (PPU).
+///
+/// This struct contains all the registers, memory, and internal state
+/// required to simulate the PPU's behavior, including background data,
+/// sprite data, and scroll registers.
 #[derive(Memento)]
 pub struct PpuState {
     #[memento]
@@ -115,6 +127,7 @@ pub struct PpuState {
 }
 
 impl PpuState {
+    /// Creates a new, default `PpuState`.
     pub fn new() -> Self {
         Self {
             nametables: [0; 2048],
@@ -166,6 +179,11 @@ impl PpuState {
     }
 }
 
+/// The Picture Processing Unit (PPU) hardware emulator.
+///
+/// This struct provides the high-level interface for interacting with the PPU,
+/// including resetting the state, managing NMI requests, and advancing the
+/// simulation through the `tick` method.
 #[derive(Memento)]
 pub struct Ppu {
     #[memento(fill)]
@@ -178,6 +196,7 @@ const ZAPPER_SENSOR_RADIUS: usize = 4;
 const ZAPPER_LIGHT_THRESHOLD: u32 = 128;
 
 impl Ppu {
+    /// Creates a new `Ppu` with the given `renderer`.
     pub fn new(renderer: RendererBox) -> Self {
         Self {
             state: PpuState::new(),
@@ -185,50 +204,62 @@ impl Ppu {
         }
     }
 
+    /// Resets the PPU state to its default values.
     pub fn reset(&mut self) {
         self.state = PpuState::new();
     }
 
+    /// Returns a reference to the current `PpuState`.
     pub fn state(&self) -> &PpuState {
         &self.state
     }
 
+    /// Returns a mutable reference to the current `PpuState`.
     pub fn state_mut(&mut self) -> &mut PpuState {
         &mut self.state
     }
 
+    /// Consumes the pending NMI request and returns whether one was requested.
     pub fn take_nmi_requested(&mut self) -> bool {
         mem::replace(&mut self.state.nmi_request, false)
     }
 
+    /// Clears the pending NMI request.
     pub fn clear_nmi(&mut self) {
         self.state.nmi_request = false;
     }
 
+    /// Returns the current frame number.
     pub fn current_frame(&self) -> u64 {
         self.state.frame
     }
 
+    /// Returns true if the current frame is ready.
     pub fn frame_ready(&self) -> bool {
         self.state.frame_ready
     }
 
+    /// Clears the frame ready flag.
     pub fn clear_frame_ready(&mut self) {
         self.state.frame_ready = false;
     }
 
+    /// Enables or disables PPU tracing.
     pub fn enable_tracing(&mut self, tracing_enabled: bool) {
         self.state.tracing_enabled = tracing_enabled;
     }
 
+    /// Returns a reference to the PPU's `Renderer`.
     pub fn renderer(&self) -> &dyn Renderer {
         self.renderer.as_ref()
     }
 
+    /// Returns a mutable reference to the PPU's `Renderer`.
     pub fn renderer_mut(&mut self) -> &mut dyn Renderer {
         self.renderer.as_mut()
     }
 
+    /// Sets the Zapper's position.
     pub fn set_zapper_position(&mut self, position: Option<(usize, usize)>) {
         if self.state.zapper_position != position {
             self.state.zapper_light_timer = 0;
@@ -236,10 +267,12 @@ impl Ppu {
         self.state.zapper_position = position;
     }
 
+    /// Returns true if Zapper light was recently detected.
     pub fn zapper_light_detected(&self) -> bool {
         self.state.zapper_light_timer > 0
     }
 
+    /// Returns a reference to the PPU's palette table.
     pub fn palette_table(&self) -> &[u8; 32] {
         &self.state.palette_table
     }
@@ -259,6 +292,7 @@ impl Ppu {
         (1..=256).contains(&self.state.cycle)
     }
 
+    /// Returns the maximum number of cycles for the current scanline.
     fn max_cycles_for_current_scanline(&self) -> u16 {
         // the prerender scanline skips the last cycle on odd frames
         let skip_last = self.is_prerender_scanline()
@@ -268,6 +302,7 @@ impl Ppu {
         340 + offset
     }
 
+    /// Advances the PPU simulation by one cycle.
     pub fn tick(&mut self, mapper: &mut dyn Mapper) {
         self.state.zapper_light_timer = self.state.zapper_light_timer.saturating_sub(1);
         let rendering_enabled = self.state.mask.rendering_enabled();
@@ -337,6 +372,7 @@ impl Ppu {
         self.increase_cycle();
     }
 
+    /// Performs sprite evaluation for the current cycle.
     fn do_sprite_evaluation(&mut self, mapper: &mut dyn Mapper) {
         let cycle = self.state.cycle;
 
@@ -391,6 +427,7 @@ impl Ppu {
         }
     }
 
+    /// Copies a single byte of sprite data to the secondary OAM.
     fn copy_sprite_byte(&mut self) {
         let mut m = self.state.oam_addr & 0x3;
         let mut n = self.state.oam_addr >> 2;
@@ -405,6 +442,7 @@ impl Ppu {
         self.state.oam_addr = (n << 2) | m;
     }
 
+    /// Increments the OAM address components.
     fn incr(&mut self, mut m: u8, mut n: u8) -> (u8, u8) {
         m += 1;
         if m == 4 {
@@ -414,6 +452,7 @@ impl Ppu {
         (m, n)
     }
 
+    /// Increments the high part of the OAM address.
     fn incr_n(&mut self, mut n: u8) -> u8 {
         n = (n + 1) & 0x3F;
         if n == 0 {
@@ -422,6 +461,7 @@ impl Ppu {
         n
     }
 
+    /// Searches for the next sprite in the OAM data.
     fn search_next_sprite(&mut self) -> bool {
         debug_assert!(self.state.cycle.is_multiple_of(2));
 
@@ -462,6 +502,7 @@ impl Ppu {
         found
     }
 
+    /// Increments the secondary OAM address.
     fn incr_sec_oam_addr(&mut self) {
         self.state.secondary_oam_addr += 1;
         if self.state.secondary_oam_addr == 32 {
@@ -470,12 +511,14 @@ impl Ppu {
         }
     }
 
+    /// Checks if a sprite's Y position is within the current scanline range.
     fn is_sprite_in_range_y(&self, value: u8) -> bool {
         let sprite_y = value as i16;
         let sprite_height = self.state.ctrl.sprite_height() as i16;
         self.state.scanline >= sprite_y && self.state.scanline < sprite_y + sprite_height
     }
 
+    /// Loads background data based on the current cycle.
     fn cycle_load_data(&mut self, mapper: &mut dyn Mapper) {
         match self.state.cycle % 8 {
             // cycles 1-2: load nametable data
@@ -520,6 +563,7 @@ impl Ppu {
         }
     }
 
+    /// Transfers the X scroll register to the V-register.
     fn transfer_scroll_x(&mut self) {
         self.state.v_reg.set_unused(false);
         self.state.v_reg.set_coarse_x(self.state.t_reg.coarse_x());
@@ -528,6 +572,7 @@ impl Ppu {
             .set_nametable_select_x(self.state.t_reg.nametable_select_x());
     }
 
+    /// Transfers the Y scroll register to the V-register.
     fn transfer_scroll_y(&mut self) {
         self.state.v_reg.set_unused(false);
         self.state.v_reg.set_coarse_y(self.state.t_reg.coarse_y());
@@ -537,6 +582,7 @@ impl Ppu {
         self.state.v_reg.set_fine_y(self.state.t_reg.fine_y());
     }
 
+    /// Increments the PPU cycle and manages scanline/frame transitions.
     fn increase_cycle(&mut self) {
         self.state.cycle += 1;
 
@@ -554,6 +600,7 @@ impl Ppu {
         }
     }
 
+    /// Handles the decay of the open bus value.
     fn handle_open_bus_decay(&mut self) {
         if self.state.open_bus_decay_timer > 0 {
             self.state.open_bus_decay_timer -= 1;
@@ -563,6 +610,7 @@ impl Ppu {
         }
     }
 
+    /// Writes a value to a PPU register.
     pub fn cpu_write(&mut self, reg_index: u8, value: u8, mapper: &mut dyn Mapper) {
         if self.state.tracing_enabled {
             trace!("PPU CPU WRITE {reg_index:04X} <- {value:04X}");
@@ -629,11 +677,13 @@ impl Ppu {
         }
     }
 
+    /// Writes a value to the open bus.
     fn write_open_bus(&mut self, value: u8) {
         self.state.open_bus_value = value;
         self.state.open_bus_decay_timer = OPEN_BUS_DECAY_FRAMES;
     }
 
+    /// Reads a value from a PPU register.
     pub fn cpu_read(&mut self, reg_index: u8, mapper: &dyn Mapper) -> u8 {
         let ret = match reg_index {
             2 => {
@@ -702,6 +752,7 @@ impl Ppu {
         ret
     }
 
+    /// Reads a value from PPU VRAM at the specified address.
     pub fn vram_read(&self, addr: u16, mapper: &dyn Mapper) -> u8 {
         let orig_addr = addr;
 
@@ -727,6 +778,7 @@ impl Ppu {
         ret
     }
 
+    /// Writes a value to PPU VRAM at the specified address.
     pub fn vram_write(&mut self, mut addr: u16, value: u8, mapper: &mut dyn Mapper) {
         let orig_addr = addr;
         addr &= 0x3FFF;
@@ -751,6 +803,7 @@ impl Ppu {
         }
     }
 
+    /// Renders a single pixel at the current scanline and cycle.
     fn render_pixel(&mut self, mapper: &dyn Mapper) {
         let x_pos = (self.state.cycle - 1) as usize;
         let y_pos = self.state.scanline as usize;
@@ -840,6 +893,7 @@ impl Ppu {
         self.renderer.render_pixel(x_pos, y_pos, rgb_color);
     }
 
+    /// Fills the sprite shifters with data for a given sprite index.
     fn fill_sprite_data(&mut self, sprite_idx: usize, mapper: &mut dyn Mapper) {
         let addr = sprite_idx * 4;
         let oam_sprite = OamSprite::from_bytes(&self.state.secondary_oam[addr..addr + 4]);
@@ -901,6 +955,7 @@ impl Ppu {
         }
     }
 
+    /// Increments the VRAM X address.
     fn increment_vram_address_x(&mut self) {
         let coarse_x = self.state.v_reg.coarse_x();
         if coarse_x == 0x1F {
@@ -914,6 +969,7 @@ impl Ppu {
         }
     }
 
+    /// Increments the VRAM Y address.
     fn increment_vram_address_y(&mut self) {
         let fine_y = self.state.v_reg.fine_y();
         if fine_y < 7 {
@@ -944,18 +1000,22 @@ impl Ppu {
         }
     }
 
+    /// Returns a reference to the OAM data.
     pub(crate) fn oam_data(&self) -> &[u8; 256] {
         &self.state.oam_data
     }
 
+    /// Returns a reference to the secondary OAM data.
     pub(crate) fn secondary_oam_data(&self) -> &[u8; 32] {
         &self.state.secondary_oam
     }
 
+    /// Returns a shadow of the status bits, combining some bits from status and some from open bus.
     pub(crate) fn status_bits_shadow(&self) -> u8 {
         (self.state.status.0 & 0b1110_0000) | (self.state.open_bus_value & 0b0001_1111)
     }
 
+    /// Returns a shadow of the VRAM buffer.
     pub(crate) fn vram_buffer_shadow(&self, mapper: &dyn Mapper) -> u8 {
         let current_addr = self.state.v_reg.address();
         if current_addr >= 0x3F00 {
@@ -965,15 +1025,18 @@ impl Ppu {
         }
     }
 
+    /// Toggles the debug rendering of sprites.
     pub fn toggle_sprite_render(&mut self) {
         self.state.debug_render_sprites_enabled = !self.state.debug_render_sprites_enabled;
     }
 
+    /// Toggles the debug rendering of backgrounds.
     pub fn toggle_background_render(&mut self) {
         self.state.debug_render_background_enabled = !self.state.debug_render_background_enabled;
     }
 }
 
+/// Computes the VRAM address for a given palette and pixel.
 fn compute_palette_vram_address(palette: u8, pixel: u8) -> u16 {
     let mut offset: u16 = 0;
 
@@ -984,6 +1047,7 @@ fn compute_palette_vram_address(palette: u8, pixel: u8) -> u16 {
     0x3F00 + offset
 }
 
+/// Returns the color index for a given byte pair and pixel X position.
 pub fn get_color_index(byte_low: u8, byte_high: u8, pixel_x: u8) -> u8 {
     let bit_shift: BI = (7 - pixel_x).try_into().unwrap();
 
@@ -1007,6 +1071,7 @@ fn normalize_palette_address(addr: u16) -> usize {
     palette_addr
 }
 
+/// Reads the palette by color ID, applying mask effects like grayscale and emphasis.
 fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
     let color_id = if mask.grayscale() {
         color_id & 0b0011_0000
@@ -1021,14 +1086,16 @@ fn read_palette_by_color_id(mask: &PpuMask, color_id: u8) -> u32 {
     }
 }
 
+/// Checks if the provided RGBA color represents a Zapper light hit.
 fn is_zapper_light(rgba: u32) -> bool {
-    let [r, g, b, _] = decompose_rgba(rgba);
+    let [r, g, b, _] = rgba.to_be_bytes();
     let r = r as u32;
     let g = g as u32;
     let b = b as u32;
     (r * 299 + g * 587 + b * 114) / 1000 >= ZAPPER_LIGHT_THRESHOLD
 }
 
+/// Returns the physical nametable address for a given address and mirroring mode.
 pub fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
     let nametable = (addr >> 10) & 0x03;
     let offset = (addr & 0x03FF) as usize;
@@ -1042,9 +1109,10 @@ pub fn mirror_nametable_addr(addr: u16, mode: MirroringType) -> usize {
     (physical_nametable as usize) * 0x0400 + offset
 }
 
+/// Applies color emphasis based on the provided mask.
 #[inline(always)]
 fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
-    let [r, g, b, a] = decompose_rgba(color);
+    let [r, g, b, a] = color.to_be_bytes();
 
     let mut r2 = r;
     let mut g2 = g;
@@ -1060,9 +1128,10 @@ fn apply_emphasis(color: u32, mask: &PpuMask) -> u32 {
         b2 = emphasize_color(b2);
     }
 
-    compose_rgba(r2, g2, b2, a)
+    u32::from_be_bytes([r2, g2, b2, a])
 }
 
+/// Applies emphasis to a single color.
 #[inline(always)]
 fn emphasize_color(col: u8) -> u8 {
     col + 0x55
