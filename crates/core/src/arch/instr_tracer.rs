@@ -1,4 +1,5 @@
 use log::{Level, log_enabled, trace};
+use rustines_macro::Memento;
 
 use crate::{
     Bus,
@@ -9,9 +10,13 @@ use crate::{
     utils::bit_utils::NumberFormat,
 };
 
+#[derive(Memento)]
 pub struct InstructionTracer {
+    #[memento]
     tracing_enabled: bool,
+    #[memento]
     function_level: u32,
+    #[memento]
     previous_clock: u64,
 }
 

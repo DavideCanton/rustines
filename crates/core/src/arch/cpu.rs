@@ -23,6 +23,7 @@ pub struct Cpu {
     pub(crate) pending_nmi_execution: bool,
     #[memento]
     pub(crate) pending_rst_execution: bool,
+    #[memento(fill)]
     tracer: InstructionTracer,
 }
 
