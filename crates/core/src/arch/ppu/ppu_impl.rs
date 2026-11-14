@@ -209,16 +209,6 @@ impl Ppu {
         self.state = PpuState::new();
     }
 
-    /// Returns a reference to the current `PpuState`.
-    pub fn state(&self) -> &PpuState {
-        &self.state
-    }
-
-    /// Returns a mutable reference to the current `PpuState`.
-    pub fn state_mut(&mut self) -> &mut PpuState {
-        &mut self.state
-    }
-
     /// Consumes the pending NMI request and returns whether one was requested.
     pub fn take_nmi_requested(&mut self) -> bool {
         mem::replace(&mut self.state.nmi_request, false)

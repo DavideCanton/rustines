@@ -143,14 +143,6 @@ impl Apu {
         self.state = ApuState::new();
     }
 
-    pub fn state(&self) -> &ApuState {
-        &self.state
-    }
-
-    pub fn state_mut(&mut self) -> &mut ApuState {
-        &mut self.state
-    }
-
     pub fn tick(&mut self) {
         self.state.cpu_cycle_count += 1;
 
