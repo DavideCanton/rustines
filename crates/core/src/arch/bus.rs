@@ -6,10 +6,7 @@ use crate::{
         apu::Apu,
         controller::NesController,
         mappers::mapper::{Mapper, MapperBox},
-        memento::{
-            MementoError, MementoReadable, MementoReader, MementoResult, MementoWriteable,
-            MementoWriter,
-        },
+        memento::{MementoReadable, MementoReader, MementoResult, MementoWriteable, MementoWriter},
         ppu::Ppu,
         zapper::Zapper,
     },
@@ -501,7 +498,7 @@ impl MementoReadable for OamDmaState {
                 address: reader.read_memento()?,
                 data: reader.read_memento()?,
             }),
-            v => Err(MementoError::InvalidValue(v, reader.pointer())),
+            v => Err(reader.read_error(v)),
         }
     }
 }
@@ -558,7 +555,7 @@ impl MementoReadable for DmcDmaState {
             4 => Ok(DmcDmaState::Read {
                 address: reader.read_memento()?,
             }),
-            v => Err(MementoError::InvalidValue(v, reader.pointer())),
+            v => Err(reader.read_error(v)),
         }
     }
 }

@@ -4,8 +4,6 @@
 //! in a sequential binary format using the `MementoReadable`, `MementoWriteable`,
 //! and `MementoReadAndFill` traits.
 
-use crate::utils::bit_utils::to_u16;
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -58,84 +56,34 @@ pub trait MementoWriteable {
     fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult;
 }
 
-impl MementoReadable for u8 {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        reader.read_single()
-    }
+macro_rules! memento_impl_nums {
+    ($($t: ty),+) => {
+        $(
+            impl MementoReadable for $t {
+                fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
+                    Ok(<$t>::from_le_bytes(reader.read_many_fixed()?))
+                }
+            }
+
+            impl MementoWriteable for $t {
+                fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+                    writer.write_many(&self.to_le_bytes())
+                }
+            }
+        )+
+    };
 }
 
-impl MementoWriteable for u8 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write(*self)
-    }
-}
-
-impl MementoReadable for u16 {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        let [b1, b2] = reader.read_many()?;
-        Ok(to_u16(b1, b2))
-    }
-}
-
-impl MementoWriteable for u16 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write_many(&self.to_le_bytes())
-    }
-}
-
-impl MementoReadable for i16 {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        let [b1, b2] = reader.read_many()?;
-        Ok(to_u16(b1, b2) as i16)
-    }
-}
-
-impl MementoWriteable for i16 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write_many(&self.to_le_bytes())
-    }
-}
-
-impl MementoReadable for u32 {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        Ok(u32::from_le_bytes(reader.read_many()?))
-    }
-}
-
-impl MementoWriteable for u32 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write_many(&self.to_le_bytes())
-    }
-}
-
-impl MementoReadable for u64 {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        Ok(u64::from_le_bytes(reader.read_many()?))
-    }
-}
-
-impl MementoWriteable for u64 {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write_many(&self.to_le_bytes())
-    }
-}
-
-impl MementoReadable for usize {
-    fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        Ok(usize::from_le_bytes(reader.read_many()?))
-    }
-}
-
-impl MementoWriteable for usize {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
-        writer.write_many(&self.to_le_bytes())
-    }
-}
+memento_impl_nums!(u8, u16, u32, u64, usize);
+memento_impl_nums!(i8, i16, i32, i64, isize);
 
 impl MementoReadable for bool {
     fn read_memento(reader: &mut MementoReader) -> MementoResult<Self> {
-        let v = reader.read_single()?;
-        Ok(!matches!(v, 0))
+        match reader.read_single()? {
+            1 => Ok(true),
+            0 => Ok(false),
+            v => Err(reader.read_error(v)),
+        }
     }
 }
 
@@ -215,7 +163,7 @@ impl<T: MementoReadable> MementoReadable for Option<T> {
         match reader.read_single()? {
             1 => Ok(Some(T::read_memento(reader)?)),
             0 => Ok(None),
-            v => Err(MementoError::InvalidValue(v, reader.pointer())),
+            v => Err(reader.read_error(v)),
         }
     }
 }
@@ -242,7 +190,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                     v.read_and_fill(reader)?;
                     Ok(())
                 } else {
-                    Err(MementoError::InvalidValue(tag, reader.pointer()))
+                    Err(reader.read_error(tag))
                 }
             }
             None => {
@@ -251,7 +199,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                 if tag == 0 {
                     Ok(())
                 } else {
-                    Err(MementoError::InvalidValue(tag, reader.pointer()))
+                    Err(reader.read_error(tag))
                 }
             }
         }
@@ -270,6 +218,11 @@ impl<'a> MementoReader<'a> {
         Self { data, pointer: 0 }
     }
 
+    /// Returns an error of type [`MementoError::InvalidValue`].
+    pub fn read_error(&self, value: u8) -> MementoError {
+        MementoError::InvalidValue(value, self.pointer)
+    }
+
     /// Reads the next byte from the reader. Returns `None` if the end of the data is reached.
     fn read_single(&mut self) -> MementoResult<u8> {
         if self.pointer == self.data.len() {
@@ -285,7 +238,7 @@ impl<'a> MementoReader<'a> {
     ///
     /// # Panics
     /// Panics if the reader runs out of bytes before `N` bytes are read.
-    fn read_many<const N: usize>(&mut self) -> MementoResult<[u8; N]> {
+    fn read_many_fixed<const N: usize>(&mut self) -> MementoResult<[u8; N]> {
         let mut arr = [0; N];
         for c in &mut arr {
             *c = self.read_single()?;
@@ -308,11 +261,6 @@ impl<'a> MementoReader<'a> {
     /// Deserializes a type `M` from the reader using the [`MementoReadable`] trait.
     pub fn read_memento<M: MementoReadable>(&mut self) -> MementoResult<M> {
         M::read_memento(self)
-    }
-
-    /// The current address
-    pub fn pointer(&self) -> usize {
-        self.pointer
     }
 }
 
