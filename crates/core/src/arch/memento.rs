@@ -4,6 +4,8 @@
 //! in a sequential binary format using the `MementoReadable`, `MementoWriteable`,
 //! and `MementoReadAndFill` traits.
 
+use std::io::{Cursor, Read};
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -208,59 +210,52 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
 
 /// A reader that provides an interface for reading bytes and deserializing types from a byte slice.
 pub struct MementoReader<'a> {
-    data: &'a [u8],
-    pointer: usize,
+    cursor: Cursor<&'a [u8]>,
 }
 
 impl<'a> MementoReader<'a> {
     /// Creates a new [`MementoReader`] from a byte slice.
     pub fn new(data: &'a [u8]) -> Self {
-        Self { data, pointer: 0 }
-    }
-
-    /// Returns an error of type [`MementoError::InvalidValue`].
-    pub fn read_error(&self, value: u8) -> MementoError {
-        MementoError::InvalidValue(value, self.pointer)
-    }
-
-    /// Reads the next byte from the reader. Returns `None` if the end of the data is reached.
-    fn read_single(&mut self) -> MementoResult<u8> {
-        if self.pointer == self.data.len() {
-            Err(MementoError::UnexpectedEnd)
-        } else {
-            let v = self.data[self.pointer];
-            self.pointer += 1;
-            Ok(v)
+        Self {
+            cursor: Cursor::new(data),
         }
-    }
-
-    /// Reads exactly `N` bytes from the reader into an array.
-    ///
-    /// # Panics
-    /// Panics if the reader runs out of bytes before `N` bytes are read.
-    fn read_many_fixed<const N: usize>(&mut self) -> MementoResult<[u8; N]> {
-        let mut arr = [0; N];
-        for c in &mut arr {
-            *c = self.read_single()?;
-        }
-        Ok(arr)
-    }
-
-    /// Reads a dynamic number of bytes from the reader into a [`Vec<u8>`].
-    ///
-    /// # Panics
-    /// Panics if the reader runs out of bytes before `size` bytes are read.
-    fn read_many_dyn(&mut self, size: usize) -> MementoResult<Vec<u8>> {
-        let mut v = Vec::with_capacity(size);
-        for _ in 0..size {
-            v.push(self.read_single()?);
-        }
-        Ok(v)
     }
 
     /// Deserializes a type `M` from the reader using the [`MementoReadable`] trait.
     pub fn read_memento<M: MementoReadable>(&mut self) -> MementoResult<M> {
         M::read_memento(self)
+    }
+
+    /// Returns an error of type [`MementoError::InvalidValue`].
+    pub fn read_error(&self, value: u8) -> MementoError {
+        MementoError::InvalidValue(value, self.cursor.position() as usize)
+    }
+
+    /// Reads the next byte from the reader. Returns `None` if the end of the data is reached.
+    fn read_single(&mut self) -> MementoResult<u8> {
+        let mut buf = [0; 1];
+        self.try_read(&mut buf)?;
+        Ok(buf[0])
+    }
+
+    /// Reads exactly `N` bytes from the reader into an array.
+    fn read_many_fixed<const N: usize>(&mut self) -> MementoResult<[u8; N]> {
+        let mut buf = [0; N];
+        self.try_read(&mut buf)?;
+        Ok(buf)
+    }
+
+    /// Reads a dynamic number of bytes from the reader into a [`Vec<u8>`].
+    fn read_many_dyn(&mut self, size: usize) -> MementoResult<Vec<u8>> {
+        let mut buf = vec![0; size];
+        self.try_read(&mut buf)?;
+        Ok(buf)
+    }
+
+    fn try_read(&mut self, buf: &mut [u8]) -> MementoResult {
+        self.cursor
+            .read_exact(buf)
+            .map_err(|_| MementoError::UnexpectedEnd)
     }
 }
 
