@@ -135,11 +135,10 @@ impl MementoReadAndFill for ChrMemory {
 }
 
 impl MementoWriteable for ChrMemory {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         if self.is_ram {
-            self.memory.write_memento(writer)?;
+            self.memory.write_memento(writer);
         }
-        Ok(())
     }
 }
 

@@ -10,11 +10,11 @@ use crate::{
     types::AppEventLoopProxy,
 };
 use gilrs::{EventType, Gilrs};
-use log::info;
+use log::{error, info};
 
 use rustines_core::{
     self as core,
-    arch::memento::{MementoReadAndFill, MementoReader},
+    arch::memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
 };
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc};
 
@@ -267,25 +267,17 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                             info!("Read save file");
                             app_state.bus.mapper_mut().set_prg_ram(&decoded);
                         }
-                        Err(e) => info!("Load save decompress failed: {e}"),
+                        Err(e) => error!("Load save decompress failed: {e}"),
                     },
-                    None => info!("Load state failed"),
+                    None => error!("Load state failed"),
                 },
                 CustomEvents::LoadedState(c) => match c {
                     Some(content) => match zstd::decode_all(content.as_slice()) {
                         Ok(decoded) => {
                             info!("Read state");
-                            let mut reader = MementoReader::new(&decoded);
-                            app_state
-                                .bus
-                                .read_and_fill(&mut reader)
-                                .expect("Failed to read saved state");
-                            app_state
-                                .cpu
-                                .read_and_fill(&mut reader)
-                                .expect("Failed to read saved state");
+                            fill_with_saved_state(app_state, decoded);
                         }
-                        Err(e) => info!("Load state decompress failed: {e}"),
+                        Err(e) => error!("Load state decompress failed: {e}"),
                     },
                     None => info!("Load state failed"),
                 },
@@ -326,6 +318,31 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
 
         event_loop.set_control_flow(ControlFlow::Poll);
     }
+}
+
+fn fill_with_saved_state(app_state: &mut AppState, decoded: Vec<u8>) {
+    let mut rollback_buffer = Vec::new();
+    app_state.bus.write_memento(&mut rollback_buffer);
+    app_state.cpu.write_memento(&mut rollback_buffer);
+
+    let mut reader = MementoReader::new(&decoded);
+    let res = fill_data(app_state, &mut reader);
+
+    match res {
+        Ok(()) => {
+            info!("State loaded successfully");
+        }
+        Err(e) => {
+            error!("Load state failed: {e:?}");
+            let mut rollback_reader = MementoReader::new(&rollback_buffer);
+            fill_data(app_state, &mut rollback_reader).expect("Rollback failed");
+        }
+    }
+}
+
+fn fill_data(app_state: &mut AppState, reader: &mut MementoReader) -> MementoResult {
+    app_state.bus.read_and_fill(reader)?;
+    app_state.cpu.read_and_fill(reader)
 }
 
 fn update_logic(app_state: &mut AppState, platform: &impl Platform) {

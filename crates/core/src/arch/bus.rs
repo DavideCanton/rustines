@@ -439,7 +439,7 @@ pub enum OamDmaState {
 }
 
 impl MementoWriteable for OamDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         match self {
             OamDmaState::NotRunning => 0u8.write_memento(writer),
             OamDmaState::Starting {
@@ -447,30 +447,26 @@ impl MementoWriteable for OamDmaState {
                 address,
                 needs_alignment,
             } => {
-                1u8.write_memento(writer)?;
-                cnt.write_memento(writer)?;
-                address.write_memento(writer)?;
-                needs_alignment.write_memento(writer)?;
-                Ok(())
+                1u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
+                needs_alignment.write_memento(writer);
             }
             OamDmaState::Aligning { cnt, address } => {
-                2u8.write_memento(writer)?;
-                cnt.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                2u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
             }
             OamDmaState::Reading { cnt, address } => {
-                3u8.write_memento(writer)?;
-                cnt.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                3u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
             }
             OamDmaState::Writing { cnt, address, data } => {
-                4u8.write_memento(writer)?;
-                cnt.write_memento(writer)?;
-                address.write_memento(writer)?;
-                data.write_memento(writer)?;
-                Ok(())
+                4u8.write_memento(writer);
+                cnt.write_memento(writer);
+                address.write_memento(writer);
+                data.write_memento(writer);
             }
         }
     }
@@ -513,28 +509,24 @@ pub enum DmcDmaState {
 }
 
 impl MementoWriteable for DmcDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         match self {
             DmcDmaState::NotRunning => 0u8.write_memento(writer),
             DmcDmaState::Halt { address } => {
-                1u8.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                1u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Dummy { address } => {
-                2u8.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                2u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Alignment { address } => {
-                3u8.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                3u8.write_memento(writer);
+                address.write_memento(writer);
             }
             DmcDmaState::Read { address } => {
-                4u8.write_memento(writer)?;
-                address.write_memento(writer)?;
-                Ok(())
+                4u8.write_memento(writer);
+                address.write_memento(writer);
             }
         }
     }

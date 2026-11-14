@@ -55,9 +55,9 @@ impl MementoReadable for ApuMode {
 }
 
 impl MementoWriteable for ApuMode {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) -> MementoResult {
+    fn write_memento(&self, writer: &mut dyn MementoWriter) {
         let b: bool = (*self).into();
-        b.write_memento(writer)
+        b.write_memento(writer);
     }
 }
 

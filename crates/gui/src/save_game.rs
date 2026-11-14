@@ -47,10 +47,8 @@ pub fn save_state(
     if let Some(path) = nes_rom.file_path.as_ref() {
         let mut writer = vec![];
 
-        bus.write_memento(&mut writer)
-            .expect("Failed to write saved state");
-        cpu.write_memento(&mut writer)
-            .expect("Failed to write saved state");
+        bus.write_memento(&mut writer);
+        cpu.write_memento(&mut writer);
 
         match zstd::encode_all(writer.as_slice(), SAVE_COMPRESSION_LEVEL) {
             Ok(compressed) => platform.start_write_file(

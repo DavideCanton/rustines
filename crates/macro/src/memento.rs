@@ -153,15 +153,14 @@ fn generate_memento_writeable(struct_name: &Ident, fields: &[MemberFill]) -> Tok
         let fname = &field.member;
         statements.push(quote! {
             log::trace!("Writing {}...", stringify!(#fname));
-            self.#fname.write_memento(writer)?;
+            self.#fname.write_memento(writer);
         });
     }
 
     TokenStream::from(quote! {
         impl crate::arch::memento::MementoWriteable for #struct_name {
-            fn write_memento(&self, writer: &mut dyn crate::arch::memento::MementoWriter) -> crate::arch::memento::MementoResult {
+            fn write_memento(&self, writer: &mut dyn crate::arch::memento::MementoWriter) {
                     #(#statements)*
-                    Ok(())
                 }
             }
     })
