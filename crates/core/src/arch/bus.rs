@@ -439,7 +439,7 @@ pub enum OamDmaState {
 }
 
 impl MementoWriteable for OamDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         match self {
             OamDmaState::NotRunning => 0u8.write_memento(writer),
             OamDmaState::Starting {
@@ -509,7 +509,7 @@ pub enum DmcDmaState {
 }
 
 impl MementoWriteable for DmcDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         match self {
             DmcDmaState::NotRunning => 0u8.write_memento(writer),
             DmcDmaState::Halt { address } => {

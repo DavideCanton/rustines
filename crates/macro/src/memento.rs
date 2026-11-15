@@ -158,8 +158,8 @@ fn generate_memento_writeable(struct_name: &Ident, fields: &[MemberFill]) -> Tok
     }
 
     TokenStream::from(quote! {
-        impl crate::arch::memento::MementoWriteable for #struct_name {
-            fn write_memento(&self, writer: &mut dyn crate::arch::memento::MementoWriter) {
+        impl ::rustines_core::MementoWriteable for #struct_name {
+            fn write_memento(&self, writer: &mut ::rustines_core::MementoWriter) {
                     #(#statements)*
                 }
             }
@@ -187,8 +187,8 @@ fn generate_memento_readable(struct_name: &Ident, fields: &[MemberFill]) -> Toke
     }
 
     TokenStream::from(quote! {
-        impl crate::arch::memento::MementoReadAndFill for #struct_name {
-            fn read_and_fill(&mut self, reader: &mut crate::arch::memento::MementoReader) -> crate::arch::memento::MementoResult {
+        impl ::rustines_core::MementoReadAndFill for #struct_name {
+            fn read_and_fill(&mut self, reader: &mut ::rustines_core::MementoReader) -> ::rustines_core::MementoResult {
                 #(#statements)*
                 Ok(())
             }

@@ -45,12 +45,12 @@ pub fn save_state(
     platform: &impl Platform,
 ) {
     if let Some(path) = nes_rom.file_path.as_ref() {
-        let mut writer = vec![];
+        let mut writer = core::MementoWriter::new();
 
         bus.write_memento(&mut writer);
         cpu.write_memento(&mut writer);
 
-        match zstd::encode_all(writer.as_slice(), SAVE_COMPRESSION_LEVEL) {
+        match zstd::encode_all(writer.into_vec().as_slice(), SAVE_COMPRESSION_LEVEL) {
             Ok(compressed) => platform.start_write_file(
                 path.with_extension(SAVE_STATE_EXTENSION),
                 proxy,

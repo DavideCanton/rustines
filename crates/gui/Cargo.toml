@@ -14,6 +14,7 @@ pixels = { workspace = true }
 pollster = "1"
 ringbuf = "0.6"
 rustines_core = { path = "../core" }
+rustines_macro = { path = "../macro" }
 web-time = { workspace = true }
 winit = { workspace = true }
 winit_input_helper = { workspace = true }

@@ -1,9 +1,13 @@
-use std::{collections::HashMap, fs::File};
+use std::{collections::HashMap, fs::File, hash::Hash};
 
 use gilrs::Button;
 use log::info;
-use rustines_core as core;
-use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode};
+use rustines_core::{self as core, MementoWriteable};
+use winit::{
+    event_loop::ActiveEventLoop,
+    keyboard::{KeyCode, PhysicalKey},
+    platform::scancode::PhysicalKeyExtScancode,
+};
 use winit_input_helper::WinitInputHelper;
 
 use crate::{
@@ -141,8 +145,139 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
     }
 }
 
-pub(crate) fn build_keymap_c1() -> KeyMap {
-    // TODO read from config file
+pub(crate) fn handle_input_keys(
+    input: &WinitInputHelper,
+    ctrl: &mut core::NesController,
+    key_map: &KeyMap,
+) {
+    for (k, v) in key_map.iter() {
+        if input.key_pressed(*k) {
+            ctrl.pressed(*v);
+        }
+        if input.key_released(*k) {
+            ctrl.released(*v);
+        }
+    }
+}
+
+pub struct InputMap {
+    key_map_1: KeyMap,
+    key_map_2: KeyMap,
+    gamepad_map_1: GamepadMap,
+}
+
+impl InputMap {
+    pub fn default_map() -> Self {
+        Self {
+            key_map_1: build_default_key_map_1(),
+            key_map_2: build_default_key_map_2(),
+            gamepad_map_1: build_default_gamepad_map_1(),
+        }
+    }
+
+    pub fn gamepad_map_1(&self) -> &GamepadMap {
+        &self.gamepad_map_1
+    }
+
+    pub fn key_map_1(&self) -> &KeyMap {
+        &self.key_map_1
+    }
+
+    pub fn key_map_2(&self) -> &KeyMap {
+        &self.key_map_2
+    }
+
+    fn _write_key_map<K>(
+        map: &HashMap<K, core::NesKey>,
+        key_writer: impl Fn(&K, &mut core::MementoWriter),
+        writer: &mut core::MementoWriter,
+    ) {
+        map.len().write_memento(writer);
+        for (k, v) in map.iter() {
+            key_writer(k, writer);
+            let v_num = *v as u16;
+            v_num.write_memento(writer);
+        }
+    }
+
+    fn _read_key_map<K: Eq + Hash>(
+        key_reader: impl Fn(&mut core::MementoReader) -> core::MementoResult<K>,
+        reader: &mut core::MementoReader,
+    ) -> core::MementoResult<HashMap<K, core::NesKey>> {
+        let len: usize = reader.read_memento()?;
+        let mut map = HashMap::new();
+
+        for _ in 0..len {
+            let key = key_reader(reader)?;
+            let value: u16 = reader.read_memento()?;
+
+            // TODO improve
+            let nes_key: core::NesKey = unsafe { std::mem::transmute(value) };
+
+            map.insert(key, nes_key);
+        }
+
+        Ok(map)
+    }
+}
+
+impl core::MementoReadable for InputMap {
+    fn read_memento(reader: &mut core::MementoReader) -> core::MementoResult<Self>
+    where
+        Self: Sized,
+    {
+        let keycode_reader = |r: &mut core::MementoReader| -> core::MementoResult<KeyCode> {
+            match KeyCode::from_scancode(r.read_memento::<u32>()?) {
+                PhysicalKey::Code(code) => Ok(code),
+                // TODO improve
+                PhysicalKey::Unidentified(_) => Err(core::MementoError::InvalidValue(42, 42)),
+            }
+        };
+
+        let key_map_1 = Self::_read_key_map(keycode_reader, reader)?;
+        let key_map_2 = Self::_read_key_map(keycode_reader, reader)?;
+
+        let gamepad_map_1 = Self::_read_key_map(
+            |r| -> core::MementoResult<Button> {
+                let code: u16 = r.read_memento()?;
+
+                // TODO improve
+                let btn: Button = unsafe { std::mem::transmute(code) };
+
+                Ok(btn)
+            },
+            reader,
+        )?;
+
+        Ok(Self {
+            key_map_1,
+            key_map_2,
+            gamepad_map_1,
+        })
+    }
+}
+
+impl core::MementoWriteable for InputMap {
+    fn write_memento(&self, writer: &mut core::MementoWriter) {
+        let keycode_writer = |k: &KeyCode, w: &mut core::MementoWriter| {
+            k.to_scancode().unwrap().write_memento(w);
+        };
+
+        Self::_write_key_map(&self.key_map_1, keycode_writer, writer);
+        Self::_write_key_map(&self.key_map_2, keycode_writer, writer);
+
+        Self::_write_key_map(
+            &self.gamepad_map_1,
+            |btn, w| {
+                let v = *btn as u16;
+                v.write_memento(w);
+            },
+            writer,
+        );
+    }
+}
+
+fn build_default_key_map_1() -> KeyMap {
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -157,8 +292,7 @@ pub(crate) fn build_keymap_c1() -> KeyMap {
     key_map
 }
 
-pub(crate) fn build_keymap_c2() -> KeyMap {
-    // TODO read from config file
+fn build_default_key_map_2() -> KeyMap {
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -173,8 +307,7 @@ pub(crate) fn build_keymap_c2() -> KeyMap {
     key_map
 }
 
-pub(crate) fn build_gamepadmap_c1() -> GamepadMap {
-    // TODO read from config file
+fn build_default_gamepad_map_1() -> GamepadMap {
     use core::NesKey;
 
     let mut key_map = HashMap::new();
@@ -189,19 +322,4 @@ pub(crate) fn build_gamepadmap_c1() -> GamepadMap {
     key_map.insert(Button::DPadLeft, NesKey::Left);
     key_map.insert(Button::DPadRight, NesKey::Right);
     key_map
-}
-
-pub(crate) fn handle_input_keys(
-    input: &WinitInputHelper,
-    ctrl: &mut core::NesController,
-    key_map: &HashMap<KeyCode, core::NesKey>,
-) {
-    for (k, v) in key_map.iter() {
-        if input.key_pressed(*k) {
-            ctrl.pressed(*v);
-        }
-        if input.key_released(*k) {
-            ctrl.released(*v);
-        }
-    }
 }

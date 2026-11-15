@@ -3,7 +3,7 @@ use crate::{
     app_state::{AppStateInfo, SpeedupState},
     constants::{INNER_SIZE, width_to_size},
     fps_counter::FpsCounter,
-    input::{self, handle_input_keys},
+    input::{self, InputMap, handle_input_keys},
     pattern_window::PatternTableWindow,
     platform::PendingRenderer,
     save_game::{load_save_game, save_game},
@@ -12,10 +12,7 @@ use crate::{
 use gilrs::{EventType, Gilrs};
 use log::{error, info};
 
-use rustines_core::{
-    self as core,
-    arch::memento::{MementoReadAndFill, MementoReader, MementoResult, MementoWriteable},
-};
+use rustines_core::{self as core, MementoReadAndFill, MementoWriteable};
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc};
 
 use web_time::{Duration, Instant};
@@ -139,9 +136,7 @@ impl<P: Platform> App<P> {
             render_counter: FpsCounter::new(),
             update_counter: FpsCounter::new(),
             cpu,
-            key_map1: input::build_keymap_c1(),
-            key_map2: input::build_keymap_c2(),
-            gamepad_map1: input::build_gamepadmap_c1(),
+            input_map: InputMap::default_map(),
             log_point: 1,
             pattern_window: PatternTableWindow::new(),
             main_window,
@@ -321,11 +316,12 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
 }
 
 fn fill_with_saved_state(app_state: &mut AppState, decoded: Vec<u8>) {
-    let mut rollback_buffer = Vec::new();
-    app_state.bus.write_memento(&mut rollback_buffer);
-    app_state.cpu.write_memento(&mut rollback_buffer);
+    let mut rollback_writer = core::MementoWriter::new();
+    app_state.bus.write_memento(&mut rollback_writer);
+    app_state.cpu.write_memento(&mut rollback_writer);
+    let rollback_buffer = rollback_writer.into_vec();
 
-    let mut reader = MementoReader::new(&decoded);
+    let mut reader = core::MementoReader::new(&decoded);
     let res = fill_data(app_state, &mut reader);
 
     match res {
@@ -334,13 +330,13 @@ fn fill_with_saved_state(app_state: &mut AppState, decoded: Vec<u8>) {
         }
         Err(e) => {
             error!("Load state failed: {e:?}");
-            let mut rollback_reader = MementoReader::new(&rollback_buffer);
+            let mut rollback_reader = core::MementoReader::new(&rollback_buffer);
             fill_data(app_state, &mut rollback_reader).expect("Rollback failed");
         }
     }
 }
 
-fn fill_data(app_state: &mut AppState, reader: &mut MementoReader) -> MementoResult {
+fn fill_data(app_state: &mut AppState, reader: &mut core::MementoReader) -> core::MementoResult {
     app_state.bus.read_and_fill(reader)?;
     app_state.cpu.read_and_fill(reader)
 }
@@ -395,9 +391,13 @@ fn handle_inputs(app_state: &mut AppState, platform: &impl Platform, event_loop:
         // reborrow
         let input = &app_state.main_window_helper;
 
-        handle_input_keys(input, app_state.bus.controller1_mut(), &app_state.key_map1);
+        handle_input_keys(
+            input,
+            app_state.bus.controller1_mut(),
+            app_state.input_map.key_map_1(),
+        );
         if let Some(ctrl2) = app_state.bus.controller2_mut() {
-            handle_input_keys(input, ctrl2, &app_state.key_map2);
+            handle_input_keys(input, ctrl2, app_state.input_map.key_map_2());
         }
 
         if app_state.bus.zapper_mut().is_some() && app_state.zapper_needs_update {
@@ -411,7 +411,7 @@ fn handle_inputs(app_state: &mut AppState, platform: &impl Platform, event_loop:
 fn handle_gamepad(app_state: &mut AppState, gilrs: &mut Gilrs) {
     let mut released = HashSet::new();
     let mut pressed = HashSet::new();
-    let map = &app_state.gamepad_map1;
+    let map = app_state.input_map.gamepad_map_1();
 
     while let Some(ev) = gilrs.next_event() {
         match ev.event {

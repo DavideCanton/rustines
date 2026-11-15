@@ -9,6 +9,7 @@ pub struct NesController {
     strobe: bool,
 }
 
+#[repr(u16)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NesKey {
     A = 0,

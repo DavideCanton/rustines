@@ -2173,6 +2173,7 @@ dependencies = [
  "pollster 1.0.1",
  "ringbuf",
  "rustines_core",
+ "rustines_macro",
  "web-time",
  "winit",
  "winit_input_helper",
