@@ -132,6 +132,6 @@ fn log_format(
     _now: &mut DeferredNow,
     record: &Record,
 ) -> Result<(), io::Error> {
-    let first = record.level().to_string().chars().next().unwrap_or(' ');
+    let first = record.level().as_str().chars().next().unwrap_or(' ');
     write!(w, "[{}]{}", first, record.args())
 }

@@ -2,6 +2,7 @@ use cpal::{
     ErrorKind, Sample, Stream,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
+use log::error;
 use ringbuf::{
     HeapProd, HeapRb,
     traits::{Consumer, Producer, Split},
@@ -42,7 +43,7 @@ impl CpalOutput {
             },
             |err| {
                 if err.kind() != ErrorKind::StreamInvalidated {
-                    eprintln!("Audio error: {err:?}");
+                    error!("Audio error: {err:?}");
                 }
             },
             None,

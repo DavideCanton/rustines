@@ -102,7 +102,7 @@ impl<P: Platform> App<P> {
                 Box::new(cpal)
             }
             Err(e) => {
-                eprintln!("Cannot initialize audio: {}", e);
+                error!("Cannot initialize audio: {}", e);
                 Box::new(core::NoAudio)
             }
         };
