@@ -494,7 +494,7 @@ impl MementoReadable for OamDmaState {
                 address: reader.read_memento()?,
                 data: reader.read_memento()?,
             }),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
@@ -547,7 +547,7 @@ impl MementoReadable for DmcDmaState {
             4 => Ok(DmcDmaState::Read {
                 address: reader.read_memento()?,
             }),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }

@@ -187,7 +187,7 @@ impl InputMap {
         &self.key_map_2
     }
 
-    fn _write_key_map<K>(
+    fn write_key_map<K>(
         map: &HashMap<K, core::NesKey>,
         key_writer: impl Fn(&K, &mut core::MementoWriter),
         writer: &mut core::MementoWriter,
@@ -195,29 +195,46 @@ impl InputMap {
         map.len().write_memento(writer);
         for (k, v) in map.iter() {
             key_writer(k, writer);
-            let v_num = *v as u16;
-            v_num.write_memento(writer);
+            v.write_memento(writer);
         }
     }
 
-    fn _read_key_map<K: Eq + Hash>(
+    fn read_key_map<K: Eq + Hash>(
         key_reader: impl Fn(&mut core::MementoReader) -> core::MementoResult<K>,
         reader: &mut core::MementoReader,
     ) -> core::MementoResult<HashMap<K, core::NesKey>> {
         let len: usize = reader.read_memento()?;
-        let mut map = HashMap::new();
+        let mut map = HashMap::with_capacity(len);
 
         for _ in 0..len {
             let key = key_reader(reader)?;
-            let value: u16 = reader.read_memento()?;
-
-            // TODO improve
-            let nes_key: core::NesKey = unsafe { std::mem::transmute(value) };
-
+            let nes_key: core::NesKey = reader.read_memento()?;
             map.insert(key, nes_key);
         }
 
         Ok(map)
+    }
+
+    fn keycode_reader(reader: &mut core::MementoReader) -> core::MementoResult<KeyCode> {
+        let scan_code = reader.read_memento()?;
+        match KeyCode::from_scancode(scan_code) {
+            PhysicalKey::Code(code) => Ok(code),
+            PhysicalKey::Unidentified(kc) => Err(reader.read_error(format!("{kc:?}"))),
+        }
+    }
+
+    fn keycode_writer(code: &KeyCode, writer: &mut core::MementoWriter) {
+        code.to_scancode().unwrap().write_memento(writer);
+    }
+
+    fn gamepad_reader(reader: &mut core::MementoReader) -> core::MementoResult<Button> {
+        let code = reader.read_memento()?;
+        let btn = code_to_button(code).map_err(|e| reader.read_error(e))?;
+        Ok(btn)
+    }
+
+    fn gamepad_writer(btn: &Button, writer: &mut core::MementoWriter) {
+        (*btn as u16).write_memento(writer);
     }
 }
 
@@ -226,28 +243,9 @@ impl core::MementoReadable for InputMap {
     where
         Self: Sized,
     {
-        let keycode_reader = |r: &mut core::MementoReader| -> core::MementoResult<KeyCode> {
-            match KeyCode::from_scancode(r.read_memento::<u32>()?) {
-                PhysicalKey::Code(code) => Ok(code),
-                // TODO improve
-                PhysicalKey::Unidentified(_) => Err(core::MementoError::InvalidValue(42, 42)),
-            }
-        };
-
-        let key_map_1 = Self::_read_key_map(keycode_reader, reader)?;
-        let key_map_2 = Self::_read_key_map(keycode_reader, reader)?;
-
-        let gamepad_map_1 = Self::_read_key_map(
-            |r| -> core::MementoResult<Button> {
-                let code: u16 = r.read_memento()?;
-
-                // TODO improve
-                let btn: Button = unsafe { std::mem::transmute(code) };
-
-                Ok(btn)
-            },
-            reader,
-        )?;
+        let key_map_1 = Self::read_key_map(Self::keycode_reader, reader)?;
+        let key_map_2 = Self::read_key_map(Self::keycode_reader, reader)?;
+        let gamepad_map_1 = Self::read_key_map(Self::gamepad_reader, reader)?;
 
         Ok(Self {
             key_map_1,
@@ -259,22 +257,51 @@ impl core::MementoReadable for InputMap {
 
 impl core::MementoWriteable for InputMap {
     fn write_memento(&self, writer: &mut core::MementoWriter) {
-        let keycode_writer = |k: &KeyCode, w: &mut core::MementoWriter| {
-            k.to_scancode().unwrap().write_memento(w);
-        };
-
-        Self::_write_key_map(&self.key_map_1, keycode_writer, writer);
-        Self::_write_key_map(&self.key_map_2, keycode_writer, writer);
-
-        Self::_write_key_map(
-            &self.gamepad_map_1,
-            |btn, w| {
-                let v = *btn as u16;
-                v.write_memento(w);
-            },
-            writer,
-        );
+        Self::write_key_map(&self.key_map_1, Self::keycode_writer, writer);
+        Self::write_key_map(&self.key_map_2, Self::keycode_writer, writer);
+        Self::write_key_map(&self.gamepad_map_1, Self::gamepad_writer, writer);
     }
+}
+
+macro_rules! decode_btn {
+    ($expr: expr, $($val: path),+ $(,)?) => {
+        match $expr {
+            $(
+                v if v == $val as u16 => Ok($val),
+            )+
+            v => Err(format!("Unexpected value: {v}"))
+        }
+    };
+}
+
+// need to implement this manually as gilrs doesn't have u16 -> button and I don't want to
+// pull in serde just for this
+// remember to update this if gilrs is updated
+fn code_to_button(value: u16) -> Result<Button, String> {
+    use Button::*;
+    decode_btn!(
+        value,
+        South,
+        East,
+        North,
+        West,
+        C,
+        Z,
+        LeftTrigger,
+        LeftTrigger2,
+        RightTrigger,
+        RightTrigger2,
+        Select,
+        Start,
+        Mode,
+        LeftThumb,
+        RightThumb,
+        DPadUp,
+        DPadDown,
+        DPadLeft,
+        DPadRight,
+        Unknown,
+    )
 }
 
 fn build_default_key_map_1() -> KeyMap {

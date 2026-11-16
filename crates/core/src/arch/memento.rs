@@ -12,8 +12,8 @@ use thiserror::Error;
 pub enum MementoError {
     #[error("Unexpected end of data")]
     UnexpectedEnd,
-    #[error("Unexpected value found {0}")]
-    InvalidValue(u8, usize),
+    #[error("Unexpected value found {0} at position {1}")]
+    InvalidValue(String, usize),
 }
 
 pub type MementoResult<T = ()> = Result<T, MementoError>;
@@ -91,7 +91,7 @@ impl MementoReadable for bool {
         match reader.read_single()? {
             1 => Ok(true),
             0 => Ok(false),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
@@ -162,7 +162,7 @@ impl<T: MementoReadable> MementoReadable for Option<T> {
         match reader.read_single()? {
             1 => Ok(Some(T::read_memento(reader)?)),
             0 => Ok(None),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
@@ -189,7 +189,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                     v.read_and_fill(reader)?;
                     Ok(())
                 } else {
-                    Err(reader.read_error(tag))
+                    Err(reader.read_error(tag.to_string()))
                 }
             }
             None => {
@@ -198,7 +198,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                 if tag == 0 {
                     Ok(())
                 } else {
-                    Err(reader.read_error(tag))
+                    Err(reader.read_error(tag.to_string()))
                 }
             }
         }
@@ -224,7 +224,7 @@ impl<'a> MementoReader<'a> {
     }
 
     /// Returns an error of type [`MementoError::InvalidValue`].
-    pub fn read_error(&self, value: u8) -> MementoError {
+    pub fn read_error(&self, value: String) -> MementoError {
         MementoError::InvalidValue(value, self.cursor.position() as usize)
     }
 
