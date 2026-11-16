@@ -42,8 +42,8 @@ impl NesController {
 
         if self.strobe {
             let mut temp = 0u8;
-            for i in 0..8 {
-                if self.buttons[i] {
+            for (i, btn) in self.buttons.iter().enumerate() {
+                if *btn {
                     temp |= 1 << i;
                 }
             }

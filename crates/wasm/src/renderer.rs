@@ -1,5 +1,5 @@
 use pixels::Pixels;
-use rustines_core::{Renderer, compose_rgba, decompose_rgba};
+use rustines_core::Renderer;
 use rustines_gui::PixelsRenderer;
 use std::{fs::File, io};
 
@@ -28,8 +28,8 @@ impl WasmRenderer {
 impl Renderer for WasmRenderer {
     fn render_pixel(&mut self, x: usize, y: usize, rgba: u32) {
         // apply color correction since colors on canvas are not rendered linearly
-        let [r, g, b, a] = decompose_rgba(rgba);
-        let rgba = compose_rgba(self.fix_color(r), self.fix_color(g), self.fix_color(b), a);
+        let [r, g, b, a] = rgba.to_le_bytes();
+        let rgba = u32::from_le_bytes([self.fix_color(r), self.fix_color(g), self.fix_color(b), a]);
         self.renderer.render_pixel(x, y, rgba)
     }
 
