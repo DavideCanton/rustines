@@ -90,11 +90,11 @@ impl Platform for WasmPlatform {
         false
     }
 
-    fn start_read_file(
+    fn start_read_binary_file(
         &self,
         path: PathBuf,
         proxy: &AppEventLoopProxy,
-        evt_ctor: ReadEventConstructor,
+        evt_ctor: ReadEventConstructor<Vec<u8>>,
     ) {
         if let Ok(name) = resolve_filename(&path) {
             let proxy = proxy.clone();
@@ -113,7 +113,30 @@ impl Platform for WasmPlatform {
         }
     }
 
-    fn start_write_file(
+    fn start_read_text_file(
+        &self,
+        path: PathBuf,
+        proxy: &AppEventLoopProxy,
+        evt_ctor: ReadEventConstructor<String>,
+    ) {
+        if let Ok(name) = resolve_filename(&path) {
+            let proxy = proxy.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let res = read_text_file(name)
+                    .await
+                    .inspect_err(|e| {
+                        info!("Failed to read text file: {e:?}");
+                    })
+                    .ok()
+                    .flatten();
+                let _ = proxy.send_event(evt_ctor(res));
+            })
+        } else {
+            let _ = proxy.send_event(evt_ctor(None));
+        }
+    }
+
+    fn start_write_binary_file(
         &self,
         path: PathBuf,
         proxy: &AppEventLoopProxy,
@@ -128,6 +151,29 @@ impl Platform for WasmPlatform {
                 let ok = res.is_ok();
                 if let Err(e) = res {
                     info!("Failed to write save data: {e:?}");
+                }
+                let _ = proxy.send_event(evt_ctor(path, ok));
+            });
+        } else {
+            let _ = proxy.send_event(evt_ctor(path, false));
+        }
+    }
+
+    fn start_write_text_file(
+        &self,
+        path: PathBuf,
+        proxy: &AppEventLoopProxy,
+        content: &str,
+        evt_ctor: WriteEventConstructor,
+    ) {
+        if let Ok(name) = resolve_filename(&path) {
+            let content = content.to_owned();
+            let proxy = proxy.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let res = write_text_file(&name, &content).await;
+                let ok = res.is_ok();
+                if let Err(e) = res {
+                    info!("Failed to write text file: {e:?}");
                 }
                 let _ = proxy.send_event(evt_ctor(path, ok));
             });
@@ -185,5 +231,19 @@ async fn write_file(name: &str, content: &[u8]) -> rexie::Result<()> {
 
     tx.commit().await?;
 
+    Ok(())
+}
+
+async fn read_text_file(name: String) -> Result<Option<String>, JsValue> {
+    let storage = web_sys::window().unwrap().local_storage().unwrap().unwrap();
+
+    let value = storage.get_item(&name)?;
+    Ok(value)
+}
+
+async fn write_text_file(name: &str, content: &str) -> Result<(), JsValue> {
+    let storage = web_sys::window().unwrap().local_storage().unwrap().unwrap();
+
+    storage.set_item(name, content)?;
     Ok(())
 }

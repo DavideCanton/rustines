@@ -46,11 +46,11 @@ impl Platform for DesktopPlatform {
         true
     }
 
-    fn start_read_file(
+    fn start_read_binary_file(
         &self,
         path: PathBuf,
         proxy: &AppEventLoopProxy,
-        evt_ctor: ReadEventConstructor,
+        evt_ctor: ReadEventConstructor<Vec<u8>>,
     ) {
         let ret = if !path.exists() {
             info!("File {path:?} not found");
@@ -65,11 +65,43 @@ impl Platform for DesktopPlatform {
         let _ = proxy.send_event(evt_ctor(ret));
     }
 
-    fn start_write_file(
+    fn start_read_text_file(
+        &self,
+        path: PathBuf,
+        proxy: &AppEventLoopProxy,
+        evt_ctor: ReadEventConstructor<String>,
+    ) {
+        let ret = if !path.exists() {
+            info!("File {path:?} not found");
+            None
+        } else {
+            fs::read_to_string(&path)
+                .inspect_err(|e| {
+                    info!("Cannot read {path:?}: {e}");
+                })
+                .ok()
+        };
+        let _ = proxy.send_event(evt_ctor(ret));
+    }
+
+    fn start_write_binary_file(
         &self,
         path: PathBuf,
         proxy: &AppEventLoopProxy,
         content: &[u8],
+        evt_ctor: WriteEventConstructor,
+    ) {
+        let res = fs::write(&path, content).inspect_err(|e| {
+            info!("Cannot write {path:?}: {e}");
+        });
+        let _ = proxy.send_event(evt_ctor(path, res.is_ok()));
+    }
+
+    fn start_write_text_file(
+        &self,
+        path: PathBuf,
+        proxy: &AppEventLoopProxy,
+        content: &str,
         evt_ctor: WriteEventConstructor,
     ) {
         let res = fs::write(&path, content).inspect_err(|e| {

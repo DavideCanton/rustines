@@ -38,7 +38,7 @@ pub enum CustomEvents {
     LoadedState(Option<Vec<u8>>),
     SavedPrgRam(PathBuf, bool),
     SavedState(PathBuf, bool),
-    LoadedConfig(Option<Vec<u8>>),
+    LoadedConfig(Option<String>),
     SavedConfig(PathBuf, bool),
 }
 
@@ -166,12 +166,12 @@ impl<P: Platform> App<P> {
 
     fn write_default_config(&mut self) -> InputMap {
         let default = InputMap::default_map();
-        let serialized = serde_json::to_vec(&default);
-        if let Ok(bytes) = serialized {
-            self.platform.start_write_file(
+        let serialized = serde_json::to_string(&default);
+        if let Ok(text) = serialized {
+            self.platform.start_write_text_file(
                 PathBuf::from(CONFIG_PATH),
                 &self.proxy,
-                &bytes,
+                &text,
                 Box::new(CustomEvents::SavedConfig),
             );
         }
@@ -210,7 +210,7 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
             self.size,
         );
 
-        self.platform.start_read_file(
+        self.platform.start_read_text_file(
             PathBuf::from(CONFIG_PATH),
             &self.proxy,
             Box::new(CustomEvents::LoadedConfig),
@@ -328,7 +328,7 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                 }
                 CustomEvents::LoadedConfig(content) => match content {
                     Some(c) => {
-                        *self.pending_input_map.borrow_mut() = match serde_json::from_slice(&c) {
+                        *self.pending_input_map.borrow_mut() = match serde_json::from_str(&c) {
                             Ok(input_map) => input_map,
                             Err(e) => {
                                 warn!("Failed to parse config, defaulting: {e}");
