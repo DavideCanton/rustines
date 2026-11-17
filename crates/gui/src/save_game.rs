@@ -14,7 +14,7 @@ pub fn load_save_state(
     platform: &impl Platform,
 ) {
     if let Some(path) = nes_rom.file_path.as_ref() {
-        platform.start_read_file(
+        platform.start_read_binary_file(
             path.with_extension(SAVE_STATE_EXTENSION),
             proxy,
             Box::new(CustomEvents::LoadedState),
@@ -29,7 +29,7 @@ pub fn load_save_game(
     proxy: &AppEventLoopProxy,
 ) {
     if let Some((path, _)) = supports_save(nes_rom, mapper) {
-        platform.start_read_file(
+        platform.start_read_binary_file(
             path.with_extension(SAVE_GAME_EXTENSION),
             proxy,
             Box::new(CustomEvents::LoadedPrgRam),
@@ -45,13 +45,13 @@ pub fn save_state(
     platform: &impl Platform,
 ) {
     if let Some(path) = nes_rom.file_path.as_ref() {
-        let mut writer = vec![];
+        let mut writer = core::MementoWriter::new();
 
         bus.write_memento(&mut writer);
         cpu.write_memento(&mut writer);
 
-        match zstd::encode_all(writer.as_slice(), SAVE_COMPRESSION_LEVEL) {
-            Ok(compressed) => platform.start_write_file(
+        match zstd::encode_all(writer.into_vec().as_slice(), SAVE_COMPRESSION_LEVEL) {
+            Ok(compressed) => platform.start_write_binary_file(
                 path.with_extension(SAVE_STATE_EXTENSION),
                 proxy,
                 &compressed,
@@ -86,7 +86,7 @@ pub fn save_game(
         info!("Writing save file");
 
         match zstd::encode_all(memory, SAVE_COMPRESSION_LEVEL) {
-            Ok(compressed) => platform.start_write_file(
+            Ok(compressed) => platform.start_write_binary_file(
                 path.with_extension(SAVE_GAME_EXTENSION),
                 proxy,
                 &compressed,

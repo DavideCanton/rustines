@@ -1,15 +1,13 @@
 use log::trace;
 
-use crate::utils::bit_utils::{BitIndex as BI, BitManip};
+use crate::{
+    MementoReadable, MementoWriteable,
+    utils::bit_utils::{BitIndex as BI, BitManip},
+};
+use serde::{Deserialize, Serialize};
 
-pub struct NesController {
-    number: u8,
-    buttons: [bool; 8],
-    shift_register: u8,
-    strobe: bool,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[repr(u16)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NesKey {
     A = 0,
     B = 1,
@@ -19,6 +17,49 @@ pub enum NesKey {
     Down = 5,
     Left = 6,
     Right = 7,
+}
+
+impl TryFrom<u16> for NesKey {
+    type Error = String;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        use NesKey::*;
+        match value {
+            0 => Ok(A),
+            1 => Ok(B),
+            2 => Ok(Select),
+            3 => Ok(Start),
+            4 => Ok(Up),
+            5 => Ok(Down),
+            6 => Ok(Left),
+            7 => Ok(Right),
+            v => Err(v.to_string()),
+        }
+    }
+}
+
+impl MementoReadable for NesKey {
+    fn read_memento(reader: &mut crate::MementoReader) -> crate::MementoResult<Self>
+    where
+        Self: Sized,
+    {
+        let v: u16 = reader.read_memento()?;
+        let conv = NesKey::try_from(v).map_err(|e| reader.read_error(e))?;
+        Ok(conv)
+    }
+}
+
+impl MementoWriteable for NesKey {
+    fn write_memento(&self, writer: &mut crate::MementoWriter) {
+        (*self as u16).write_memento(writer);
+    }
+}
+
+pub struct NesController {
+    number: u8,
+    buttons: [bool; 8],
+    shift_register: u8,
+    strobe: bool,
 }
 
 impl NesController {

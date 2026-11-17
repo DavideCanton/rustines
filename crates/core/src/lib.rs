@@ -1,3 +1,6 @@
+// define alias name to allow using memento proc macro inside the crate
+extern crate self as rustines_core;
+
 pub mod arch;
 pub mod audio;
 pub mod loaders;
@@ -11,7 +14,10 @@ pub use arch::{
     cpu::Cpu,
     debug_utils,
     mappers::mapper::{Mapper, MapperBox},
-    memento::MementoWriter,
+    memento::{
+        MementoError, MementoReadAndFill, MementoReadable, MementoReader, MementoResult,
+        MementoWriteable, MementoWriter,
+    },
     ppu::Ppu,
     rom_structs::{INesHeader, MirroringType, NesRom},
 };

@@ -5,9 +5,8 @@ use winit::window::Window;
 use winit_input_helper::WinitInputHelper;
 
 use crate::{
-    fps_counter::FpsCounter,
-    pattern_window::PatternTableWindow,
-    types::{AppEventLoopProxy, GamepadMap, KeyMap},
+    fps_counter::FpsCounter, input::InputMap, pattern_window::PatternTableWindow,
+    types::AppEventLoopProxy,
 };
 use web_time::{Duration, Instant};
 
@@ -35,9 +34,7 @@ pub struct AppState {
     pub(crate) update_counter: FpsCounter,
     pub(crate) log_point: u32,
 
-    pub(crate) key_map1: KeyMap,
-    pub(crate) key_map2: KeyMap,
-    pub(crate) gamepad_map1: GamepadMap,
+    pub(crate) input_map: InputMap,
 
     pub(crate) pattern_window: PatternTableWindow,
 
@@ -83,7 +80,6 @@ impl AppState {
     pub fn resume(&mut self) {
         self.pause = false;
         self.last_frame_time = Instant::now();
-        self.pause = false;
     }
 }
 

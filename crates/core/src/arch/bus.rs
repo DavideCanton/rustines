@@ -439,7 +439,7 @@ pub enum OamDmaState {
 }
 
 impl MementoWriteable for OamDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         match self {
             OamDmaState::NotRunning => 0u8.write_memento(writer),
             OamDmaState::Starting {
@@ -494,7 +494,7 @@ impl MementoReadable for OamDmaState {
                 address: reader.read_memento()?,
                 data: reader.read_memento()?,
             }),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
@@ -509,7 +509,7 @@ pub enum DmcDmaState {
 }
 
 impl MementoWriteable for DmcDmaState {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         match self {
             DmcDmaState::NotRunning => 0u8.write_memento(writer),
             DmcDmaState::Halt { address } => {
@@ -547,7 +547,7 @@ impl MementoReadable for DmcDmaState {
             4 => Ok(DmcDmaState::Read {
                 address: reader.read_memento()?,
             }),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }

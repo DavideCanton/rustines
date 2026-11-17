@@ -12,8 +12,8 @@ use thiserror::Error;
 pub enum MementoError {
     #[error("Unexpected end of data")]
     UnexpectedEnd,
-    #[error("Unexpected value found {0}")]
-    InvalidValue(u8, usize),
+    #[error("Unexpected value found {0} at position {1}")]
+    InvalidValue(String, usize),
 }
 
 pub type MementoResult<T = ()> = Result<T, MementoError>;
@@ -24,21 +24,30 @@ pub trait MementoReadAndFill {
     fn read_and_fill(&mut self, reader: &mut MementoReader) -> MementoResult;
 }
 
-/// A trait for types that can write bytes to a destination.
-pub trait MementoWriter {
-    /// Writes a single byte to the writer.
-    fn write(&mut self, value: u8);
-    /// Writes a slice of bytes to the writer.
-    fn write_many(&mut self, values: &[u8]);
+#[derive(Default)]
+pub struct MementoWriter {
+    buffer: Vec<u8>,
 }
 
-impl MementoWriter for Vec<u8> {
-    fn write(&mut self, value: u8) {
-        self.push(value);
+impl MementoWriter {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
     }
 
-    fn write_many(&mut self, values: &[u8]) {
-        self.extend_from_slice(values);
+    pub fn into_vec(self) -> Vec<u8> {
+        self.buffer
+    }
+
+    /// Writes a single byte to the writer.
+    pub fn write(&mut self, value: u8) {
+        self.buffer.push(value);
+    }
+
+    /// Writes a slice of bytes to the writer.
+    pub fn write_many(&mut self, values: &[u8]) {
+        self.buffer.extend_from_slice(values);
     }
 }
 
@@ -53,7 +62,7 @@ pub trait MementoReadable {
 /// A trait for types that can be serialized into a [`MementoWriter`].
 pub trait MementoWriteable {
     /// Writes the binary representation of the type into the `MementoWriter`.
-    fn write_memento(&self, writer: &mut dyn MementoWriter);
+    fn write_memento(&self, writer: &mut MementoWriter);
 }
 
 macro_rules! memento_impl_nums {
@@ -66,7 +75,7 @@ macro_rules! memento_impl_nums {
             }
 
             impl MementoWriteable for $t {
-                fn write_memento(&self, writer: &mut dyn MementoWriter) {
+                fn write_memento(&self, writer: &mut MementoWriter) {
                     writer.write_many(&self.to_le_bytes());
                 }
             }
@@ -82,13 +91,13 @@ impl MementoReadable for bool {
         match reader.read_single()? {
             1 => Ok(true),
             0 => Ok(false),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
 
 impl MementoWriteable for bool {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         writer.write(*self as u8);
     }
 }
@@ -114,16 +123,8 @@ impl<const N: usize, M: MementoReadAndFill> MementoReadAndFill for [M; N] {
     }
 }
 
-impl<M: MementoWriteable> MementoWriteable for &[M] {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
-        for v in *self {
-            v.write_memento(writer);
-        }
-    }
-}
-
 impl<const N: usize, M: MementoWriteable> MementoWriteable for [M; N] {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         for v in self {
             v.write_memento(writer);
         }
@@ -138,14 +139,14 @@ impl MementoReadable for Vec<u8> {
 }
 
 impl MementoWriteable for Vec<u8> {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         self.len().write_memento(writer);
         writer.write_many(self);
     }
 }
 
 impl<T: MementoWriteable> MementoWriteable for Option<T> {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         match self {
             Some(v) => {
                 1u8.write_memento(writer);
@@ -161,13 +162,13 @@ impl<T: MementoReadable> MementoReadable for Option<T> {
         match reader.read_single()? {
             1 => Ok(Some(T::read_memento(reader)?)),
             0 => Ok(None),
-            v => Err(reader.read_error(v)),
+            v => Err(reader.read_error(v.to_string())),
         }
     }
 }
 
 impl<T: MementoWriteable, U: MementoWriteable> MementoWriteable for (T, U) {
-    fn write_memento(&self, writer: &mut dyn MementoWriter) {
+    fn write_memento(&self, writer: &mut MementoWriter) {
         self.0.write_memento(writer);
         self.1.write_memento(writer);
     }
@@ -188,7 +189,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                     v.read_and_fill(reader)?;
                     Ok(())
                 } else {
-                    Err(reader.read_error(tag))
+                    Err(reader.read_error(tag.to_string()))
                 }
             }
             None => {
@@ -197,7 +198,7 @@ impl<M: MementoReadAndFill> MementoReadAndFill for Option<M> {
                 if tag == 0 {
                     Ok(())
                 } else {
-                    Err(reader.read_error(tag))
+                    Err(reader.read_error(tag.to_string()))
                 }
             }
         }
@@ -223,7 +224,7 @@ impl<'a> MementoReader<'a> {
     }
 
     /// Returns an error of type [`MementoError::InvalidValue`].
-    pub fn read_error(&self, value: u8) -> MementoError {
+    pub fn read_error(&self, value: String) -> MementoError {
         MementoError::InvalidValue(value, self.cursor.position() as usize)
     }
 
@@ -264,9 +265,10 @@ mod tests {
     #[test]
     fn test_u8() {
         let val: u8 = 42;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: u8 = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -274,9 +276,10 @@ mod tests {
     #[test]
     fn test_u16() {
         let val: u16 = 12345;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: u16 = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -284,9 +287,10 @@ mod tests {
     #[test]
     fn test_u32() {
         let val: u32 = 0xDEADBEEF;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: u32 = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -294,9 +298,10 @@ mod tests {
     #[test]
     fn test_u64() {
         let val: u64 = 0x123456789ABCDEF0;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: u64 = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -304,9 +309,10 @@ mod tests {
     #[test]
     fn test_usize() {
         let val: usize = 12345678;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: usize = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -314,16 +320,18 @@ mod tests {
     #[test]
     fn test_bool() {
         let val: bool = true;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: bool = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
 
         let val: bool = false;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: bool = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -331,9 +339,10 @@ mod tests {
     #[test]
     fn test_array() {
         let val: [u8; 3] = [1, 2, 3];
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: [u8; 3] = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -341,9 +350,10 @@ mod tests {
     #[test]
     fn test_vec_u8() {
         let val: Vec<u8> = vec![10, 20, 30, 40];
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: Vec<u8> = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -352,17 +362,19 @@ mod tests {
     fn test_option() {
         // Test Some
         let val: Option<u32> = Some(123);
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: Option<u32> = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
 
         // Test None
         let val: Option<u32> = None;
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: Option<u32> = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -370,9 +382,10 @@ mod tests {
     #[test]
     fn test_tuple() {
         let val: (u8, u16) = (1, 2);
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
         val.write_memento(&mut writer);
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
         let decoded: (u8, u16) = reader.read_memento().unwrap();
         assert_eq!(val, decoded);
     }
@@ -390,12 +403,13 @@ mod tests {
     #[test]
     fn test_read_and_fill_option() {
         let mut val: Option<TestFill> = Some(TestFill(42));
-        let mut writer = Vec::new();
+        let mut writer = MementoWriter::new();
 
         // Write using write_memento (which uses the tag 1 for Some)
         val.write_memento(&mut writer);
 
-        let mut reader = MementoReader::new(&writer);
+        let data = writer.into_vec();
+        let mut reader = MementoReader::new(&data);
 
         // Now use read_and_fill to populate the existing instance
         val.read_and_fill(&mut reader).unwrap();
