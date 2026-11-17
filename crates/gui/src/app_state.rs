@@ -80,7 +80,6 @@ impl AppState {
     pub fn resume(&mut self) {
         self.pause = false;
         self.last_frame_time = Instant::now();
-        self.pause = false;
     }
 }
 

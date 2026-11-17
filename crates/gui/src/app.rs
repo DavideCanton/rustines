@@ -163,6 +163,20 @@ impl<P: Platform> App<P> {
             proxy: self.proxy.clone(),
         }
     }
+
+    fn write_default_config(&mut self) -> InputMap {
+        let default = InputMap::default_map();
+        let serialized = serde_json::to_vec(&default);
+        if let Ok(bytes) = serialized {
+            self.platform.start_write_file(
+                PathBuf::from(CONFIG_PATH),
+                &self.proxy,
+                &bytes,
+                Box::new(CustomEvents::SavedConfig),
+            );
+        }
+        default
+    }
 }
 
 impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
@@ -171,16 +185,19 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
             return;
         }
 
-        let main_window = Arc::new(
-            event_loop
-                .create_window(
-                    WindowAttributes::default()
-                        .with_title("Rustines")
-                        .with_inner_size(self.size)
-                        .with_min_inner_size(self.size),
-                )
-                .unwrap(),
-        );
+        let main_window = match event_loop.create_window(
+            WindowAttributes::default()
+                .with_title("Rustines")
+                .with_inner_size(self.size)
+                .with_min_inner_size(self.size),
+        ) {
+            Ok(window) => Arc::new(window),
+            Err(e) => {
+                error!("Failed to create window: {}", e);
+                event_loop.exit();
+                return;
+            }
+        };
 
         self.platform
             .init_window_hook(Arc::clone(&main_window), self.size);
@@ -300,7 +317,9 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                 CustomEvents::SavedConfig(..) => {
                     info!("Wrote config")
                 }
-                _ => unreachable!(),
+                _ => {
+                    warn!("Unexpected event during runtime: {:?}", event);
+                }
             }
         } else {
             match event {
@@ -309,22 +328,23 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                 }
                 CustomEvents::LoadedConfig(content) => match content {
                     Some(c) => {
-                        *self.pending_input_map.borrow_mut() =
-                            Some(serde_json::from_slice(&c).unwrap())
+                        *self.pending_input_map.borrow_mut() = match serde_json::from_slice(&c) {
+                            Ok(input_map) => input_map,
+                            Err(e) => {
+                                warn!("Failed to parse config, defaulting: {e}");
+                                // use default, don't overwrite the file, so the user can fix it
+                                Some(InputMap::default_map())
+                            }
+                        }
                     }
                     None => {
-                        let default = InputMap::default_map();
-                        let serialized = serde_json::to_vec(&default).unwrap();
-                        self.platform.start_write_file(
-                            PathBuf::from(CONFIG_PATH),
-                            &self.proxy,
-                            &serialized,
-                            Box::new(CustomEvents::SavedConfig),
-                        );
+                        let default = self.write_default_config();
                         *self.pending_input_map.borrow_mut() = Some(default);
                     }
                 },
-                e => unreachable!("{:?}", e),
+                e => {
+                    warn!("Unexpected event during init: {:?}", e);
+                }
             }
         }
     }
@@ -473,7 +493,7 @@ fn handle_gamepad(app_state: &mut AppState, gilrs: &mut Gilrs) {
                     released.insert(*v);
                 }
             }
-            // for now let's ignore axis
+            // TODO: Handle axis events for analog sticks
             _ => {}
         }
     }
