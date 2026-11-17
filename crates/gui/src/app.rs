@@ -5,12 +5,12 @@ use crate::{
     fps_counter::FpsCounter,
     input::{self, InputMap, handle_input_keys},
     pattern_window::PatternTableWindow,
-    platform::PendingRenderer,
+    platform::{PendingInputMap, PendingRenderer},
     save_game::{load_save_game, save_game},
     types::AppEventLoopProxy,
 };
 use gilrs::{EventType, Gilrs};
-use log::{error, info};
+use log::{error, info, warn};
 
 use rustines_core::{self as core, MementoReadAndFill, MementoWriteable};
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc, sync::Arc};
@@ -30,7 +30,7 @@ use winit_input_helper::WinitInputHelper;
 const TARGET_FPS: u64 = 60;
 const SAVE_INTERVAL: u64 = 10;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum CustomEvents {
     Pause,
     Resume,
@@ -38,7 +38,11 @@ pub enum CustomEvents {
     LoadedState(Option<Vec<u8>>),
     SavedPrgRam(PathBuf, bool),
     SavedState(PathBuf, bool),
+    LoadedConfig(Option<Vec<u8>>),
+    SavedConfig(PathBuf, bool),
 }
+
+pub const CONFIG_PATH: &str = "config.json";
 
 pub struct App<P> {
     app_state: Option<AppState>,
@@ -47,9 +51,10 @@ pub struct App<P> {
     zapper: bool,
     pending_window: Option<Arc<Window>>,
     pending_renderer: PendingRenderer,
+    pending_input_map: PendingInputMap,
     platform: P,
     size: PhysicalSize<u32>,
-    gilrs: Gilrs,
+    gilrs: Option<Gilrs>,
     enable_debug_keys: bool,
     proxy: AppEventLoopProxy,
 }
@@ -80,7 +85,10 @@ impl<P: Platform> App<P> {
             size: width_to_size(width),
             pending_window: None,
             pending_renderer: Rc::new(RefCell::new(None)),
-            gilrs: Gilrs::new().unwrap(),
+            pending_input_map: Rc::new(RefCell::new(None)),
+            gilrs: Gilrs::new()
+                .inspect_err(|e| info!("Cannot initialize gilrs: {e:?}"))
+                .ok(),
             enable_debug_keys,
             proxy,
         }
@@ -90,6 +98,7 @@ impl<P: Platform> App<P> {
         &mut self,
         main_window: Arc<Window>,
         renderer: core::RendererBox,
+        input_map: InputMap,
     ) -> AppState {
         let ppu = core::Ppu::new(renderer);
 
@@ -99,7 +108,7 @@ impl<P: Platform> App<P> {
                 Box::new(cpal)
             }
             Err(e) => {
-                error!("Cannot initialize audio: {}", e);
+                warn!("Cannot initialize audio: {}", e);
                 Box::new(core::NoAudio)
             }
         };
@@ -136,7 +145,7 @@ impl<P: Platform> App<P> {
             render_counter: FpsCounter::new(),
             update_counter: FpsCounter::new(),
             cpu,
-            input_map: InputMap::default_map(),
+            input_map,
             log_point: 1,
             pattern_window: PatternTableWindow::new(),
             main_window,
@@ -182,6 +191,12 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
             Arc::clone(&main_window),
             Rc::clone(&self.pending_renderer),
             self.size,
+        );
+
+        self.platform.start_read_file(
+            PathBuf::from(CONFIG_PATH),
+            &self.proxy,
+            Box::new(CustomEvents::LoadedConfig),
         );
     }
 
@@ -282,6 +297,34 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
                 CustomEvents::SavedPrgRam(..) => {
                     info!("Wrote save file");
                 }
+                CustomEvents::SavedConfig(..) => {
+                    info!("Wrote config")
+                }
+                _ => unreachable!(),
+            }
+        } else {
+            match event {
+                CustomEvents::SavedConfig(..) => {
+                    info!("Wrote config")
+                }
+                CustomEvents::LoadedConfig(content) => match content {
+                    Some(c) => {
+                        *self.pending_input_map.borrow_mut() =
+                            Some(serde_json::from_slice(&c).unwrap())
+                    }
+                    None => {
+                        let default = InputMap::default_map();
+                        let serialized = serde_json::to_vec(&default).unwrap();
+                        self.platform.start_write_file(
+                            PathBuf::from(CONFIG_PATH),
+                            &self.proxy,
+                            &serialized,
+                            Box::new(CustomEvents::SavedConfig),
+                        );
+                        *self.pending_input_map.borrow_mut() = Some(default);
+                    }
+                },
+                e => unreachable!("{:?}", e),
             }
         }
     }
@@ -289,15 +332,20 @@ impl<P: Platform> ApplicationHandler<CustomEvents> for App<P> {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         match self.app_state.as_mut() {
             None => {
-                let renderer = self.pending_renderer.borrow_mut().take();
-                if let Some(renderer) = renderer {
+                if self.pending_renderer.borrow().is_some()
+                    && self.pending_input_map.borrow().is_some()
+                {
+                    let renderer = self.pending_renderer.borrow_mut().take().unwrap();
+                    let input_map = self.pending_input_map.borrow_mut().take().unwrap();
                     let window = self.pending_window.take().unwrap();
-                    self.app_state = Some(self.init_app_state(window, renderer));
+                    self.app_state = Some(self.init_app_state(window, renderer, input_map));
                 }
             }
             Some(app_state) => {
                 handle_inputs(app_state, &self.platform, event_loop);
-                handle_gamepad(app_state, &mut self.gilrs);
+                if let Some(gilrs) = self.gilrs.as_mut() {
+                    handle_gamepad(app_state, gilrs);
+                }
 
                 // run as many updates as possible in the delta that has passed
                 while app_state.accumulator >= app_state.frame_duration {

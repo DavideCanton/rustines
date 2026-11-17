@@ -8,13 +8,15 @@ edition = "2024"
 anyhow = { workspace = true }
 cpal = { version = "0.18" }
 flexi_logger = { workspace = true }
-gilrs = "0.11"
+gilrs = { version = "0.11", features = ["serde-serialize"] }
 log = { workspace = true }
 pixels = { workspace = true }
 pollster = "1"
 ringbuf = "0.6"
 rustines_core = { path = "../core" }
 rustines_macro = { path = "../macro" }
+serde = { workspace = true }
+serde_json = "1.0"
 web-time = { workspace = true }
 winit = { workspace = true }
 winit_input_helper = { workspace = true }

@@ -4,9 +4,10 @@ use crate::{
     MementoReadable, MementoWriteable,
     utils::bit_utils::{BitIndex as BI, BitManip},
 };
+use serde::{Deserialize, Serialize};
 
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NesKey {
     A = 0,
     B = 1,

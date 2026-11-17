@@ -2,12 +2,9 @@ use std::{collections::HashMap, fs::File, hash::Hash};
 
 use gilrs::Button;
 use log::info;
-use rustines_core::{self as core, MementoWriteable};
-use winit::{
-    event_loop::ActiveEventLoop,
-    keyboard::{KeyCode, PhysicalKey},
-    platform::scancode::PhysicalKeyExtScancode,
-};
+use rustines_core as core;
+use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeStruct};
+use winit::{event_loop::ActiveEventLoop, keyboard::KeyCode};
 use winit_input_helper::WinitInputHelper;
 
 use crate::{
@@ -160,6 +157,7 @@ pub(crate) fn handle_input_keys(
     }
 }
 
+#[derive(Eq, PartialEq)]
 pub struct InputMap {
     key_map_1: KeyMap,
     key_map_2: KeyMap,
@@ -186,122 +184,57 @@ impl InputMap {
     pub fn key_map_2(&self) -> &KeyMap {
         &self.key_map_2
     }
+}
 
-    fn write_key_map<K>(
-        map: &HashMap<K, core::NesKey>,
-        key_writer: impl Fn(&K, &mut core::MementoWriter),
-        writer: &mut core::MementoWriter,
-    ) {
-        map.len().write_memento(writer);
-        for (k, v) in map.iter() {
-            key_writer(k, writer);
-            v.write_memento(writer);
-        }
+/// Helper struct for deserializing InputMap with reversed key-value pairs
+#[derive(Deserialize)]
+struct InputMapReversed {
+    key_map_1: HashMap<core::NesKey, Vec<KeyCode>>,
+    key_map_2: HashMap<core::NesKey, Vec<KeyCode>>,
+    gamepad_map_1: HashMap<core::NesKey, Vec<Button>>,
+}
+
+fn reverse_and_group_map<K: Eq + Hash + Copy>(
+    input: &HashMap<K, core::NesKey>,
+) -> HashMap<core::NesKey, Vec<K>> {
+    let mut reversed: HashMap<core::NesKey, Vec<K>> = HashMap::new();
+    for (key, nes_key) in input {
+        reversed.entry(*nes_key).or_default().push(*key);
     }
+    reversed
+}
 
-    fn read_key_map<K: Eq + Hash>(
-        key_reader: impl Fn(&mut core::MementoReader) -> core::MementoResult<K>,
-        reader: &mut core::MementoReader,
-    ) -> core::MementoResult<HashMap<K, core::NesKey>> {
-        let len: usize = reader.read_memento()?;
-        let mut map = HashMap::with_capacity(len);
+fn reverse_and_flatten_map<K: Eq + Hash>(
+    reversed: HashMap<core::NesKey, Vec<K>>,
+) -> HashMap<K, core::NesKey> {
+    reversed
+        .into_iter()
+        .flat_map(|(nes_key, keys)| keys.into_iter().map(move |key| (key, nes_key)))
+        .collect()
+}
 
-        for _ in 0..len {
-            let key = key_reader(reader)?;
-            let nes_key: core::NesKey = reader.read_memento()?;
-            map.insert(key, nes_key);
-        }
+impl Serialize for InputMap {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_struct("InputMap", 3)?;
 
-        Ok(map)
-    }
+        map.serialize_field("key_map_1", &reverse_and_group_map(&self.key_map_1))?;
+        map.serialize_field("key_map_2", &reverse_and_group_map(&self.key_map_2))?;
+        map.serialize_field("gamepad_map_1", &reverse_and_group_map(&self.gamepad_map_1))?;
 
-    fn keycode_reader(reader: &mut core::MementoReader) -> core::MementoResult<KeyCode> {
-        let scan_code = reader.read_memento()?;
-        match KeyCode::from_scancode(scan_code) {
-            PhysicalKey::Code(code) => Ok(code),
-            PhysicalKey::Unidentified(kc) => Err(reader.read_error(format!("{kc:?}"))),
-        }
-    }
-
-    fn keycode_writer(code: &KeyCode, writer: &mut core::MementoWriter) {
-        code.to_scancode().unwrap().write_memento(writer);
-    }
-
-    fn gamepad_reader(reader: &mut core::MementoReader) -> core::MementoResult<Button> {
-        let code = reader.read_memento()?;
-        let btn = code_to_button(code).map_err(|e| reader.read_error(e))?;
-        Ok(btn)
-    }
-
-    fn gamepad_writer(btn: &Button, writer: &mut core::MementoWriter) {
-        (*btn as u16).write_memento(writer);
+        map.end()
     }
 }
 
-impl core::MementoReadable for InputMap {
-    fn read_memento(reader: &mut core::MementoReader) -> core::MementoResult<Self>
-    where
-        Self: Sized,
-    {
-        let key_map_1 = Self::read_key_map(Self::keycode_reader, reader)?;
-        let key_map_2 = Self::read_key_map(Self::keycode_reader, reader)?;
-        let gamepad_map_1 = Self::read_key_map(Self::gamepad_reader, reader)?;
+impl<'de> Deserialize<'de> for InputMap {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let reversed = InputMapReversed::deserialize(deserializer)?;
 
-        Ok(Self {
-            key_map_1,
-            key_map_2,
-            gamepad_map_1,
+        Ok(InputMap {
+            key_map_1: reverse_and_flatten_map(reversed.key_map_1),
+            key_map_2: reverse_and_flatten_map(reversed.key_map_2),
+            gamepad_map_1: reverse_and_flatten_map(reversed.gamepad_map_1),
         })
     }
-}
-
-impl core::MementoWriteable for InputMap {
-    fn write_memento(&self, writer: &mut core::MementoWriter) {
-        Self::write_key_map(&self.key_map_1, Self::keycode_writer, writer);
-        Self::write_key_map(&self.key_map_2, Self::keycode_writer, writer);
-        Self::write_key_map(&self.gamepad_map_1, Self::gamepad_writer, writer);
-    }
-}
-
-macro_rules! decode_btn {
-    ($expr: expr, $($val: path),+ $(,)?) => {
-        match $expr {
-            $(
-                v if v == $val as u16 => Ok($val),
-            )+
-            v => Err(format!("Unexpected value: {v}"))
-        }
-    };
-}
-
-// need to implement this manually as gilrs doesn't have u16 -> button and I don't want to
-// pull in serde just for this
-// remember to update this if gilrs is updated
-fn code_to_button(value: u16) -> Result<Button, String> {
-    use Button::*;
-    decode_btn!(
-        value,
-        South,
-        East,
-        North,
-        West,
-        C,
-        Z,
-        LeftTrigger,
-        LeftTrigger2,
-        RightTrigger,
-        RightTrigger2,
-        Select,
-        Start,
-        Mode,
-        LeftThumb,
-        RightThumb,
-        DPadUp,
-        DPadDown,
-        DPadLeft,
-        DPadRight,
-        Unknown,
-    )
 }
 
 fn build_default_key_map_1() -> KeyMap {
@@ -349,4 +282,20 @@ fn build_default_gamepad_map_1() -> GamepadMap {
     key_map.insert(Button::DPadLeft, NesKey::Left);
     key_map.insert(Button::DPadRight, NesKey::Right);
     key_map
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InputMap;
+
+    #[test]
+    fn test_roundtrip() {
+        let original = InputMap::default_map();
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: InputMap = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(original.key_map_1(), deserialized.key_map_1());
+        assert_eq!(original.key_map_2(), deserialized.key_map_2());
+        assert_eq!(original.gamepad_map_1(), deserialized.gamepad_map_1());
+    }
 }

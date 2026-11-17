@@ -53,7 +53,7 @@ impl Platform for DesktopPlatform {
         evt_ctor: ReadEventConstructor,
     ) {
         let ret = if !path.exists() {
-            info!("Saved state not found");
+            info!("File {path:?} not found");
             None
         } else {
             fs::read(&path)

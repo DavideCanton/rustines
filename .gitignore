@@ -28,4 +28,6 @@ __pycache__/
 .venv/
 .python-version
 
-.continue/
+.agents/
+.cline/
+.clinerules/

@@ -3,9 +3,10 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 use rustines_core::Renderer;
 use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::{AppEventLoopProxy, AppState, CustomEvents};
+use crate::{AppEventLoopProxy, AppState, CustomEvents, input::InputMap};
 
 pub type PendingRenderer = Rc<RefCell<Option<Box<dyn Renderer>>>>;
+pub type PendingInputMap = Rc<RefCell<Option<InputMap>>>;
 pub type ReadEventConstructor = Box<dyn FnOnce(Option<Vec<u8>>) -> CustomEvents>;
 pub type WriteEventConstructor = Box<dyn FnOnce(PathBuf, bool) -> CustomEvents>;
 

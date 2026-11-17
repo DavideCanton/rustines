@@ -11,6 +11,7 @@ bitfield = "0.20"
 bytemuck = { version = "1.25", features = ["derive"] }
 log = { workspace = true }
 rustines_macro = { path = "../macro" }
+serde = { workspace = true }
 thiserror = { workspace = true }
 zip = { version = "9.0", features = ["deflate"], default-features = false }
 
