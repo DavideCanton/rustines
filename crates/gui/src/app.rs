@@ -1,7 +1,7 @@
 use crate::{
     AppState, CpalOutput, Platform,
     app_state::{AppStateInfo, SpeedupState},
-    constants::{INNER_SIZE, width_to_size},
+    constants::{FRAMES_MULTIPLIER_SPEEDUP, INNER_SIZE, SAVE_INTERVAL, TARGET_FPS, width_to_size},
     fps_counter::FpsCounter,
     input::{self, InputMap, handle_input_keys},
     pattern_window::PatternTableWindow,
@@ -26,9 +26,6 @@ use winit::{
     window::{Window, WindowAttributes, WindowId},
 };
 use winit_input_helper::WinitInputHelper;
-
-const TARGET_FPS: u64 = 60;
-const SAVE_INTERVAL: u64 = 10;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum CustomEvents {
@@ -411,7 +408,11 @@ fn fill_data(app_state: &mut AppState, reader: &mut core::MementoReader) -> core
 
 fn update_logic(app_state: &mut AppState, platform: &impl Platform) {
     if !app_state.pause {
-        let frame_to_run = if app_state.speedup.active { 4 } else { 1 };
+        let frame_to_run = if app_state.speedup.active {
+            FRAMES_MULTIPLIER_SPEEDUP
+        } else {
+            1
+        };
         for _ in 0..frame_to_run {
             app_state.update_counter.update();
             while !app_state.bus.ppu().frame_ready() {
