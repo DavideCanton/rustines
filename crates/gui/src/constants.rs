@@ -31,3 +31,6 @@ pub const TARGET_FPS: u64 = 60;
 pub const SAVE_INTERVAL: u64 = 10;
 /// Number of extra frames to process per update when speedup is active.
 pub const FRAMES_MULTIPLIER_SPEEDUP: u32 = 4;
+
+// Number of ticks between press and release of A+B when AB mode is enabled
+pub const AUTO_AB_TICK_INTERVAL: u32 = 100;

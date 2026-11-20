@@ -112,6 +112,15 @@ fn handle_debug_keys(app_state: &mut AppState, event_loop: &ActiveEventLoop) {
             core::debug_utils::debug_dump_state(&app_state.bus, &app_state.cpu);
         }
 
+        if input.key_pressed(KeyCode::F12) {
+            app_state.auto_ab.toggle();
+            if app_state.auto_ab.active {
+                info!("Auto-A/B mode enabled");
+            } else {
+                info!("Auto-A/B mode disabled");
+            }
+        }
+
         if input.key_pressed(KeyCode::KeyF) {
             let mut file = File::create("frame.ppm").expect("cannot create file");
             app_state

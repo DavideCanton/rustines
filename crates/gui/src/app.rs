@@ -1,7 +1,7 @@
 use crate::{
     AppState, CpalOutput, Platform,
-    app_state::{AppStateInfo, SpeedupState},
-    constants::{FRAMES_MULTIPLIER_SPEEDUP, INNER_SIZE, SAVE_INTERVAL, TARGET_FPS, width_to_size},
+    app_state::{AppStateInfo, AutoABState, SpeedupState},
+    constants as C,
     fps_counter::FpsCounter,
     input::{self, InputMap, handle_input_keys},
     pattern_window::PatternTableWindow,
@@ -79,7 +79,7 @@ impl<P: Platform> App<P> {
             trace_boot,
             zapper,
             platform,
-            size: width_to_size(width),
+            size: C::width_to_size(width),
             pending_window: None,
             pending_renderer: Rc::new(RefCell::new(None)),
             pending_input_map: Rc::new(RefCell::new(None)),
@@ -151,8 +151,9 @@ impl<P: Platform> App<P> {
             cursor_position: None,
             zapper_trigger_pressed: false,
             zapper_needs_update: false,
-            frame_duration: Duration::from_nanos(1_000_000_000 / TARGET_FPS),
+            frame_duration: Duration::from_nanos(1_000_000_000 / C::TARGET_FPS),
             speedup: SpeedupState::default(),
+            auto_ab: AutoABState::new(C::AUTO_AB_TICK_INTERVAL),
             enable_debug_keys: self.enable_debug_keys,
             accumulator: Duration::ZERO,
             last_frame_time: Instant::now(),
@@ -409,7 +410,7 @@ fn fill_data(app_state: &mut AppState, reader: &mut core::MementoReader) -> core
 fn update_logic(app_state: &mut AppState, platform: &impl Platform) {
     if !app_state.pause {
         let frame_to_run = if app_state.speedup.active {
-            FRAMES_MULTIPLIER_SPEEDUP
+            C::FRAMES_MULTIPLIER_SPEEDUP
         } else {
             1
         };
@@ -418,10 +419,14 @@ fn update_logic(app_state: &mut AppState, platform: &impl Platform) {
             while !app_state.bus.ppu().frame_ready() {
                 app_state.cpu.tick(&mut app_state.bus);
 
+                app_state
+                    .auto_ab
+                    .process_tick(app_state.bus.controller1_mut());
+
                 // save if enough frames have passed
                 let current_frame = app_state.bus.ppu().current_frame();
                 if current_frame != app_state.last_save
-                    && current_frame.is_multiple_of(TARGET_FPS * SAVE_INTERVAL)
+                    && current_frame.is_multiple_of(C::TARGET_FPS * C::SAVE_INTERVAL)
                 {
                     save_game(
                         &app_state.nes_rom,
@@ -513,8 +518,8 @@ fn update_zapper_input(app_state: &mut AppState) {
     let position = app_state.cursor_position.and_then(|(x, y)| {
         (size.width > 0 && size.height > 0).then(|| {
             (
-                (x * f64::from(INNER_SIZE.width) / f64::from(size.width)) as usize,
-                (y * f64::from(INNER_SIZE.height) / f64::from(size.height)) as usize,
+                (x * f64::from(C::INNER_SIZE.width) / f64::from(size.width)) as usize,
+                (y * f64::from(C::INNER_SIZE.height) / f64::from(size.height)) as usize,
             )
         })
     });

@@ -72,6 +72,10 @@ impl NesController {
         }
     }
 
+    pub fn buttons(&self) -> &[bool; 8] {
+        &self.buttons
+    }
+
     pub fn reset(&mut self) {
         self.buttons.fill(false);
         self.shift_register = 0;
