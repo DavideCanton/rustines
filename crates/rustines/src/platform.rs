@@ -3,7 +3,7 @@ use std::{cell::RefCell, fs, path::PathBuf, rc::Rc, sync::Arc};
 use log::info;
 use rustines_core::Renderer;
 use rustines_gui::{
-    AppEventLoopProxy, AppState, INNER_SIZE, PixelsRenderer, Platform, ReadEventConstructor,
+    AppEventLoopProxy, INNER_SIZE, PixelsRenderer, Platform, ReadEventConstructor,
     WriteEventConstructor, create_pixels,
 };
 use winit::{dpi::PhysicalSize, window::Window};
@@ -11,15 +11,13 @@ use winit::{dpi::PhysicalSize, window::Window};
 pub struct DesktopPlatform;
 
 impl Platform for DesktopPlatform {
-    fn set_title(&self, app_state: &AppState) {
-        let r_fps = format_fps(app_state.render_fps(), "FPS");
-        let u_fps = format_fps(app_state.update_fps(), "Simulation FPS");
+    fn set_title(&self, window: &Window, rom_name: &str, render_fps: f64, update_fps: f64) {
+        let r_fps = format_fps(render_fps, "FPS");
+        let u_fps = format_fps(update_fps, "Simulation FPS");
 
-        let title = format!("{} | {r_fps} | {u_fps}", app_state.rom_name());
+        let title = format!("{} | {r_fps} | {u_fps}", rom_name);
 
-        app_state
-            .main_window()
-            .set_title(&format!("Rustines | {title}"));
+        window.set_title(&format!("Rustines | {title}"));
     }
 
     fn init_window_hook(&self, _window: Arc<Window>, _size: PhysicalSize<u32>) {}

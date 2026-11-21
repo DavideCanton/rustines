@@ -1,5 +1,5 @@
 mod app;
-mod app_state;
+mod app_structs;
 mod audio;
 mod constants;
 mod fps_counter;
@@ -8,11 +8,11 @@ mod pattern_window;
 mod platform;
 mod renderer;
 mod save_game;
+mod states;
 mod types;
 mod utils;
 
 pub use app::{App, CustomEvents};
-pub use app_state::AppState;
 pub use audio::CpalOutput;
 pub use constants::INNER_SIZE;
 pub use platform::{Platform, ReadEventConstructor, WriteEventConstructor};

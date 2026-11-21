@@ -3,7 +3,7 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc, sync::Arc};
 use rustines_core::Renderer;
 use winit::{dpi::PhysicalSize, window::Window};
 
-use crate::{AppEventLoopProxy, AppState, CustomEvents, input::InputMap};
+use crate::{AppEventLoopProxy, CustomEvents, input::InputMap};
 
 pub type PendingRenderer = Rc<RefCell<Option<Box<dyn Renderer>>>>;
 pub type PendingInputMap = Rc<RefCell<Option<InputMap>>>;
@@ -11,7 +11,7 @@ pub type ReadEventConstructor<T> = Box<dyn FnOnce(Option<T>) -> CustomEvents>;
 pub type WriteEventConstructor = Box<dyn FnOnce(PathBuf, bool) -> CustomEvents>;
 
 pub trait Platform {
-    fn set_title(&self, app_state: &AppState);
+    fn set_title(&self, window: &Window, rom_name: &str, render_fps: f64, update_fps: f64);
     fn init_window_hook(&self, window: Arc<Window>, size: PhysicalSize<u32>);
     fn init_pending_renderer(
         &self,

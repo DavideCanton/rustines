@@ -8,16 +8,12 @@ use crate::{
     constants::{SAVE_COMPRESSION_LEVEL, SAVE_GAME_EXTENSION, SAVE_STATE_EXTENSION},
 };
 
-pub fn load_save_state(
-    nes_rom: &core::NesRom,
-    proxy: &AppEventLoopProxy,
-    platform: &impl Platform,
-) {
+pub fn load_save_state(nes_rom: &core::NesRom, proxy: &AppEventLoopProxy, platform: &dyn Platform) {
     if let Some(path) = nes_rom.file_path.as_ref() {
         platform.start_read_binary_file(
             path.with_extension(SAVE_STATE_EXTENSION),
             proxy,
-            Box::new(CustomEvents::LoadedState),
+            Box::new(CustomEvents::SaveStateRead),
         );
     }
 }
@@ -25,14 +21,14 @@ pub fn load_save_state(
 pub fn load_save_game(
     nes_rom: &core::NesRom,
     mapper: &dyn core::Mapper,
-    platform: &impl Platform,
+    platform: &dyn Platform,
     proxy: &AppEventLoopProxy,
 ) {
     if let Some((path, _)) = supports_save(nes_rom, mapper) {
         platform.start_read_binary_file(
             path.with_extension(SAVE_GAME_EXTENSION),
             proxy,
-            Box::new(CustomEvents::LoadedPrgRam),
+            Box::new(CustomEvents::SaveGameRead),
         );
     }
 }
@@ -42,7 +38,7 @@ pub fn save_state(
     bus: &core::Bus,
     cpu: &core::Cpu,
     proxy: &AppEventLoopProxy,
-    platform: &impl Platform,
+    platform: &dyn Platform,
 ) {
     if let Some(path) = nes_rom.file_path.as_ref() {
         let mut writer = core::MementoWriter::new();
@@ -55,7 +51,7 @@ pub fn save_state(
                 path.with_extension(SAVE_STATE_EXTENSION),
                 proxy,
                 &compressed,
-                Box::new(CustomEvents::SavedPrgRam),
+                Box::new(CustomEvents::SaveGameWritten),
             ),
             Err(e) => info!("Compress save state failed: {e}"),
         }
@@ -79,7 +75,7 @@ fn supports_save<'n, 'm>(
 pub fn save_game(
     nes_rom: &core::NesRom,
     mapper: &dyn core::Mapper,
-    platform: &impl Platform,
+    platform: &dyn Platform,
     proxy: &AppEventLoopProxy,
 ) {
     if let Some((path, memory)) = supports_save(nes_rom, mapper) {
@@ -90,7 +86,7 @@ pub fn save_game(
                 path.with_extension(SAVE_GAME_EXTENSION),
                 proxy,
                 &compressed,
-                Box::new(CustomEvents::SavedState),
+                Box::new(CustomEvents::SaveStateWritten),
             ),
             Err(e) => info!("Compress save state failed: {e}"),
         }

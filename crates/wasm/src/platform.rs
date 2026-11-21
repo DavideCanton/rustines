@@ -2,7 +2,7 @@ use log::info;
 use rexie::{ObjectStore, Rexie, TransactionMode};
 use rustines_core::Renderer;
 use rustines_gui::{
-    AppEventLoopProxy, AppState, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
+    AppEventLoopProxy, INNER_SIZE, Platform, ReadEventConstructor, WriteEventConstructor,
     create_pixels,
 };
 use std::{
@@ -28,20 +28,20 @@ fn format_fps(fps: f64) -> String {
 }
 
 impl Platform for WasmPlatform {
-    fn set_title(&self, app_state: &AppState) {
+    fn set_title(&self, _window: &Window, rom_name: &str, render_fps: f64, update_fps: f64) {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
 
         if let Some(e) = document.get_element_by_id("filename") {
-            e.set_text_content(Some(app_state.rom_name()))
+            e.set_text_content(Some(rom_name))
         }
 
         if let Some(e) = document.get_element_by_id("r_fps") {
-            e.set_text_content(Some(&format_fps(app_state.render_fps())))
+            e.set_text_content(Some(&format_fps(render_fps)))
         }
 
         if let Some(e) = document.get_element_by_id("u_fps") {
-            e.set_text_content(Some(&format_fps(app_state.update_fps())))
+            e.set_text_content(Some(&format_fps(update_fps)))
         }
     }
 
