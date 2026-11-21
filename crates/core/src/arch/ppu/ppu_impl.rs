@@ -9,6 +9,7 @@ use std::{array, mem};
 
 use crate::{
     arch::{
+        Flag,
         mappers::mapper::Mapper,
         ppu::{
             OamSprite,
@@ -121,9 +122,9 @@ pub struct PpuState {
     #[memento]
     tracing_enabled: bool,
     #[memento]
-    debug_render_sprites_enabled: bool,
+    debug_render_sprites_enabled: Flag,
     #[memento]
-    debug_render_background_enabled: bool,
+    debug_render_background_enabled: Flag,
 }
 
 impl PpuState {
@@ -173,8 +174,8 @@ impl PpuState {
             zapper_light_timer: 0,
 
             tracing_enabled: false,
-            debug_render_background_enabled: true,
-            debug_render_sprites_enabled: true,
+            debug_render_background_enabled: Flag::from(true),
+            debug_render_sprites_enabled: Flag::from(true),
         }
     }
 }
@@ -857,10 +858,10 @@ impl Ppu {
         };
 
         let (palette, pixel) = match render_type {
-            RenderType::Background if self.state.debug_render_background_enabled => {
+            RenderType::Background if self.state.debug_render_background_enabled.is_enabled() => {
                 (bg_palette, bg_pixel)
             }
-            RenderType::Sprite if self.state.debug_render_sprites_enabled => {
+            RenderType::Sprite if self.state.debug_render_sprites_enabled.is_enabled() => {
                 (sprite_palette, sprite_pixel)
             }
             _ => (0, 0),
@@ -1016,13 +1017,13 @@ impl Ppu {
     }
 
     /// Toggles the debug rendering of sprites.
-    pub fn toggle_sprite_render(&mut self) {
-        self.state.debug_render_sprites_enabled = !self.state.debug_render_sprites_enabled;
+    pub fn toggle_sprite_render(&mut self) -> bool {
+        self.state.debug_render_sprites_enabled.toggle()
     }
 
     /// Toggles the debug rendering of backgrounds.
-    pub fn toggle_background_render(&mut self) {
-        self.state.debug_render_background_enabled = !self.state.debug_render_background_enabled;
+    pub fn toggle_background_render(&mut self) -> bool {
+        self.state.debug_render_background_enabled.toggle()
     }
 }
 

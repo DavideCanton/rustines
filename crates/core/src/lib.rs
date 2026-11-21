@@ -23,4 +23,4 @@ pub use arch::{
 };
 pub use audio::{AudioOutput, AudioOutputBox, NoAudio};
 pub use loaders::{loader::Loader, loaders_factory::decode_loader};
-pub use renderer::{NoopRenderer, Renderer, RendererBox};
+pub use renderer::{MessageLocation, NoopRenderer, Renderer, RendererBox};

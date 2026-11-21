@@ -18,3 +18,5 @@ pub mod debug_utils;
 
 #[cfg(test)]
 mod arch_tests;
+
+pub use utils::Flag;

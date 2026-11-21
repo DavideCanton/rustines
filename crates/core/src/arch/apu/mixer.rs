@@ -1,35 +1,4 @@
-#[derive(Debug, Clone, Copy)]
-pub struct Flag(bool);
-
-impl Flag {
-    pub fn toggle(&mut self) {
-        self.0 = !self.0;
-    }
-
-    pub fn set(&mut self) {
-        self.0 = true;
-    }
-
-    pub fn value(&self) -> bool {
-        self.0
-    }
-
-    pub fn ternary<T>(&self, ok: T, or: T) -> T {
-        if self.0 { ok } else { or }
-    }
-}
-
-impl From<bool> for Flag {
-    fn from(value: bool) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Flag> for bool {
-    fn from(value: Flag) -> Self {
-        value.0
-    }
-}
+use crate::arch::Flag;
 
 pub struct Mixer {
     pulse1_flag: Flag,
