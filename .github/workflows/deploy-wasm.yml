@@ -40,3 +40,7 @@ jobs:
                   python-version: "3.14"
             - name: Deploy to FTP
               run: python scripts/upload.py
+              env:
+                  FTP_USER: ${{ secrets.FTP_USER }}
+                  FTP_HOST: ${{ secrets.FTP_HOST }}
+                  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
