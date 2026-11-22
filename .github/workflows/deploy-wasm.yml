@@ -24,7 +24,7 @@ jobs:
             - uses: actions/upload-artifact@v7
               with:
                   name: wasm-build
-                  path: web/assets/
+                  path: web/assets/generated/
 
     deploy:
         needs: build
@@ -34,7 +34,7 @@ jobs:
             - uses: actions/download-artifact@v7
               with:
                   name: wasm-build
-                  path: web/assets/
+                  path: web/assets/generated/
             - uses: actions/setup-python@v7
               with:
                   python-version: "3.14"
