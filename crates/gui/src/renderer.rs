@@ -192,6 +192,7 @@ impl Renderer for PixelsRenderer {
     }
 }
 
+#[inline(always)]
 fn render_pixel_into_buf(buf: &mut [u8], x: usize, y: usize, w: usize, rgba: u32) {
     let i = (y * w + x) * 4;
     buf[i..i + 4].copy_from_slice(&rgba.to_be_bytes());

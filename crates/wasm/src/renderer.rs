@@ -16,20 +16,22 @@ impl WasmRenderer {
             cache_color: (0u8..=255)
                 .into_iter()
                 .map(|c| ((c as f32 / 255.0).powf(1.0 / 2.2) * 255.0) as u8)
-                .collect::<Vec<_>>(),
+                .collect(),
         }
     }
 
+    #[inline(always)]
     fn fix_color(&mut self, c: u8) -> u8 {
         self.cache_color[c as usize]
     }
 }
 
 impl Renderer for WasmRenderer {
+    #[inline(always)]
     fn render_pixel(&mut self, x: usize, y: usize, rgba: u32) {
         // apply color correction since colors on canvas are not rendered linearly
-        let [r, g, b, a] = rgba.to_le_bytes();
-        let rgba = u32::from_le_bytes([self.fix_color(r), self.fix_color(g), self.fix_color(b), a]);
+        let [r, g, b, a] = rgba.to_be_bytes();
+        let rgba = u32::from_be_bytes([self.fix_color(r), self.fix_color(g), self.fix_color(b), a]);
         self.renderer.render_pixel(x, y, rgba)
     }
 
