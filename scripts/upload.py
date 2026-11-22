@@ -4,8 +4,17 @@ from ftplib import FTP
 from pathlib import PurePosixPath
 
 import dotenv
-import keyring
 from common import resolve_web
+
+
+def get_password():
+    ftp_password = os.environ.get("FTP_PASSWORD")
+    if not ftp_password:
+        import keyring
+
+        ftp_password = keyring.get_password(ftp_host, ftp_user)
+    assert ftp_password
+    return ftp_password
 
 
 def check_clean_workspace():
@@ -36,9 +45,7 @@ dotenv.load_dotenv()
 
 ftp_user = os.environ["FTP_USER"].strip()
 ftp_host = os.environ["FTP_HOST"].strip()
-
-ftp_password = keyring.get_password(ftp_host, ftp_user)
-assert ftp_password
+ftp_password = get_password()
 
 root = resolve_web().resolve()
 
