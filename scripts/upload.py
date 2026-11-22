@@ -1,10 +1,27 @@
 import os
+import subprocess
 from ftplib import FTP
 from pathlib import PurePosixPath
 
 import dotenv
 import keyring
 from common import resolve_web
+
+
+def check_clean_workspace():
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    if result.stdout.strip():
+        print("ERROR: Workspace is dirty. Pending changes detected:")
+        print(result.stdout)
+        raise SystemExit(1)
+
+
+check_clean_workspace()
 
 EXT = {
     ".html": "t",
