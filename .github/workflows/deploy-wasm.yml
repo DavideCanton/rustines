@@ -1,42 +1,42 @@
 name: Build and Deploy WASM
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+    build-and-deploy:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-          targets: wasm32-unknown-unknown
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@v1
+              with:
+                  toolchain: stable
+                  targets: wasm32-unknown-unknown
 
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+            - name: Cache Rust and wasm-pack
+              uses: Swatinem/rust-cache@v2
 
-      - name: Cache Rust and wasm-pack
-        uses: Swatinem/rust-cache@v2
+            - name: Install wasm-pack
+              uses: taiki-e/install-action@wasm-pack
 
-      - name: Install Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.14'      
+            - name: Install Python
+              uses: actions/setup-python@v7
+              with:
+                  python-version: "3.14"
 
-      - name: Build WASM
-        run: bash build-wasm.sh
+            - name: Build WASM
+              run: bash build-wasm.sh
 
-      - name: Deploy to FTP
-        env:
-          FTP_USER: ${{ secrets.FTP_USER }}
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: python scripts/upload.py
+            - name: Deploy to FTP
+              env:
+                  FTP_USER: ${{ secrets.FTP_USER }}
+                  FTP_HOST: ${{ secrets.FTP_HOST }}
+                  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+              run: python scripts/upload.py
