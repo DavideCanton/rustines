@@ -47,9 +47,13 @@
             </div>
         </div>
         <div id="error" class="hidden">NES ERROR</div>
+        <div class="version-container">
+            Version:&nbsp;<span id="version"></span>
+        </div>
 
         <script type="module">
             import init, { start_wasm } from "./assets/rustines_wasm.js";
+            import { VERSION } from "./assets/version.js";
 
             const romInput = document.getElementById("rom");
             const btn = document.getElementById("start");
@@ -103,6 +107,8 @@
                     loaded.textContent = `Could not start ROM: ${error}`;
                 }
             });
+
+            gById("version").textContent = VERSION;
         </script>
     </body>
 </html>
