@@ -42,7 +42,14 @@ impl Renderer for WasmRenderer {
         Ok(())
     }
 
-    fn display_message(&mut self, message: &str, seconds: u64, location: MessageLocation) {
-        self.renderer.display_message(message, seconds, location);
+    fn display_message(
+        &mut self,
+        message: &str,
+        seconds: u64,
+        font_size: f32,
+        location: MessageLocation,
+    ) {
+        self.renderer
+            .display_message(message, seconds, font_size, location);
     }
 }

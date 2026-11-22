@@ -304,6 +304,7 @@ impl RunningState {
         self.bus.ppu_mut().renderer_mut().display_message(
             msg,
             C::MESSAGE_SECONDS,
+            C::MESSAGE_FONT_SIZE,
             C::MESSAGE_LOCATION,
         );
     }
@@ -484,7 +485,7 @@ impl State for RunningState {
             CustomEvents::SaveStateRead(c) => match c {
                 Some(content) => match zstd::decode_all(content.as_slice()) {
                     Ok(decoded) => {
-                        self.display_message("Read state");
+                        self.display_message("Loaded state");
                         self.fill_with_saved_state(decoded);
                     }
                     Err(e) => {
@@ -498,12 +499,12 @@ impl State for RunningState {
                 }
             },
             CustomEvents::SaveStateWritten(..) => {
-                self.display_message("Wrote state");
+                self.display_message("Saved state");
             }
             CustomEvents::SaveGameWritten(..) => {
                 info!("Wrote save file");
             }
-            CustomEvents::ConfigWritten(..) => info!("Wrote config"),
+            CustomEvents::ConfigWritten(..) => info!("Saved config"),
             _ => {
                 warn!("Unexpected event during runtime: {:?}", event);
             }

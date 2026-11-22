@@ -16,6 +16,8 @@ The emulator has just a simple CLI at the moment.
 
 Uses [pixels](https://docs.rs/pixels/latest/pixels/), [winit](https://docs.rs/winit/latest/winit/) and [cpal](https://docs.rs/cpal/latest/cpal/).
 
+The font used for drawing state messages is [Public Pixel](https://ggbot.itch.io/public-pixel-font).
+
 ## Legal disclaimer
 
 Rustines is a standalone software emulator used exclusively to play legally acquired homebrew games or personal backups of legally owned classic NES cartridges.

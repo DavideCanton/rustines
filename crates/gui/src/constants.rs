@@ -41,3 +41,6 @@ pub const MESSAGE_SECONDS: u64 = 5;
 
 // Popup message default location
 pub const MESSAGE_LOCATION: MessageLocation = MessageLocation::TopLeft;
+
+// Default popup font size
+pub const MESSAGE_FONT_SIZE: f32 = 8.0;
