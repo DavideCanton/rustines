@@ -1,104 +1,108 @@
 <!doctype html>
 <html>
+    <head>
+        <title>Rustines</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
 
-<head>
-    <title>Rustines</title>
-    <link rel="stylesheet"
-          href="style.css">
-</head>
+    <body>
+        <a
+            href="https://github.com/DavideCanton/rustines"
+            class="github-ribbon"
+        >
+            <img
+                loading="lazy"
+                decoding="async"
+                width="149"
+                height="149"
+                src="https://github.blog/wp-content/uploads/2008/12/forkme_right_orange_ff7600.png"
+                class="attachment-full size-full"
+                alt="Fork me on GitHub"
+            />
+        </a>
 
-<body>
-    <a href="https://github.com/DavideCanton/rustines" class="github-ribbon"><img loading="lazy"
-             decoding="async"
-             width="149"
-             height="149"
-             src="https://github.blog/wp-content/uploads/2008/12/forkme_right_orange_ff7600.png"
-             class="attachment-full size-full"
-             alt="Fork me on GitHub"></a>
+        <a href="disclaimer.html" class="disclaimer-link">Legal disclaimer</a>
 
-    <a href="disclaimer.html" class="disclaimer-link">Legal disclaimer</a>
-
-    <div id="main">
-        <div id="header">
-            <label for="rom"
-                   id="label">Click here to select ROM</label>
-            <input type="file"
-                   id="rom" />
-            <p id="loaded"
-               class="status"></p>
-        </div>
-        <div id="zapper_container"
-             style="display: none">
-            <input id="zapper"
-                   type="checkbox" />
-            <label for="zapper">Enable zapper</span>
-        </div>
-        <span style="display: none"
-              id="start">Play!</span>
-        <div id="run_status">
-            <span id="filename"
-                  class="status"></span>
-            <div class="counter">
-                <span class="status fps">FPS:</span>
-                <span id="r_fps"
-                      class="status"></span>
+        <div id="main">
+            <div id="header">
+                <label for="rom" id="label">Click here to select ROM</label>
+                <input type="file" id="rom" />
+                <p id="loaded" class="status"></p>
             </div>
-            <div class="counter">
-                <span class="status fps">Simulation FPS:</span>
-                <span id="u_fps"
-                      class="status"></span>
+            <div id="zapper_container" class="hidden">
+                <input id="zapper" type="checkbox" />
+                <label for="zapper">Enable zapper</label>
+            </div>
+            <span class="hidden" id="start">Play!</span>
+            <div id="run_status" class="hidden">
+                <span id="filename" class="status"></span>
+                <div class="counter">
+                    <span class="status fps">FPS:</span>
+                    <span id="r_fps" class="status"></span>
+                </div>
+                <div class="counter">
+                    <span class="status fps">Simulation FPS:</span>
+                    <span id="u_fps" class="status"></span>
+                </div>
             </div>
         </div>
-    </div>
-    <div id="error">NES ERROR</div>
+        <div id="error" class="hidden">NES ERROR</div>
 
-    <script type="module">
-        import init, { start_wasm } from "./assets/rustines_wasm.js";
+        <script type="module">
+            import init, { start_wasm } from "./assets/rustines_wasm.js";
 
-        const romInput = document.getElementById("rom");
-        const btn = document.getElementById("start");
-        const loaded = document.getElementById("loaded");
-        let romBytes;
-        let romName;
+            const romInput = document.getElementById("rom");
+            const btn = document.getElementById("start");
+            const loaded = document.getElementById("loaded");
+            let romBytes;
+            let romName;
+            const gById = document.getElementById.bind(document);
 
-        romInput.addEventListener("change", async () => {
-            const file = romInput.files[0];
-            romBytes = undefined;
-
-            if (!file) {
-                return;
+            function show(element) {
+                element.classList.remove("hidden");
             }
 
-            romName = file.name;
-
-            try {
-                romBytes = new Uint8Array(await file.arrayBuffer());
-                btn.style.display = "unset";
-                loaded.textContent = `Loaded ${file.name}`;
-                document.getElementById("zapper_container").style.display =
-                    "block";
-            } catch (error) {
-                loaded.textContent = `Could not read file: ${error}`;
+            function hide(element) {
+                element.classList.add("hidden");
             }
-        });
 
-        btn.addEventListener("click", async () => {
-            let zapper = document.getElementById("zapper").checked;
+            romInput.addEventListener("change", async () => {
+                const file = romInput.files[0];
+                romBytes = undefined;
 
-            try {
-                await init({module_or_path: "assets/rustines_wasm_bg.wasm.gz"});
-                start_wasm(romBytes, romName, zapper);
-                document.getElementById("header").style.display = "none";
-                document.getElementById("zapper_container").style.display = "none";
-                btn.style.display = "none";
-                document.getElementById("run_status").style.display =
-                    "flex";
-                document.getElementById("game_canvas").focus();
-            } catch (error) {
-                loaded.textContent = `Could not start ROM: ${error}`;
-            }
-        });
-    </script>
-</body>
+                if (!file) {
+                    return;
+                }
 
+                romName = file.name;
+
+                try {
+                    romBytes = new Uint8Array(await file.arrayBuffer());
+                    show(btn);
+                    loaded.textContent = `Loaded ${file.name}`;
+                    show(gById("zapper_container"));
+                } catch (error) {
+                    loaded.textContent = `Could not read file: ${error}`;
+                }
+            });
+
+            btn.addEventListener("click", async () => {
+                let zapper = gById("zapper").checked;
+
+                try {
+                    await init({
+                        module_or_path: "assets/rustines_wasm_bg.wasm.gz",
+                    });
+                    start_wasm(romBytes, romName, zapper);
+                    hide(gById("header"));
+                    hide(gById("zapper_container"));
+                    hide(btn);
+                    show(gById("run_status"));
+                    gById("game_canvas").focus();
+                } catch (error) {
+                    loaded.textContent = `Could not start ROM: ${error}`;
+                }
+            });
+        </script>
+    </body>
 </html>

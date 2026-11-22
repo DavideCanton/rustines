@@ -68,13 +68,11 @@ impl RunningState {
     pub fn pause(&mut self) {
         self.pause = true;
         self.accumulator = Duration::ZERO;
-        self.display_message("Paused");
     }
 
     pub fn resume(&mut self) {
         self.pause = false;
         self.last_frame_time = Instant::now();
-        self.display_message("Resumed");
     }
 
     pub fn platform(&self) -> &dyn Platform {
@@ -236,6 +234,15 @@ impl RunningState {
         }
 
         if self.main_window_helper.held_shift() {
+            if self.main_window_helper.key_pressed(KeyCode::F12) {
+                self.auto_ab.toggle();
+                if self.auto_ab.active {
+                    self.display_message("Auto-A/B mode enabled");
+                } else {
+                    self.display_message("Auto-A/B mode disabled");
+                }
+            }
+
             if self.main_window_helper.key_pressed(KeyCode::Digit1) {
                 let enabled = self.bus.apu_mut().mixer_mut().pulse1().toggle();
                 self.display_message(&format!(
@@ -314,8 +321,10 @@ impl RunningState {
             if self.main_window_helper.key_pressed(KeyCode::KeyX) {
                 if self.pause {
                     self.resume();
+                    self.display_message("Resumed");
                 } else {
                     self.pause();
+                    self.display_message("Paused");
                 }
             }
 
@@ -338,15 +347,6 @@ impl RunningState {
             if self.main_window_helper.key_pressed(KeyCode::KeyQ) {
                 core::debug_utils::debug_dump_state(&self.bus, &self.cpu);
                 self.display_message("Dumped state");
-            }
-
-            if self.main_window_helper.key_pressed(KeyCode::F12) {
-                self.auto_ab.toggle();
-                if self.auto_ab.active {
-                    self.display_message("Auto-A/B mode enabled");
-                } else {
-                    self.display_message("Auto-A/B mode disabled");
-                }
             }
 
             if self.main_window_helper.key_pressed(KeyCode::KeyF) {

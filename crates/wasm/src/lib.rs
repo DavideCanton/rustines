@@ -22,7 +22,7 @@ fn panic_hook(info: &PanicHookInfo) {
     if web_sys::window()
         .and_then(|w| w.document())
         .and_then(|d| d.get_element_by_id("error"))
-        .and_then(|e| e.class_list().add_1("show").ok())
+        .and_then(|e| e.class_list().remove_1("hidden").ok())
         .is_none()
     {
         warn!("Can't display fancy error!");

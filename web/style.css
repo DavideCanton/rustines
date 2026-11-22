@@ -7,6 +7,10 @@ body {
     user-select: none;
 }
 
+.hidden {
+    display: none !important;
+}
+
 #main {
     display: flex;
     flex-direction: column;
@@ -54,9 +58,8 @@ label {
     border-color: red;
 }
 
-
 #run_status {
-    display: none;
+    display: flex;
     margin-bottom: 60px;
     flex-direction: column;
 }
@@ -102,11 +105,6 @@ label {
     font-size: 4em;
     text-align: center;
     line-height: 20vh;
-    display: none;
-}
-
-#error.show {
-    display: block;
 }
 
 .github-ribbon {
