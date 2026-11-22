@@ -8,6 +8,7 @@ edition = "2024"
 anyhow = { workspace = true }
 cpal = { version = "0.18" }
 flexi_logger = { workspace = true }
+fontdue = "0.9"
 gilrs = { version = "0.11", features = ["serde-serialize"] }
 log = { workspace = true }
 pixels = { workspace = true }

@@ -51,7 +51,7 @@ pub fn save_state(
                 path.with_extension(SAVE_STATE_EXTENSION),
                 proxy,
                 &compressed,
-                Box::new(CustomEvents::SaveGameWritten),
+                Box::new(CustomEvents::SaveStateWritten),
             ),
             Err(e) => info!("Compress save state failed: {e}"),
         }
@@ -86,7 +86,7 @@ pub fn save_game(
                 path.with_extension(SAVE_GAME_EXTENSION),
                 proxy,
                 &compressed,
-                Box::new(CustomEvents::SaveStateWritten),
+                Box::new(CustomEvents::SaveGameWritten),
             ),
             Err(e) => info!("Compress save state failed: {e}"),
         }

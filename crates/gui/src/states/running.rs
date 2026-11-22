@@ -68,11 +68,13 @@ impl RunningState {
     pub fn pause(&mut self) {
         self.pause = true;
         self.accumulator = Duration::ZERO;
+        self.display_message("Paused");
     }
 
     pub fn resume(&mut self) {
         self.pause = false;
         self.last_frame_time = Instant::now();
+        self.display_message("Resumed");
     }
 
     pub fn platform(&self) -> &dyn Platform {
@@ -212,18 +214,15 @@ impl RunningState {
     }
 
     pub(crate) fn handle_special_keys(&mut self, event_loop: &ActiveEventLoop) {
-        let input = &self.main_window_helper;
-
         // keep this enabled even when debug keys are disabled
-        self.speedup.update(input.key_held(KeyCode::Backquote));
+        self.speedup
+            .update(self.main_window_helper.key_held(KeyCode::Backquote));
 
         if self.enable_debug_keys {
             self.handle_debug_keys(event_loop);
         }
 
-        let input = &self.main_window_helper;
-
-        if input.key_pressed(KeyCode::F5) {
+        if self.main_window_helper.key_pressed(KeyCode::F5) {
             save_state(
                 &self.nes_rom,
                 &self.bus,
@@ -232,54 +231,87 @@ impl RunningState {
                 self.platform(),
             );
         }
-        if input.key_pressed(KeyCode::F9) {
+        if self.main_window_helper.key_pressed(KeyCode::F9) {
             load_save_state(&self.nes_rom, &self.proxy, self.platform());
         }
 
-        if input.held_shift() {
-            let bus = &mut self.bus;
-            let cpu = &mut self.cpu;
+        if self.main_window_helper.held_shift() {
+            if self.main_window_helper.key_pressed(KeyCode::Digit1) {
+                let enabled = self.bus.apu_mut().mixer_mut().pulse1().toggle();
+                self.display_message(&format!(
+                    "{} pulse 1",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
+            }
+            if self.main_window_helper.key_pressed(KeyCode::Digit2) {
+                let enabled = self.bus.apu_mut().mixer_mut().pulse2().toggle();
+                self.display_message(&format!(
+                    "{} pulse 2",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
+            }
+            if self.main_window_helper.key_pressed(KeyCode::Digit3) {
+                let enabled = self.bus.apu_mut().mixer_mut().triangle().toggle();
+                self.display_message(&format!(
+                    "{} triangle",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
+            }
+            if self.main_window_helper.key_pressed(KeyCode::Digit4) {
+                let enabled = self.bus.apu_mut().mixer_mut().noise().toggle();
 
-            let mixer = bus.apu_mut().mixer_mut();
-
-            if input.key_pressed(KeyCode::Digit1) {
-                mixer.pulse1().toggle();
+                self.display_message(&format!(
+                    "{} noise",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
             }
-            if input.key_pressed(KeyCode::Digit2) {
-                mixer.pulse2().toggle();
+            if self.main_window_helper.key_pressed(KeyCode::Digit5) {
+                let enabled = self.bus.apu_mut().mixer_mut().dmc().toggle();
+                self.display_message(&format!(
+                    "{} dmc",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
             }
-            if input.key_pressed(KeyCode::Digit3) {
-                mixer.triangle().toggle();
-            }
-            if input.key_pressed(KeyCode::Digit4) {
-                mixer.noise().toggle();
-            }
-            if input.key_pressed(KeyCode::Digit5) {
-                mixer.dmc().toggle();
-            }
-            if input.key_pressed(KeyCode::Digit0) {
-                mixer.enable_all();
+            if self.main_window_helper.key_pressed(KeyCode::Digit0) {
+                self.bus.apu_mut().mixer_mut().enable_all();
+                self.display_message("Enabled all audio channels");
             }
 
-            if input.key_pressed(KeyCode::Digit6) {
-                bus.ppu_mut().toggle_sprite_render();
+            if self.main_window_helper.key_pressed(KeyCode::Digit6) {
+                let enabled = self.bus.ppu_mut().toggle_sprite_render();
+                self.display_message(&format!(
+                    "{} sprite rendering",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
             }
-            if input.key_pressed(KeyCode::Digit7) {
-                bus.ppu_mut().toggle_background_render();
+            if self.main_window_helper.key_pressed(KeyCode::Digit7) {
+                let enabled = self.bus.ppu_mut().toggle_background_render();
+                self.display_message(&format!(
+                    "{} background rendering",
+                    if enabled { "Enabled" } else { "Disabled" }
+                ));
             }
 
-            if input.key_pressed(KeyCode::KeyR) {
-                bus.reset();
-                cpu.reset();
+            if self.main_window_helper.key_pressed(KeyCode::KeyR) {
+                self.bus.reset();
+                self.cpu.reset();
+                self.display_message("Resetting");
             }
         }
     }
 
-    fn handle_debug_keys(&mut self, event_loop: &ActiveEventLoop) {
-        let input = &self.main_window_helper;
+    fn display_message(&mut self, msg: &str) {
+        self.bus.ppu_mut().renderer_mut().display_message(
+            msg,
+            C::MESSAGE_SECONDS,
+            C::MESSAGE_FONT_SIZE,
+            C::MESSAGE_LOCATION,
+        );
+    }
 
-        if input.held_shift() {
-            if input.key_pressed(KeyCode::KeyX) {
+    fn handle_debug_keys(&mut self, event_loop: &ActiveEventLoop) {
+        if self.main_window_helper.held_shift() {
+            if self.main_window_helper.key_pressed(KeyCode::KeyX) {
                 if self.pause {
                     self.resume();
                 } else {
@@ -287,44 +319,47 @@ impl RunningState {
                 }
             }
 
-            let input = &self.main_window_helper;
-
-            if input.key_pressed(KeyCode::KeyD) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyD) {
                 core::debug_utils::debug_dump_nametables(&self.bus);
                 core::debug_utils::debug_dump_attribute_tables(&self.bus);
+                self.display_message("Dumped NT + AT");
             }
 
-            if input.key_pressed(KeyCode::KeyP) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyP) {
                 core::debug_utils::debug_dump_palette(&self.bus);
+                self.display_message("Dumped palette");
             }
 
-            if input.key_pressed(KeyCode::KeyO) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyO) {
                 core::debug_utils::debug_dump_oam(self.bus.ppu());
+                self.display_message("Dumped OAM");
             }
 
-            if input.key_pressed(KeyCode::KeyQ) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyQ) {
                 core::debug_utils::debug_dump_state(&self.bus, &self.cpu);
+                self.display_message("Dumped state");
             }
 
-            if input.key_pressed(KeyCode::F12) {
+            if self.main_window_helper.key_pressed(KeyCode::F12) {
                 self.auto_ab.toggle();
                 if self.auto_ab.active {
-                    info!("Auto-A/B mode enabled");
+                    self.display_message("Auto-A/B mode enabled");
                 } else {
-                    info!("Auto-A/B mode disabled");
+                    self.display_message("Auto-A/B mode disabled");
                 }
             }
 
-            if input.key_pressed(KeyCode::KeyF) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyF) {
                 let mut file = File::create("frame.ppm").expect("cannot create file");
                 self.bus
                     .ppu()
                     .renderer()
                     .dump_frame(&mut file)
                     .expect("cannot dump frame");
+                self.display_message("Wrote frame to file");
             }
 
-            if input.key_pressed(KeyCode::KeyT) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyT) {
                 let log_point = self.log_point;
                 println!("LOG_POINT {}", log_point);
                 info!("LOG_POINT {}", log_point);
@@ -334,11 +369,15 @@ impl RunningState {
                 self.cpu.enable_tracing(true);
                 self.bus.enable_tracing(true);
                 self.bus.ppu_mut().enable_tracing(true);
+
+                self.display_message("Set logpoint");
             }
 
-            if input.key_pressed(KeyCode::KeyS) {
+            if self.main_window_helper.key_pressed(KeyCode::KeyS) {
                 self.pattern_window
                     .show(self.bus.mapper_ref(), event_loop, 4);
+
+                self.display_message("Displayed pattern window");
             }
         }
     }
@@ -446,22 +485,26 @@ impl State for RunningState {
             CustomEvents::SaveStateRead(c) => match c {
                 Some(content) => match zstd::decode_all(content.as_slice()) {
                     Ok(decoded) => {
-                        info!("Read state");
+                        self.display_message("Loaded state");
                         self.fill_with_saved_state(decoded);
                     }
-                    Err(e) => error!("Load state decompress failed: {e}"),
+                    Err(e) => {
+                        self.display_message("Load state decompress failed");
+                        error!("Load state decompress failed: {e}")
+                    }
                 },
-                None => info!("Load state failed"),
+                None => {
+                    self.display_message("Load state failed");
+                    error!("Load state failed")
+                }
             },
             CustomEvents::SaveStateWritten(..) => {
-                info!("Wrote state");
+                self.display_message("Saved state");
             }
             CustomEvents::SaveGameWritten(..) => {
                 info!("Wrote save file");
             }
-            CustomEvents::ConfigWritten(..) => {
-                info!("Wrote config")
-            }
+            CustomEvents::ConfigWritten(..) => info!("Saved config"),
             _ => {
                 warn!("Unexpected event during runtime: {:?}", event);
             }

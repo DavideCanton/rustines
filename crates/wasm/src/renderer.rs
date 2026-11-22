@@ -1,5 +1,5 @@
 use pixels::Pixels;
-use rustines_core::Renderer;
+use rustines_core::{MessageLocation, Renderer};
 use rustines_gui::PixelsRenderer;
 use std::{fs::File, io};
 
@@ -40,5 +40,16 @@ impl Renderer for WasmRenderer {
     fn dump_frame(&self, _file: &mut File) -> io::Result<()> {
         // don't implement this for web
         Ok(())
+    }
+
+    fn display_message(
+        &mut self,
+        message: &str,
+        seconds: u64,
+        font_size: f32,
+        location: MessageLocation,
+    ) {
+        self.renderer
+            .display_message(message, seconds, font_size, location);
     }
 }

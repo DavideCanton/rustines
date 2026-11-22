@@ -1,3 +1,4 @@
+use rustines_core::MessageLocation;
 use winit::dpi::PhysicalSize;
 
 /// The width of the inner viewport in pixels.
@@ -34,3 +35,12 @@ pub const FRAMES_MULTIPLIER_SPEEDUP: u32 = 4;
 
 // Number of ticks between press and release of A+B when AB mode is enabled
 pub const AUTO_AB_TICK_INTERVAL: u32 = 100;
+
+// Number of seconds a popup message is displayed
+pub const MESSAGE_SECONDS: u64 = 5;
+
+// Popup message default location
+pub const MESSAGE_LOCATION: MessageLocation = MessageLocation::TopLeft;
+
+// Default popup font size
+pub const MESSAGE_FONT_SIZE: f32 = 8.0;
