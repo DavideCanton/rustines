@@ -3,8 +3,14 @@ import subprocess
 from ftplib import FTP
 from pathlib import PurePosixPath
 
-import dotenv
 from common import resolve_web
+
+try:
+    import dotenv
+
+    dotenv.load_dotenv()
+except ImportError:
+    pass
 
 
 def get_password():
@@ -41,7 +47,6 @@ EXT = {
 }
 ROOT = PurePosixPath("/")
 
-dotenv.load_dotenv()
 
 ftp_user = os.environ["FTP_USER"].strip()
 ftp_host = os.environ["FTP_HOST"].strip()

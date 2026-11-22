@@ -29,10 +29,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.14'
-
-      - name: Install Python dependencies
-        run: pip install -r scripts/requirements.txt
+          python-version: '3.14'      
 
       - name: Build WASM
         run: bash build-wasm.sh
