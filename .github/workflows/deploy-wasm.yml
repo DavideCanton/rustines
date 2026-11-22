@@ -7,36 +7,36 @@ permissions:
     contents: read
 
 jobs:
-    build-and-deploy:
+    build:
         runs-on: ubuntu-latest
-
         steps:
-            - name: Checkout
-              uses: actions/checkout@v7
-
-            - name: Install Rust
-              uses: dtolnay/rust-toolchain@v1
+            - uses: actions/checkout@v7
+            - uses: dtolnay/rust-toolchain@v1
               with:
                   toolchain: stable
                   targets: wasm32-unknown-unknown
-
-            - name: Cache Rust and wasm-pack
-              uses: Swatinem/rust-cache@v2
-
-            - name: Install wasm-pack
-              uses: taiki-e/install-action@wasm-pack
-
-            - name: Install Python
-              uses: actions/setup-python@v7
+            - uses: Swatinem/rust-cache@v2
+            - uses: taiki-e/install-action@v2
               with:
-                  python-version: "3.14"
-
+                  tool: wasm-pack
             - name: Build WASM
               run: bash build-wasm.sh
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: wasm-build
+                  path: web/assets/
 
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/download-artifact@v4
+              with:
+                  name: wasm-build
+                  path: web/assets/
+            - uses: actions/setup-python@v7
+              with:
+                  python-version: "3.14"
             - name: Deploy to FTP
-              env:
-                  FTP_USER: ${{ secrets.FTP_USER }}
-                  FTP_HOST: ${{ secrets.FTP_HOST }}
-                  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
               run: python scripts/upload.py
