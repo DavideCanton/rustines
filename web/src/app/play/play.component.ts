@@ -20,7 +20,6 @@ const WASM_MODULE_PATH = 'generated/rustines_wasm_bg.wasm.gz';
 })
 export class PlayComponent implements OnInit {
   romName = signal<string | null>(null);
-  error = signal(false);
 
   romService = inject(RomService);
   router = inject(Router);

@@ -12,16 +12,46 @@ use std::{
     sync::Arc,
 };
 use wasm_bindgen::JsValue;
-use web_sys::js_sys::Uint8Array;
+use web_sys::{Element, js_sys::Uint8Array};
 
+use crate::constants::{
+    CANVAS_ID, CANVAS_PARENT_ID, DB_NAME, RENDER_FPS_ID, STORE_NAME, UPDATE_FPS_ID,
+};
 use crate::renderer::WasmRenderer;
 use pixels::wgpu::TextureFormat;
 use winit::{dpi::PhysicalSize, platform::web::WindowExtWebSys, window::Window};
 
-pub struct WasmPlatform;
+pub struct WasmPlatform {
+    render_fps_element: RefCell<Option<Element>>,
+    update_fps_element: RefCell<Option<Element>>,
+}
 
-const DB_NAME: &str = "RustinesDB";
-const STORE_NAME: &str = "files";
+impl WasmPlatform {
+    pub fn new() -> Self {
+        Self {
+            render_fps_element: RefCell::new(None),
+            update_fps_element: RefCell::new(None),
+        }
+    }
+
+    fn cache_elements(&self) {
+        let web_window = web_sys::window().expect("no global window exists");
+        let document = web_window
+            .document()
+            .expect("should have a document on window");
+
+        let render_fps_element = document
+            .get_element_by_id(RENDER_FPS_ID)
+            .expect("Cannot find render fps element");
+
+        let update_fps_element = document
+            .get_element_by_id(UPDATE_FPS_ID)
+            .expect("Cannot find update fps element");
+
+        *self.render_fps_element.borrow_mut() = Some(render_fps_element);
+        *self.update_fps_element.borrow_mut() = Some(update_fps_element);
+    }
+}
 
 fn format_fps(fps: f64) -> String {
     format!("{:.1}", fps)
@@ -29,20 +59,20 @@ fn format_fps(fps: f64) -> String {
 
 impl Platform for WasmPlatform {
     fn set_title(&self, _window: &Window, _rom_name: &str, render_fps: f64, update_fps: f64) {
-        let window = web_sys::window().unwrap();
-        let document = window.document().unwrap();
+        let fps_str = format_fps(render_fps);
+        let update_fps_str = format_fps(update_fps);
 
-        if let Some(e) = document.get_element_by_id("render-fps") {
-            e.set_text_content(Some(&format_fps(render_fps)))
+        if let Some(e) = self.render_fps_element.borrow().as_ref() {
+            e.set_text_content(Some(&fps_str));
         }
 
-        if let Some(e) = document.get_element_by_id("update-fps") {
-            e.set_text_content(Some(&format_fps(update_fps)))
+        if let Some(e) = self.update_fps_element.borrow().as_ref() {
+            e.set_text_content(Some(&update_fps_str));
         }
     }
 
     fn init_window_hook(&self, window: Arc<Window>, size: PhysicalSize<u32>) {
-        let web_window = web_sys::window().expect("no global `window` exists");
+        let web_window = web_sys::window().expect("no global window exists");
         let document = web_window
             .document()
             .expect("should have a document on window");
@@ -50,12 +80,14 @@ impl Platform for WasmPlatform {
         let canvas = window.canvas().expect("Canvas generation failed");
         canvas.set_width(size.width);
         canvas.set_height(size.height);
-        canvas.set_id("game_canvas");
+        canvas.set_id(CANVAS_ID);
         document
-            .get_element_by_id("canvas-container")
+            .get_element_by_id(CANVAS_PARENT_ID)
             .unwrap()
             .append_child(&canvas)
             .expect("Canvas append failed");
+
+        self.cache_elements();
     }
 
     fn init_pending_renderer(

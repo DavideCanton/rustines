@@ -1,5 +1,6 @@
 #![cfg(target_arch = "wasm32")]
 
+mod constants;
 mod platform;
 mod renderer;
 
@@ -16,13 +17,15 @@ use web_sys::{Event, HtmlElement, VisibilityState, js_sys::Function};
 use wasm_bindgen::prelude::*;
 use winit::{event_loop::EventLoop, platform::web::EventLoopExtWebSys};
 
+use crate::constants::{CANVAS_ID, ERROR_ELEMENT_ID, VISIBLE_CLASS};
+
 const WIDTH: u32 = 1024;
 
 fn panic_hook(info: &PanicHookInfo) {
     if web_sys::window()
         .and_then(|w| w.document())
-        .and_then(|d| d.get_element_by_id("error"))
-        .and_then(|e| e.class_list().remove_1("hidden").ok())
+        .and_then(|d| d.get_element_by_id(ERROR_ELEMENT_ID))
+        .and_then(|e| e.class_list().add_1(VISIBLE_CLASS).ok())
         .is_none()
     {
         warn!("Can't display fancy error!");
@@ -62,7 +65,7 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
         false,
         zapper,
         WIDTH,
-        platform::WasmPlatform,
+        platform::WasmPlatform::new(),
         false,
         proxy.clone(),
     );
@@ -79,7 +82,7 @@ pub fn start_wasm(buf: &[u8], name: &str, zapper: bool) -> Result<(), JsValue> {
                 let _ = proxy.send_event(CustomEvents::Pause);
             }
             VisibilityState::Visible => {
-                if let Some(canvas) = doc.get_element_by_id("game_canvas") {
+                if let Some(canvas) = doc.get_element_by_id(CANVAS_ID) {
                     let _ = canvas.dyn_into::<HtmlElement>().unwrap().focus();
                 }
                 let _ = proxy.send_event(CustomEvents::Resume);
