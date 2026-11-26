@@ -37,6 +37,9 @@ def parse_args():
 class DryRunFTP:
     """Mock FTP client for dry run mode."""
 
+    def __init__(self, *a, **kw):
+        pass
+
     def __enter__(self):
         return self
 
