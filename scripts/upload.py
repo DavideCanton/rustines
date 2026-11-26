@@ -95,13 +95,6 @@ def main():
 
     check_clean_workspace(allow_dirty=args.allow_dirty)
 
-    EXT = {
-        ".html": "t",
-        ".js": "t",
-        ".css": "t",
-        ".wasm": "b",
-        ".gz": "b",
-    }
     ROOT = PurePosixPath("/")
 
     root = (resolve_web() / "dist").resolve()
@@ -114,19 +107,10 @@ def main():
 
             for f in files:
                 rf = cwd / f
-                mode = EXT.get(rf.suffix)
-                if mode is None:
-                    continue
-
                 print(f"{rf}...", end="")
 
-                match mode:
-                    case "t":
-                        with cur.joinpath(f).open("rb") as f:
-                            ftp.storlines(f"STOR {rf}", f)
-                    case "b":
-                        with cur.joinpath(f).open("rb") as f:
-                            ftp.storbinary(f"STOR {rf}", f)
+                with cur.joinpath(f).open("rb") as f:
+                    ftp.storbinary(f"STOR {rf}", f)
 
                 print("end!")
 

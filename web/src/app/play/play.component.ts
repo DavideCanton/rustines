@@ -10,7 +10,7 @@ import { RomService } from '../rom.service';
 import { Router } from '@angular/router';
 import init, { start_wasm } from '../generated/rustines_wasm';
 
-const WASM_MODULE_PATH = '/generated/rustines_wasm_bg.wasm.gz';
+const WASM_MODULE_PATH = 'generated/rustines_wasm_bg.wasm.gz';
 
 @Component({
   imports: [],

@@ -1,20 +1,26 @@
-.run-status {
+.container {
   display: flex;
-  margin-bottom: 60px;
   flex-direction: column;
+  align-items: center;
 
-  .status {
-    text-align: right;
-  }
-
-  .counter {
+  .run-status {
     display: flex;
-  }
+    margin-bottom: 60px;
+    flex-direction: column;
 
-  .fps {
-    flex: 1 1 0;
-    text-align: right;
-    margin-right: 10px;
+    .status {
+      text-align: right;
+    }
+
+    .counter {
+      display: flex;
+    }
+
+    .fps {
+      flex: 1 1 0;
+      text-align: right;
+      margin-right: 10px;
+    }
   }
 }
 
