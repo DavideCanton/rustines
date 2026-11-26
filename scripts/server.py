@@ -65,7 +65,7 @@ def main():
         parser.print_help()
         sys.exit(0)
 
-    os.chdir(resolve_web())
+    os.chdir(resolve_web() / "dist")
 
     host = args.host
     port = args.port

@@ -34,4 +34,8 @@ __pycache__/
 
 config.json
 
-web/assets/generated/
+web/public/generated/
+web/src/app/generated/
+web/dist/
+web/node_modules/
+web/.angular/

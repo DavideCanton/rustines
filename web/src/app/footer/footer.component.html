@@ -1,0 +1,7 @@
+@if (showDisclaimerLink()) {
+  <a routerLink="/disclaimer" class="disclaimer-link">Legal disclaimer</a>
+} @else {
+  <a routerLink="/" class="disclaimer-link">Back to index</a>
+}
+
+<div class="version-container">Version:&nbsp;{{ version }}</div>

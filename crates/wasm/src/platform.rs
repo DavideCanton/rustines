@@ -28,19 +28,15 @@ fn format_fps(fps: f64) -> String {
 }
 
 impl Platform for WasmPlatform {
-    fn set_title(&self, _window: &Window, rom_name: &str, render_fps: f64, update_fps: f64) {
+    fn set_title(&self, _window: &Window, _rom_name: &str, render_fps: f64, update_fps: f64) {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
 
-        if let Some(e) = document.get_element_by_id("filename") {
-            e.set_text_content(Some(rom_name))
-        }
-
-        if let Some(e) = document.get_element_by_id("r_fps") {
+        if let Some(e) = document.get_element_by_id("render-fps") {
             e.set_text_content(Some(&format_fps(render_fps)))
         }
 
-        if let Some(e) = document.get_element_by_id("u_fps") {
+        if let Some(e) = document.get_element_by_id("update-fps") {
             e.set_text_content(Some(&format_fps(update_fps)))
         }
     }
@@ -56,7 +52,7 @@ impl Platform for WasmPlatform {
         canvas.set_height(size.height);
         canvas.set_id("game_canvas");
         document
-            .get_element_by_id("main")
+            .get_element_by_id("canvas-container")
             .unwrap()
             .append_child(&canvas)
             .expect("Canvas append failed");

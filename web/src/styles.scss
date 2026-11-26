@@ -1,0 +1,20 @@
+body {
+  background-color: black;
+  margin: 0;
+  font-family: monospace;
+  font-size: 2em;
+  color: white;
+  user-select: none;
+}
+
+pre {
+  text-wrap: auto;
+}
+
+label {
+  cursor: pointer;
+}
+
+.status {
+  color: green;
+}
