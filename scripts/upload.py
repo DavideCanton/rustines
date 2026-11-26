@@ -52,7 +52,7 @@ ftp_user = os.environ["FTP_USER"].strip()
 ftp_host = os.environ["FTP_HOST"].strip()
 ftp_password = get_password()
 
-root = resolve_web().resolve()
+root = (resolve_web() / "dist").resolve()
 
 with FTP(host=ftp_host, user=ftp_user, passwd=ftp_password) as ftp:
     print(ftp.getwelcome())

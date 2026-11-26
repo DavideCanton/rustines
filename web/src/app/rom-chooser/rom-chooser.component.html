@@ -1,0 +1,15 @@
+<div class="header">
+  <label for="rom" class="label">Click here to select ROM</label>
+  <input type="file" id="rom" (change)="onFileChange($event)" />
+  @if (romName()) {
+    <p class="status">Loaded {{ romName() }}</p>
+    <div class="zapper-container">
+      <input type="checkbox" id="zapper" [(checked)]="zapper" />
+      <label for="zapper">Enable zapper</label>
+    </div>
+    <span class="start" (click)="start()">Play!</span>
+  }
+  @if (error()) {
+    <p class="status">Could not read file: {{ error() }}</p>
+  }
+</div>

@@ -2,16 +2,24 @@
 
 set -e
 
+folder=src/app/generated
+
 # out dir is relative to the crate path
-wasm-pack build --target web --no-typescript --no-pack --out-dir ../../web/assets/generated/ crates/wasm/
+wasm-pack build --target web --no-pack --out-dir ../../web/$folder/ crates/wasm/
 
 echo "Compressing..."
-gzip -9 -f web/assets/generated/rustines_wasm_bg.wasm
+gzip -9 -f web/$folder/rustines_wasm_bg.wasm
 
-# Generate version.js with the git commit hash
+echo "Moving compressed wasm to public folder"
+mkdir -p web/public/generated/
+mv web/$folder/rustines_wasm_bg.wasm.gz web/public/generated/
+
+# Generate version.ts with the git commit hash
 COMMIT_HASH=$(git rev-parse HEAD)
-cat > web/assets/generated/version.js <<EOF
+cat > web/$folder/version.ts <<EOF
 export const VERSION = "${COMMIT_HASH}";
 EOF
 
-echo "Generated version.js with commit ${COMMIT_HASH}"
+echo "Generated version.ts with commit ${COMMIT_HASH}"
+
+(cd web/ && npm run ng build)

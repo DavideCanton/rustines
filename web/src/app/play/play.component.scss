@@ -1,0 +1,47 @@
+.run-status {
+  display: flex;
+  margin-bottom: 60px;
+  flex-direction: column;
+
+  .status {
+    text-align: right;
+  }
+
+  .counter {
+    display: flex;
+  }
+
+  .fps {
+    flex: 1 1 0;
+    text-align: right;
+    margin-right: 10px;
+  }
+}
+
+.error {
+  position: fixed;
+  z-index: 100000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: black;
+  width: 30vw;
+  height: 20vh;
+  border: 5px solid white;
+  border-radius: 10px;
+  color: red;
+  font-size: 4em;
+  text-align: center;
+  line-height: 20vh;
+}
+
+:host ::ng-deep canvas {
+  flex: 0 0 auto;
+  border: 3px solid gray;
+  border-radius: 6px;
+  outline: none;
+
+  &:focus {
+    border-color: red;
+  }
+}

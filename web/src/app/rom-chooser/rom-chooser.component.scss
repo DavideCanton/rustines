@@ -1,0 +1,33 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  input[type="file"] {
+    display: none;
+  }
+
+  .label {
+    padding: 0.1em;
+    text-align: center;
+    display: inline-block;
+  }
+
+  .zapper-container {
+    margin-bottom: 1em;
+
+    label {
+      margin-left: 0.5em;
+    }
+
+    #zapper {
+      transform: scale(1.5);
+    }
+  }
+
+  .start {
+    cursor: pointer;
+    text-align: center;
+  }
+}

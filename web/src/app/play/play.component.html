@@ -1,0 +1,17 @@
+<div class="run-status">
+  <span class="status">{{ romName() }}</span>
+  <div class="counter">
+    <span class="status fps">FPS:</span>
+    <span id="render-fps" class="status"></span>
+  </div>
+  <div class="counter">
+    <span class="status fps">Simulation FPS:</span>
+    <span id="update-fps" class="status"></span>
+  </div>
+</div>
+
+<div id="canvas-container" #canvasContainer></div>
+
+@if(error()) {
+<div class="error">NES ERROR</div>
+}
