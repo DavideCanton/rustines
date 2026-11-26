@@ -20,7 +20,7 @@ jobs:
               with:
                   tool: wasm-pack
             - name: Install Angular CLI
-              run: npm install @angular/cli@22
+              run: (cd web/ && npm ci)
             - name: Build WASM
               run: bash build-wasm.sh /rustines/
             - uses: actions/upload-artifact@v7
